@@ -17,7 +17,7 @@
 !config
 !config/tsconfig.build.json
 !webpack.config.js
-!pnpm-lock.yaml
+!yarn.lock
 !tests
 !fixtures
 !fixtures/integration-docs

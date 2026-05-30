@@ -11,7 +11,7 @@ import {
 import {CollapsedNode} from 'sentry/views/performance/newTraceDetails/traceModels/traceCollapsedNode';
 import {TraceTree} from 'sentry/views/performance/newTraceDetails/traceModels/traceTree';
 import type {TracePreferencesState} from 'sentry/views/performance/newTraceDetails/traceState/tracePreferences';
-import type {HydratedReplayRecord} from 'sentry/views/replays/types';
+import type {ReplayRecord} from 'sentry/views/replays/types';
 
 import {makeExampleTrace} from './makeExampleTrace';
 import type {TraceTreeNode} from './traceTreeNode';
@@ -45,8 +45,7 @@ export class IssuesTraceTree extends TraceTree {
     trace: TraceTree.Trace,
     options: {
       meta: TraceMetaQueryResults['data'] | null;
-      replay: HydratedReplayRecord | null;
-      preferences?: Pick<TracePreferencesState, 'autogroup' | 'missing_instrumentation'>;
+      replay: ReplayRecord | null;
     }
   ): IssuesTraceTree {
     const tree = super.FromTrace(trace, options);

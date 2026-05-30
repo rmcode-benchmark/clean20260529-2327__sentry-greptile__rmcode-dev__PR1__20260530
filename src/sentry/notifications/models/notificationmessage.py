@@ -68,7 +68,7 @@ class NotificationMessage(Model):
     open_period_start = DateTimeField(null=True)
 
     class Meta:
-        app_label = "notifications"
+        app_label = "sentry"
         db_table = "sentry_notificationmessage"
         # A notification message should exist for either issue or metric alert, but never both
         constraints = [

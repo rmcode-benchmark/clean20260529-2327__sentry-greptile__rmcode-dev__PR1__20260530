@@ -29,12 +29,12 @@ export function SearchInvalidTag({message, highlightMessage, docLink}: Props) {
 }
 
 const Invalid = styled(`span`)`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   font-family: ${p => p.theme.text.family};
   color: ${p => p.theme.gray400};
 
   code {
-    font-weight: ${p => p.theme.fontWeight.bold};
+    font-weight: ${p => p.theme.fontWeightBold};
     padding: 0;
   }
   display: flex;

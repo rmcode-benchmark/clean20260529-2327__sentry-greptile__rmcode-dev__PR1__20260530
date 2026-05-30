@@ -16,10 +16,6 @@ import PageFiltersStore from 'sentry/stores/pageFiltersStore';
 import {IssueViewSaveButton} from 'sentry/views/issueList/issueViews/issueViewSaveButton';
 import {IssueSortOptions} from 'sentry/views/issueList/utils';
 
-const organization = OrganizationFixture({
-  features: ['issue-views'],
-});
-
 const defaultProps = {
   query: 'is:unresolved',
   sort: IssueSortOptions.DATE,
@@ -77,7 +73,6 @@ describe('IssueViewSaveButton', function () {
       </Fragment>,
       {
         initialRouterConfig: initialRouterConfigFeed,
-        organization,
       }
     );
 
@@ -129,7 +124,6 @@ describe('IssueViewSaveButton', function () {
       </Fragment>,
       {
         initialRouterConfig: initialRouterConfigView,
-        organization,
       }
     );
 
@@ -189,7 +183,6 @@ describe('IssueViewSaveButton', function () {
           },
         },
       },
-      organization,
     });
 
     // Should show unsaved changes
@@ -238,8 +231,8 @@ describe('IssueViewSaveButton', function () {
       {
         organization: OrganizationFixture({
           access: ['org:read'],
-          features: ['issue-views'],
         }),
+
         initialRouterConfig: initialRouterConfigView,
       }
     );
@@ -295,7 +288,6 @@ describe('IssueViewSaveButton', function () {
           },
         },
       },
-      organization,
     });
 
     await screen.findByTestId('save-button-unsaved');
@@ -318,14 +310,5 @@ describe('IssueViewSaveButton', function () {
 
     // The save button should no longer show unsaved changes
     expect(screen.getByTestId('save-button')).toBeInTheDocument();
-  });
-
-  it('shows a feature disabled hovercard when the feature is disabled', async function () {
-    render(<IssueViewSaveButton {...defaultProps} />, {
-      organization: OrganizationFixture({
-        features: [],
-      }),
-    });
-    expect(await screen.findByRole('button', {name: 'Save As'})).toBeDisabled();
   });
 });

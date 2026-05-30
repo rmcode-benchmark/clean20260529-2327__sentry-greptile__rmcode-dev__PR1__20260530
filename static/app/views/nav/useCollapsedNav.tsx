@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useInteractOutside} from '@react-aria/interactions';
 
 import {
@@ -30,18 +30,17 @@ export function useCollapsedNav() {
     isInteractingRef,
     endInteraction,
     setActivePrimaryNavGroup,
-    collapsedNavIsOpen,
-    setCollapsedNavIsOpen,
   } = useNavContext();
 
+  const [isOpen, setIsOpen] = useState(false);
   const isHoveredRef = useRef(false);
 
   const closeNav = useCallback(() => {
     isHoveredRef.current = false;
     endInteraction();
-    setCollapsedNavIsOpen(false);
+    setIsOpen(false);
     setActivePrimaryNavGroup(null);
-  }, [endInteraction, setActivePrimaryNavGroup, setCollapsedNavIsOpen]);
+  }, [endInteraction, setActivePrimaryNavGroup]);
 
   const shouldNavStayOpen = useCallback(() => {
     const hasKeyboardFocus = navParentRef.current?.querySelector(':focus-visible');
@@ -63,7 +62,7 @@ export function useCollapsedNav() {
   // Resets hover state if nav is disabled
   // Without this the menu will pop back open when collapsing
   useEffect(() => {
-    if (!isCollapsed && collapsedNavIsOpen) {
+    if (!isCollapsed && isOpen) {
       closeNav();
     }
   });
@@ -86,7 +85,7 @@ export function useCollapsedNav() {
       isHoveredRef.current = true;
 
       openTimer = setTimeout(() => {
-        setCollapsedNavIsOpen(true);
+        setIsOpen(true);
       }, NAV_SIDEBAR_OPEN_DELAY_MS);
     };
 
@@ -125,7 +124,7 @@ export function useCollapsedNav() {
     const handleFocusIn = (e: FocusEvent) => {
       if (e.target instanceof HTMLElement && e.target.matches(':focus-visible')) {
         clearTimeout(closeTimer);
-        setCollapsedNavIsOpen(true);
+        setIsOpen(true);
       }
     };
 
@@ -157,7 +156,6 @@ export function useCollapsedNav() {
     isCollapsed,
     isInteractingRef,
     navParentRef,
-    setCollapsedNavIsOpen,
     shouldNavStayOpen,
     tryCloseNav,
   ]);
@@ -178,8 +176,8 @@ export function useCollapsedNav() {
 
       closeNav();
     },
-    isDisabled: !isCollapsed || !collapsedNavIsOpen,
+    isDisabled: !isCollapsed || !isOpen,
   });
 
-  return {isOpen: collapsedNavIsOpen};
+  return {isOpen};
 }

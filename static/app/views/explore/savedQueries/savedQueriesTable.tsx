@@ -9,7 +9,7 @@ import {
 } from 'sentry/actionCreators/indicator';
 import {openSaveQueryModal} from 'sentry/actionCreators/modal';
 import {ActivityAvatar} from 'sentry/components/activity/item/avatar';
-import {UserAvatar} from 'sentry/components/core/avatar/userAvatar';
+import Avatar from 'sentry/components/core/avatar';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import Pagination, {type CursorHandler} from 'sentry/components/pagination';
 import {SavedEntityTable} from 'sentry/components/savedEntityTable';
@@ -221,9 +221,13 @@ export function SavedQueriesTable({
                 <Tooltip title={'Sentry'}>
                   <ActivityAvatar type="system" size={20} />
                 </Tooltip>
-              ) : query.createdBy ? (
-                <UserAvatar user={query.createdBy} hasTooltip />
-              ) : null}
+              ) : (
+                <Avatar
+                  user={query.createdBy}
+                  tooltip={query.createdBy?.name}
+                  hasTooltip
+                />
+              )}
             </SavedEntityTable.Cell>
             <SavedEntityTable.Cell data-column="last-visited">
               <SavedEntityTable.CellTimeSince date={query.lastVisited} />
@@ -310,7 +314,7 @@ const SavedEntityTableWithColumns = styled(SavedEntityTable)`
     40px 20% minmax(auto, 120px) minmax(auto, 120px) minmax(0, 1fr)
     auto auto 48px;
 
-  @container (max-width: ${p => p.theme.breakpoints.md}) {
+  @container (max-width: ${p => p.theme.breakpoints.medium}) {
     grid-template-areas: 'star name project query created-by actions';
     grid-template-columns: 40px 20% minmax(auto, 120px) minmax(0, 1fr) auto 48px;
 
@@ -322,7 +326,7 @@ const SavedEntityTableWithColumns = styled(SavedEntityTable)`
     }
   }
 
-  @container (max-width: ${p => p.theme.breakpoints.sm}) {
+  @container (max-width: ${p => p.theme.breakpoints.small}) {
     grid-template-areas: 'star name query actions';
     grid-template-columns: 40px 30% minmax(0, 1fr) 48px;
 
@@ -356,7 +360,7 @@ const TableHeading = styled('h2')`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   margin-top: ${space(3)};
   margin-bottom: ${space(1.5)};
 `;

@@ -1,12 +1,11 @@
-import {ExternalLink} from 'sentry/components/core/link';
+import ExternalLink from 'sentry/components/links/externalLink';
+import {StepType} from 'sentry/components/onboarding/gettingStartedDoc/step';
 import type {
   Docs,
   DocsParams,
   OnboardingConfig,
 } from 'sentry/components/onboarding/gettingStartedDoc/types';
-import {StepType} from 'sentry/components/onboarding/gettingStartedDoc/types';
 import {
-  agentMonitoringOnboarding,
   AlternativeConfiguration,
   crashReportOnboardingPython,
 } from 'sentry/gettingStartedDocs/python/python';
@@ -130,7 +129,6 @@ const docs: Docs = {
   onboarding,
   profilingOnboarding: onboarding,
   crashReportOnboarding: crashReportOnboardingPython,
-  agentMonitoringOnboarding,
 };
 
 export default docs;

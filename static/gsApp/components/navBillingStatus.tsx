@@ -124,16 +124,14 @@ function QuotaExceededContent({
             handleRequestSent={() => onCheck({checked: true, eventTypes})}
           />
           <DismissContainer>
-            <CheckboxLabel>
-              <Checkbox
-                name="dismiss"
-                checked={isDismissed}
-                onChange={e => {
-                  onCheck({checked: e.target.checked, eventTypes, isManual: true});
-                }}
-              />
-              <span>{t("Don't annoy me again")}</span>
-            </CheckboxLabel>
+            <Checkbox
+              name="dismiss"
+              checked={isDismissed}
+              onChange={e => {
+                onCheck({checked: e.target.checked, eventTypes, isManual: true});
+              }}
+            />
+            <CheckboxLabel>{t("Don't annoy me again")}</CheckboxLabel>
           </DismissContainer>
         </ActionContainer>
       </Body>
@@ -158,15 +156,12 @@ function PrimaryNavigationQuotaExceeded({organization}: {organization: Organizat
           subscription?.onDemandBudgets?.budgetMode === OnDemandBudgetMode.PER_CATEGORY
             ? subscription.onDemandBudgets.budgets[category]
             : subscription?.onDemandMaxSpend;
-
-        const reservedTiers = subscription?.planDetails.planCategories?.[category];
         if (
           !designatedBudget &&
-          reservedTiers?.length === 1 &&
-          reservedTiers[0]?.events === 1
+          (!currentHistory.reserved || currentHistory.reserved <= 1)
         ) {
-          // if there isn't any PAYG and the category has a single reserved tier which is 1 (ie. crons, uptime, etc),
-          // then we don't need to show the alert
+          // don't show any categories without additional reserved volumes
+          // if there is no PAYG
           return acc;
         }
         acc.push(category);
@@ -358,18 +353,18 @@ const Header = styled('div')`
 `;
 
 const HeaderTitle = styled('h1')`
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   margin-bottom: 0;
 `;
 
 const Title = styled('h2')`
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   margin-bottom: 0;
 `;
 
 const Body = styled('div')`
   margin: ${space(2)};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   display: flex;
   flex-direction: column;
   gap: ${space(1)};
@@ -391,13 +386,6 @@ const DismissContainer = styled('div')`
   align-items: center;
 `;
 
-const CheckboxLabel = styled('label')`
-  display: flex;
-  align-items: center;
-  font-weight: ${p => p.theme.fontWeight.normal};
-  cursor: pointer;
-
-  > span {
-    margin-left: ${space(1)};
-  }
+const CheckboxLabel = styled('span')`
+  margin-left: ${space(1)};
 `;

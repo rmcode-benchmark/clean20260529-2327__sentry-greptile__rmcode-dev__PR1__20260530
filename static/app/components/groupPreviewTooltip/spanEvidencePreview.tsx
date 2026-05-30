@@ -104,7 +104,7 @@ export function SpanEvidencePreview({
 const EmptyWrapper = styled('div')`
   color: ${p => p.theme.subText};
   padding: ${space(1.5)};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   display: flex;
   align-items: center;
   justify-content: center;

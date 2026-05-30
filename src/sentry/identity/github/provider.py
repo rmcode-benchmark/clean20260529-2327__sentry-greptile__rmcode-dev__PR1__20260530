@@ -2,7 +2,6 @@ from django.core.exceptions import PermissionDenied
 
 from sentry import http, options
 from sentry.identity.oauth2 import OAuth2Provider
-from sentry.integrations.types import IntegrationProviderSlug
 
 
 def get_user_info(access_token):
@@ -25,7 +24,7 @@ def get_user_info(access_token):
 
 
 class GitHubIdentityProvider(OAuth2Provider):
-    key = IntegrationProviderSlug.GITHUB.value
+    key = "github"
     name = "GitHub"
 
     oauth_access_token_url = "https://github.com/login/oauth/access_token"

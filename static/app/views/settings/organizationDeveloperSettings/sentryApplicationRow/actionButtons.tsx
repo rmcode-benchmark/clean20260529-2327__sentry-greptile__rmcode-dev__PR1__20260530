@@ -1,9 +1,11 @@
+import styled from '@emotion/styled';
+
 import ConfirmDelete from 'sentry/components/confirmDelete';
 import {Button} from 'sentry/components/core/button';
-import {ButtonBar} from 'sentry/components/core/button/buttonBar';
 import {LinkButton} from 'sentry/components/core/button/linkButton';
 import {IconDelete, IconStats, IconUpgrade} from 'sentry/icons';
 import {t} from 'sentry/locale';
+import {space} from 'sentry/styles/space';
 import type {SentryApp} from 'sentry/types/integrations';
 import type {Organization} from 'sentry/types/organization';
 
@@ -31,25 +33,25 @@ function ActionButtons({
   disableDeleteReason,
 }: Props) {
   const appDashboardButton = (
-    <LinkButton
-      size="sm"
+    <StyledLinkButton
+      size="xs"
       icon={<IconStats />}
       to={`/settings/${org.slug}/developer-settings/${app.slug}/dashboard/`}
     >
       {t('Dashboard')}
-    </LinkButton>
+    </StyledLinkButton>
   );
 
   const publishRequestButton = showPublish ? (
-    <Button
+    <StyledButton
       disabled={!!disablePublishReason}
       title={disablePublishReason}
       icon={<IconUpgrade />}
-      size="sm"
+      size="xs"
       onClick={onPublish}
     >
       {t('Publish')}
-    </Button>
+    </StyledButton>
   ) : null;
 
   const deleteConfirmMessage = t(
@@ -58,10 +60,10 @@ function ActionButtons({
   );
   const deleteButton = showDelete ? (
     disableDeleteReason ? (
-      <Button
+      <StyledButton
         disabled
         title={disableDeleteReason}
-        size="sm"
+        size="xs"
         icon={<IconDelete />}
         aria-label={t('Delete')}
       />
@@ -73,19 +75,35 @@ function ActionButtons({
           priority="danger"
           onConfirm={() => onDelete(app)}
         >
-          <Button size="sm" icon={<IconDelete />} aria-label={t('Delete')} />
+          <StyledButton size="xs" icon={<IconDelete />} aria-label={t('Delete')} />
         </ConfirmDelete>
       )
     )
   ) : null;
 
   return (
-    <ButtonBar>
+    <ButtonHolder>
       {appDashboardButton}
       {publishRequestButton}
       {deleteButton}
-    </ButtonBar>
+    </ButtonHolder>
   );
 }
+
+const ButtonHolder = styled('div')`
+  flex-direction: row;
+  display: flex;
+  & > * {
+    margin-left: ${space(0.5)};
+  }
+`;
+
+const StyledButton = styled(Button)`
+  color: ${p => p.theme.subText};
+`;
+
+const StyledLinkButton = styled(LinkButton)`
+  color: ${p => p.theme.subText};
+`;
 
 export default ActionButtons;

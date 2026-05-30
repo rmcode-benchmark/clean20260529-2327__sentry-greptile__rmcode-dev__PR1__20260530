@@ -6,10 +6,10 @@ import isValidDate from 'sentry/utils/date/isValidDate';
 import {defaultTitle} from 'sentry/utils/replays/getFrameDetails';
 import type {BreadcrumbFrame, RawBreadcrumbFrame} from 'sentry/utils/replays/types';
 import {isBreadcrumbFrame} from 'sentry/utils/replays/types';
-import type {HydratedReplayRecord} from 'sentry/views/replays/types';
+import type {ReplayRecord} from 'sentry/views/replays/types';
 
 export default function hydrateBreadcrumbs(
-  replayRecord: HydratedReplayRecord,
+  replayRecord: ReplayRecord,
   breadcrumbFrames: RawBreadcrumbFrame[]
 ): BreadcrumbFrame[] {
   const startTimestampMs = replayRecord.started_at.getTime();
@@ -44,9 +44,7 @@ export default function hydrateBreadcrumbs(
     .filter(isBreadcrumbFrame);
 }
 
-export function replayInitBreadcrumb(
-  replayRecord: HydratedReplayRecord
-): BreadcrumbFrame {
+export function replayInitBreadcrumb(replayRecord: ReplayRecord): BreadcrumbFrame {
   const initialUrl = replayRecord.urls?.[0] ?? replayRecord.tags.url?.join(', ');
 
   return {

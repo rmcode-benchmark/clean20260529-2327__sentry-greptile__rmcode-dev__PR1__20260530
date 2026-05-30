@@ -63,12 +63,12 @@ class ProjectFilterDetailsTest(APITestCase):
         )
 
         new_subfilters = [
-            "edge_pre_79",
+            "safari_pre_6",
+            "opera_mini_pre_8",
             "ie10",
             "ie11",
-            "opera_mini_pre_8",
             "opera_pre_15",
-            "safari_pre_6",
+            "edge_pre_79",
         ]
 
         self.get_success_response(
@@ -79,4 +79,4 @@ class ProjectFilterDetailsTest(APITestCase):
             status_code=204,
         )
 
-        assert project.get_option("filters:legacy-browsers") == new_subfilters
+        assert set(project.get_option("filters:legacy-browsers")) == set(new_subfilters)

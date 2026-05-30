@@ -34,7 +34,6 @@ import {
 } from 'sentry/utils/queryClient';
 import {addQueryParamsToExistingUrl} from 'sentry/utils/queryString';
 import {recordInteraction} from 'sentry/utils/recordSentryAppInteraction';
-import {testableWindowLocation} from 'sentry/utils/testableWindowLocation';
 import useApi from 'sentry/utils/useApi';
 import {useNavigate} from 'sentry/utils/useNavigate';
 import useOrganization from 'sentry/utils/useOrganization';
@@ -145,7 +144,7 @@ export default function SentryAppDetailedView() {
           sentryApp.redirectUrl,
           queryParams
         );
-        testableWindowLocation.assign(redirectUrl);
+        window.location.assign(redirectUrl);
       }
     },
     [organization, sentryApp]
@@ -326,13 +325,10 @@ export default function SentryAppDetailedView() {
       }
 
       if (userHasAccess) {
-        // TODO: @sentaur-athena: Remove hardcoded github-deployment-gates after deleting the code
         return (
           <InstallButton
             data-test-id="install-button"
-            disabled={
-              disabledFromFeatures || integrationSlug === 'github-deployment-gates'
-            }
+            disabled={disabledFromFeatures}
             onClick={() => handleInstall()}
             priority="primary"
             size="sm"
@@ -419,7 +415,7 @@ const PermissionWrapper = styled('div')`
 
 const Title = styled('p')`
   margin-bottom: ${space(1)};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
 `;
 
 const Indicator = styled((p: any) => <CircleIndicator size={7} {...p} />)`

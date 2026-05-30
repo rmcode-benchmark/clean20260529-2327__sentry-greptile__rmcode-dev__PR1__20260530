@@ -42,9 +42,7 @@ import {
 import {
   getChunkCategoryFromDuration,
   getPlanCategoryName,
-  isByteCategory,
   isContinuousProfiling,
-  isPartOfReservedBudget,
 } from 'getsentry/utils/dataCategory';
 import formatCurrency from 'getsentry/utils/formatCurrency';
 import {roundUpToNearestDollar} from 'getsentry/utils/roundUpToNearestDollar';
@@ -202,32 +200,6 @@ export function calculateCategoryPrepaidUsage(
     subscription.categories[category];
   const usage = accepted ?? categoryInfo?.usage ?? 0;
 
-  // If reservedCpe or reservedSpend aren't provided but category is part of a reserved budget,
-  // try to extract them from subscription.reservedBudgets
-  let effectiveReservedCpe = reservedCpe ?? undefined;
-  let effectiveReservedSpend = reservedSpend ?? undefined;
-
-  if (
-    (effectiveReservedCpe === undefined || effectiveReservedSpend === undefined) &&
-    isPartOfReservedBudget(category, subscription.reservedBudgets ?? [])
-  ) {
-    // Look for the category in reservedBudgets
-    for (const budget of subscription.reservedBudgets || []) {
-      if (category in budget.categories) {
-        const categoryBudget = budget.categories[category];
-        if (categoryBudget) {
-          if (effectiveReservedCpe === undefined) {
-            effectiveReservedCpe = categoryBudget.reservedCpe;
-          }
-          if (effectiveReservedSpend === undefined) {
-            effectiveReservedSpend = categoryBudget.reservedSpend;
-          }
-          break;
-        }
-      }
-    }
-  }
-
   // Calculate the prepaid total
   let prepaidTotal: any;
   if (isUnlimitedReserved(prepaid)) {
@@ -236,19 +208,16 @@ export function calculateCategoryPrepaidUsage(
     // Convert prepaid limits to the appropriate unit based on category
     prepaidTotal =
       prepaid *
-      (isByteCategory(category)
+      (category === DataCategory.ATTACHMENTS
         ? GIGABYTE
-        : isContinuousProfiling(category)
+        : category === DataCategory.PROFILE_DURATION ||
+            category === DataCategory.PROFILE_DURATION_UI
           ? MILLISECONDS_IN_HOUR
           : 1);
   }
-
-  const hasReservedBudget = Boolean(
-    reservedCpe || typeof effectiveReservedSpend === 'number'
-  ); // reservedSpend can be 0
-
+  const hasReservedBudget = reservedCpe || typeof reservedSpend === 'number'; // reservedSpend can be 0
   const prepaidUsed = hasReservedBudget
-    ? (effectiveReservedSpend ?? usage * (effectiveReservedCpe ?? 0))
+    ? (reservedSpend ?? usage * (reservedCpe ?? 0))
     : usage;
   const prepaidPercentUsed = getPercentage(prepaidUsed, prepaidTotal);
 
@@ -382,6 +351,10 @@ export function UsageTotals({
   freeUnits = 0,
   prepaidUnits = 0,
   reservedUnits = null,
+  // freeBudget = null,
+  // prepaidBudget = null,
+  // reservedBudget = null,
+  // reservedSpend = null,
   softCapType = null,
   totals = EMPTY_STAT_TOTAL,
   eventTotals = {},
@@ -833,13 +806,7 @@ export function CombinedUsageTotals({
     subscription.planTier === PlanTier.AM3;
   const onDemandBudgets = parseOnDemandBudgetsFromSubscription(subscription);
   const totalMaxOndemandBudget =
-    'sharedMaxBudget' in onDemandBudgets
-      ? onDemandBudgets.sharedMaxBudget
-      : Object.keys(productGroup.categories).reduce(
-          (acc, category) =>
-            acc + getOnDemandBudget(onDemandBudgets, category as DataCategory),
-          0
-        );
+    'sharedMaxBudget' in onDemandBudgets ? onDemandBudgets.sharedMaxBudget : 0; // TODO: handle per category budgets
 
   let totalOnDemandSpent = 0;
   let totalOnDemandMax = 0;
@@ -909,7 +876,7 @@ export function CombinedUsageTotals({
 
   function getReservedInfo() {
     if (doesNotHaveProduct) {
-      // TODO(reserved budgets): move this to frontend const similar to BILLED_DATA_CATEGORY_INFO
+      // TODO(data categories): move this to backend
       if (apiName === ReservedBudgetCategoryType.SEER) {
         return t('Detect and fix issues faster with our AI debugging agent.');
       }
@@ -1018,11 +985,6 @@ export function CombinedUsageTotals({
       </CombinedLegendContainer>
     );
   }
-
-  // match the unused bar to the last category in category order that has been used
-  // for that budget; otherwise default to the first category in category 0order
-  let categoryForUnusedPrepaid = firstCategory;
-  let categoryForUnusedOnDemand = firstCategory;
 
   return (
     <SubscriptionCard data-test-id={`usage-card-${apiName}`}>
@@ -1150,7 +1112,6 @@ export function CombinedUsageTotals({
                           )
                           .map(([rbCategory, rbInfo]) => {
                             if (rbInfo.reservedSpend > 0) {
-                              categoryForUnusedPrepaid = rbCategory as DataCategory;
                               return (
                                 <PlanUseBar
                                   style={{
@@ -1173,7 +1134,7 @@ export function CombinedUsageTotals({
                       style={{
                         width: `${unusedPrepaidWidth}%`,
                         backgroundColor: colorFn(
-                          categoryToColors[categoryForUnusedPrepaid]?.reserved
+                          categoryToColors[firstCategory]?.reserved
                         )
                           .fade(0.5)
                           .string(),
@@ -1190,7 +1151,6 @@ export function CombinedUsageTotals({
                       );
 
                       if (ondemandPercentUsed >= 1) {
-                        categoryForUnusedOnDemand = rbCategory as DataCategory;
                         return (
                           <PlanUseBar
                             key={rbCategory}
@@ -1209,7 +1169,7 @@ export function CombinedUsageTotals({
                         style={{
                           width: `${unusedOnDemandWidth}%`,
                           backgroundColor: colorFn(
-                            categoryToColors[categoryForUnusedOnDemand]?.ondemand
+                            categoryToColors[firstCategory]?.ondemand
                           )
                             .fade(0.5)
                             .string(),
@@ -1258,19 +1218,11 @@ export function CombinedUsageTotals({
             if (shouldCompressCategories && category !== parentCategoryForCompression) {
               return null;
             }
-            const billedUsage =
-              subscription.categories?.[category as DataCategory]?.usage ?? 0;
-            const totals = allTotalsByCategory?.[category] ?? EMPTY_STAT_TOTAL;
-            const adjustedTotals = {
-              ...totals,
-              accepted: billedUsage,
-            };
-
             return (
               <UsageTotalsTable
                 key={category}
                 category={category as DataCategory}
-                totals={adjustedTotals}
+                totals={allTotalsByCategory?.[category] ?? EMPTY_STAT_TOTAL}
                 subscription={subscription}
               />
             );
@@ -1292,12 +1244,12 @@ const CardBody = styled('div')`
 `;
 
 const UsageSummaryTitle = styled('h4')`
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   margin-bottom: 0px;
   font-weight: 400;
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
-    font-size: ${p => p.theme.fontSize.xl};
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
+    font-size: ${p => p.theme.fontSizeExtraLarge};
   }
 `;
 
@@ -1317,7 +1269,7 @@ const BaseRow = styled('div')`
 
 const SubText = styled('span')`
   color: ${p => p.theme.chartLabel};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 const AcceptedSummary = styled('div')`
@@ -1373,12 +1325,12 @@ const CombinedLegendContainer = styled('div')`
 
 const LegendTitle = styled('div')`
   font-weight: 700;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   white-space: nowrap;
 `;
 
 const LegendPrice = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const LegendPriceSubText = styled(LegendPrice)`

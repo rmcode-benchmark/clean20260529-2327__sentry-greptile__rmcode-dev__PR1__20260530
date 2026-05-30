@@ -84,7 +84,7 @@ export default function ProjectToolbarSettings({
         }
       />
       <Feature
-        features="sentry-toolbar-ui"
+        features="dev-toolbar-ui"
         organization={organization}
         renderDisabled={NoAccess}
       >
@@ -96,7 +96,7 @@ export default function ProjectToolbarSettings({
         <ProjectPermissionAlert project={project} />
         {domain && (
           <Alert.Container>
-            <Alert type="info">
+            <Alert type="info" showIcon>
               {tct(
                 'To enable the Dev Toolbar, copy and paste your domain into the Allowed Origins text box below: [domain] ',
                 {domain: <strong>{domain}</strong>}

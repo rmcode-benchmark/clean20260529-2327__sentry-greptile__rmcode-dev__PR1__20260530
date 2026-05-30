@@ -90,16 +90,12 @@ function useTimelineZoom<E extends HTMLElement>({enabled = true, onSelect}: Opti
     const containerRect = containerRef.current.getBoundingClientRect();
     const offset = e.clientX - containerRect.left;
 
-    // Selection is only activated when inside the container. Also tests that
-    // the mouse is not occluded by a overlay element.
+    // Selection is only activated when inside the container
     const isInsideContainer =
       e.clientX > containerRect.left &&
       e.clientX < containerRect.right &&
       e.clientY > containerRect.top &&
-      e.clientY < containerRect.bottom &&
-      !document
-        .elementsFromPoint(e.clientX, e.clientY)
-        .some(el => el.hasAttribute('data-overlay'));
+      e.clientY < containerRect.bottom;
 
     if (!isInsideContainer) {
       return;

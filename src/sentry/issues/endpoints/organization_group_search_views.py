@@ -76,6 +76,11 @@ class OrganizationGroupSearchViewsEndpoint(OrganizationEndpoint):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
+        if not features.has(
+            "organizations:issue-stream-custom-views", organization, actor=request.user
+        ):
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
         has_global_views = features.has("organizations:global-views", organization)
 
         serializer = OrganizationGroupSearchViewGetSerializer(data=request.GET)
@@ -179,7 +184,9 @@ class OrganizationGroupSearchViewsEndpoint(OrganizationEndpoint):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        if not features.has("organizations:issue-views", organization, actor=request.user):
+        if not features.has(
+            "organizations:issue-stream-custom-views", organization, actor=request.user
+        ):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         serializer = GroupSearchViewPostValidator(

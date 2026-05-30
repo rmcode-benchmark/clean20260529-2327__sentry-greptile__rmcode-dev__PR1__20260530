@@ -165,8 +165,6 @@ export const fields = {
     help: t(
       'Outbound requests matching Allowed Domains will have the header "{token_header}: {token}" appended'
     ),
-    saveOnBlur: false,
-    saveMessage: t('Ensure you update usages of your security token.'),
     setValue: value => getDynamicText({value, fixed: '__SECURITY_TOKEN__'}),
   },
   securityTokenHeader: {
@@ -177,8 +175,6 @@ export const fields = {
     help: t(
       'Outbound requests matching Allowed Domains will have the header "{token_header}: {token}" appended'
     ),
-    saveOnBlur: false,
-    saveMessage: t('Ensure you update usages of the security token header.'),
   },
   verifySSL: {
     name: 'verifySSL',

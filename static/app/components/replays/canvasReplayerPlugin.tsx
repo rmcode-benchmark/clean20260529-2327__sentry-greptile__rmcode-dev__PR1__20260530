@@ -19,12 +19,8 @@ type CanvasEventWithTime = eventWithTime & {
   type: EventType.IncrementalSnapshot;
 };
 
-function isElement(node: Node): node is Element {
-  return node.nodeType === Node.ELEMENT_NODE;
-}
-
 function isCanvasElement(node: Node): node is HTMLCanvasElement {
-  return isElement(node) && node.tagName === 'CANVAS';
+  return node instanceof HTMLCanvasElement;
 }
 
 function isCanvasMutationEvent(e: eventWithTime): e is CanvasEventWithTime {
@@ -183,7 +179,6 @@ export function CanvasReplayerPlugin(events: eventWithTime[]): ReplayPlugin {
    */
   function cloneCanvas(id: number, node: Node) {
     if (!isCanvasElement(node)) {
-      Sentry.logger.warn('Replay: node is not a canvas element');
       return null;
     }
     const cloneNode = node.cloneNode();

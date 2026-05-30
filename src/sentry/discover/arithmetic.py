@@ -296,7 +296,6 @@ def parse_arithmetic(
     equation: str,
     max_operators: int | None = None,
     custom_measurements: set[str] | None = None,
-    validate_single_operator: bool = False,
 ) -> tuple[Operation, list[str], list[str]]:
     """Given a string equation try to parse it into a set of Operations"""
     try:
@@ -315,7 +314,9 @@ def parse_arithmetic(
         return result, list(visitor.fields), list(visitor.functions)
     if len(visitor.fields) > 0 and len(visitor.functions) > 0:
         raise ArithmeticValidationError("Cannot mix functions and fields in arithmetic")
-    if validate_single_operator and visitor.operators == 0:
+    if visitor.terms <= 1:
+        raise ArithmeticValidationError("Arithmetic expression must contain at least 2 terms")
+    if visitor.operators == 0:
         raise ArithmeticValidationError("Arithmetic expression must contain at least 1 operator")
     return result, list(visitor.fields), list(visitor.functions)
 
@@ -340,9 +341,7 @@ def resolve_equation_list(
     parsed_equations: list[ParsedEquation] = []
     resolved_columns: list[str] = selected_columns[:]
     for index, equation in enumerate(equations):
-        parsed_equation, fields, functions = parse_arithmetic(
-            equation, None, custom_measurements, validate_single_operator=True
-        )
+        parsed_equation, fields, functions = parse_arithmetic(equation, None, custom_measurements)
 
         if (len(fields) == 0 and len(functions) == 0) and not plain_math:
             raise InvalidSearchQuery("Equations need to include a field or function")

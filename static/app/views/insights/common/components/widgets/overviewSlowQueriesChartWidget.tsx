@@ -13,8 +13,8 @@ import {Mode} from 'sentry/views/explore/contexts/pageParamsContext/mode';
 import {ChartType} from 'sentry/views/insights/common/components/chart';
 import {SpanDescriptionCell} from 'sentry/views/insights/common/components/tableCells/spanDescriptionCell';
 import type {LoadableChartWidgetProps} from 'sentry/views/insights/common/components/widgets/types';
-import {useSpans} from 'sentry/views/insights/common/queries/useDiscover';
-import {useTopNSpanSeries} from 'sentry/views/insights/common/queries/useTopNDiscoverSeries';
+import {useEAPSpans} from 'sentry/views/insights/common/queries/useDiscover';
+import {useTopNSpanEAPSeries} from 'sentry/views/insights/common/queries/useTopNDiscoverSeries';
 import {convertSeriesToTimeseries} from 'sentry/views/insights/common/utils/convertSeriesToTimeseries';
 import {Referrer} from 'sentry/views/insights/pages/platform/laravel/referrers';
 import {usePageFilterChartParams} from 'sentry/views/insights/pages/platform/laravel/utils';
@@ -44,7 +44,7 @@ export default function OverviewSlowQueriesChartWidget(props: LoadableChartWidge
 
   const fullQuery = `has:db.system has:span.group ${query}`;
 
-  const queriesRequest = useSpans(
+  const queriesRequest = useEAPSpans(
     {
       fields: [
         'span.op',
@@ -62,7 +62,7 @@ export default function OverviewSlowQueriesChartWidget(props: LoadableChartWidge
     Referrer.QUERIES_CHART
   );
 
-  const timeSeriesRequest = useTopNSpanSeries(
+  const timeSeriesRequest = useTopNSpanEAPSeries(
     {
       ...pageFilterChartParams,
       search: `span.group:[${queriesRequest.data?.map(item => `"${item['span.group']}"`).join(',')}]`,
@@ -70,7 +70,7 @@ export default function OverviewSlowQueriesChartWidget(props: LoadableChartWidge
       yAxis: ['avg(span.duration)'],
       sort: {field: 'avg(span.duration)', kind: 'desc'},
       topN: 3,
-      enabled: queriesRequest.data.length > 0,
+      enabled: !!queriesRequest.data,
     },
     Referrer.QUERIES_CHART,
     props.pageFilters
@@ -84,7 +84,7 @@ export default function OverviewSlowQueriesChartWidget(props: LoadableChartWidge
   const hasData =
     queriesRequest.data && queriesRequest.data.length > 0 && timeSeries.length > 0;
 
-  const colorPalette = theme.chart.getColorPalette(timeSeries.length - 1);
+  const colorPalette = theme.chart.getColorPalette(timeSeries.length - 2);
 
   const aliases = Object.fromEntries(
     queriesRequest.data?.map(item => [
@@ -119,9 +119,7 @@ export default function OverviewSlowQueriesChartWidget(props: LoadableChartWidge
   const footer = hasData && (
     <WidgetFooterTable>
       {queriesRequest.data?.map((item, index) => (
-        <Fragment
-          key={`${item['project.id']}-${item['span.group']}-${item['sentry.normalized_description']}`}
-        >
+        <Fragment key={item['sentry.normalized_description']}>
           <div>
             <SeriesColorIndicator
               style={{
@@ -188,7 +186,7 @@ export default function OverviewSlowQueriesChartWidget(props: LoadableChartWidge
 const ControllerText = styled('div')`
   ${p => p.theme.overflowEllipsis};
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   line-height: 1.2;
   min-width: 0px;
 `;

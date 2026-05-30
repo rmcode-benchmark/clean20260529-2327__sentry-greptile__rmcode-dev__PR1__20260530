@@ -10,11 +10,7 @@ import sentry_sdk
 from sentry_sdk import capture_exception
 
 from sentry import features, killswitches, options, quotas, utils
-from sentry.constants import (
-    HEALTH_CHECK_GLOBS,
-    INGEST_THROUGH_TRUSTED_RELAYS_ONLY_DEFAULT,
-    ObjectStatus,
-)
+from sentry.constants import HEALTH_CHECK_GLOBS, ObjectStatus
 from sentry.datascrubbing import get_datascrubbing_settings, get_pii_config
 from sentry.dynamic_sampling import generate_rules
 from sentry.grouping.api import get_grouping_config_dict_for_project
@@ -52,9 +48,12 @@ from .measurements import CUSTOM_MEASUREMENT_LIMIT
 # These features will be listed in the project config.
 EXPOSABLE_FEATURES = [
     "organizations:continuous-profiling",
+    "organizations:continuous-profiling-beta",
+    "organizations:continuous-profiling-beta-ingest",
     "organizations:device-class-synthesis",
     "organizations:performance-queries-mongodb-extraction",
     "organizations:profiling",
+    "organizations:session-replay-combined-envelope-items",
     "organizations:session-replay-recording-scrubbing",
     "organizations:session-replay-video-disabled",
     "organizations:session-replay",
@@ -64,11 +63,12 @@ EXPOSABLE_FEATURES = [
     "projects:span-metrics-extraction",
     "projects:span-metrics-extraction-addons",
     "organizations:indexed-spans-extraction",
+    "organizations:ingest-spans-in-eap",
+    "projects:ingest-spans-in-eap",
     "projects:relay-otel-endpoint",
-    "organizations:ourlogs-calculated-byte-count",
     "organizations:ourlogs-ingestion",
-    "organizations:ourlogs-meta-attributes",
     "organizations:view-hierarchy-scrubbing",
+    "projects:ourlogs-breadcrumb-extraction",
     "organizations:performance-issues-spans",
     "organizations:relay-playstation-ingestion",
 ]
@@ -212,16 +212,6 @@ class CardinalityLimitOption(TypedDict):
 def get_metrics_config(timeout: TimeChecker, project: Project) -> Mapping[str, Any] | None:
     metrics_config = {}
 
-    if cardinality_limits := get_cardinality_limits(timeout, project):
-        metrics_config["cardinalityLimits"] = cardinality_limits
-
-    return metrics_config or None
-
-
-def get_cardinality_limits(timeout: TimeChecker, project: Project) -> list[CardinalityLimit] | None:
-    if options.get("relay.cardinality-limiter.mode") == "disabled":
-        return None
-
     passive_limits = options.get("relay.cardinality-limiter.passive-limits-by-org").get(
         str(project.organization.id), []
     )
@@ -260,7 +250,7 @@ def get_cardinality_limits(timeout: TimeChecker, project: Project) -> list[Cardi
         "relay.cardinality-limiter.limits", []
     )
     option_limit_options: list[CardinalityLimitOption] = options.get(
-        "relay.cardinality-limiter.limits"
+        "relay.cardinality-limiter.limits", []
     )
 
     for clo in project_limit_options + organization_limit_options + option_limit_options:
@@ -283,7 +273,9 @@ def get_cardinality_limits(timeout: TimeChecker, project: Project) -> list[Cardi
         except KeyError:
             pass
 
-    return cardinality_limits
+    metrics_config["cardinalityLimits"] = cardinality_limits
+
+    return metrics_config or None
 
 
 def get_project_config(
@@ -1055,14 +1047,6 @@ def _get_project_config(
         }
 
     config = cfg["config"]
-
-    if features.has("organizations:ingest-through-trusted-relays-only", project.organization):
-        config["trustedRelaySettings"] = {
-            "verifySignature": project.organization.get_option(
-                "sentry:ingest-through-trusted-relays-only",
-                INGEST_THROUGH_TRUSTED_RELAYS_ONLY_DEFAULT,
-            )
-        }
 
     with sentry_sdk.start_span(op="get_exposed_features"):
         if exposed_features := get_exposed_features(project):

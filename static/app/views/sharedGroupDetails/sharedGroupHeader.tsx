@@ -85,20 +85,20 @@ const TitleWrap = styled('div')`
 
 const Title = styled('h3')`
   color: ${p => p.theme.headingColor};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   line-height: ${p => p.theme.text.lineHeightHeading};
   margin-right: ${space(2)};
   margin-bottom: 0;
   ${p => p.theme.overflowEllipsis};
 
-  @media (min-width: ${props => props.theme.breakpoints.sm}) {
+  @media (min-width: ${props => props.theme.breakpoints.small}) {
     font-size: ${p => p.theme.headerFontSize};
   }
 `;
 
 const TimeStamp = styled('div')`
   color: ${p => p.theme.headingColor};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   line-height: ${p => p.theme.text.lineHeightHeading};
   margin-top: ${space(0.25)};
 `;

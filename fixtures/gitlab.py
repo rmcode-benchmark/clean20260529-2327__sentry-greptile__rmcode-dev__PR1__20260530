@@ -50,13 +50,7 @@ class GitLabTestCase(APITestCase):
         )
 
     @assume_test_silo_mode(SiloMode.REGION)
-    def create_gitlab_repo(
-        self,
-        name: str,
-        external_id: int = 15,
-        url: str | None = None,
-        organization_id: int | None = None,
-    ) -> Repository:
+    def create_repo(self, name, external_id=15, url=None, organization_id=None):
         instance = self.integration.metadata["instance"]
         organization_id = organization_id or self.organization.id
         return Repository.objects.create(

@@ -1,5 +1,5 @@
 import type {CalendarProps, DateRangeProps, Range, RangeKeyDict} from 'react-date-range';
-import moment from 'moment-timezone';
+import format from 'date-fns/format';
 
 /**
  * Auto-mock of the react-date-range library for jest
@@ -26,7 +26,7 @@ function DatePickerInput({date, onChange, ...props}: DatePickerInputProps) {
   return (
     <input
       type="date"
-      value={date ? moment(date).format('YYYY-MM-DD') : ''}
+      value={date ? format(date, 'yyyy-MM-dd') : ''}
       onChange={e => {
         const newDate = new Date(e.target.value + 'T00:00:00');
 

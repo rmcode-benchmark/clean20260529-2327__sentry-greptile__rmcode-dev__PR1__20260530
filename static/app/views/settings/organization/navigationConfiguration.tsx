@@ -17,7 +17,7 @@ export function getOrganizationNavigationConfiguration({
   organization: incomingOrganization,
 }: ConfigParams): NavigationSection[] {
   if (incomingOrganization && prefersStackedNav(incomingOrganization)) {
-    return getUserOrgNavigationConfiguration();
+    return getUserOrgNavigationConfiguration({organization: incomingOrganization});
   }
 
   return [
@@ -138,18 +138,14 @@ export function getOrganizationNavigationConfiguration({
           path: `${organizationSettingsPathPrefix}/feature-flags/`,
           title: t('Feature Flags'),
           description: t('Set up feature flag integrations'),
-        },
-        {
-          path: `${organizationSettingsPathPrefix}/seer/`,
-          title: t('Seer Automation'),
-          description: t(
-            "Manage settings for Seer's automated analysis across your organization"
+          badge: () => (
+            <FeatureBadge
+              type="beta"
+              tooltipProps={{
+                title: t('This feature is currently in open beta and may change'),
+              }}
+            />
           ),
-          show: ({organization}) =>
-            !!organization &&
-            organization.features.includes('trigger-autofix-on-issue-summary') &&
-            !organization.hideAiFeatures,
-          id: 'seer',
         },
         {
           path: `${organizationSettingsPathPrefix}/stats/`,
@@ -166,8 +162,8 @@ export function getOrganizationNavigationConfiguration({
       items: [
         {
           path: `${organizationSettingsPathPrefix}/auth-tokens/`,
-          title: t('Organization Tokens'),
-          description: t('Manage organization tokens'),
+          title: t('Auth Tokens'),
+          description: t('Manage organization auth tokens'),
           id: 'auth-tokens',
         },
         {

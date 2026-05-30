@@ -30,7 +30,6 @@ type HighlightCallbacks = ReturnType<typeof useReplayHighlighting>;
 // Instead only expose methods that wrap `Replayer` and manage state.
 interface ReplayPlayerContextProps extends HighlightCallbacks {
   /**
-   * DEPRECATED - use `useAnalyticsArea` instead.
    * The context in which the replay is being viewed.
    */
   analyticsContext: string;
@@ -92,6 +91,7 @@ interface ReplayPlayerContextProps extends HighlightCallbacks {
   /**
    * The core replay data
    */
+  replay: ReplayReader | null;
 
   /**
    * Restart the replay
@@ -133,6 +133,7 @@ const ReplayPlayerContext = createContext<ReplayPlayerContextProps>({
   isPlaying: false,
   isVideoReplay: false,
   removeHighlight: () => {},
+  replay: null,
   restart: () => {},
   setCurrentTime: () => {},
   setRoot: () => {},
@@ -142,7 +143,6 @@ const ReplayPlayerContext = createContext<ReplayPlayerContextProps>({
 
 type Props = {
   /**
-   * DEPRECATED - use `useAnalyticsArea` instead.
    * The context in which the replay is being viewed.
    * Attached to certain analytics events.
    */
@@ -524,18 +524,14 @@ export function Provider({
   // Initialize replayer for Video Replays
   useEffect(() => {
     const instance =
-      isVideoReplay &&
-      rootEl &&
-      !replay?.isFetching() &&
-      !replayerRef.current &&
-      initVideoRoot(rootEl);
+      isVideoReplay && rootEl && !replayerRef.current && initVideoRoot(rootEl);
 
     return () => {
       if (instance && !rootEl) {
         instance.destroy();
       }
     };
-  }, [rootEl, isVideoReplay, initVideoRoot, videoEvents, replay]);
+  }, [rootEl, isVideoReplay, initVideoRoot, videoEvents]);
 
   // For non-video (e.g. rrweb) replays, initialize the player
   useEffect(() => {
@@ -618,6 +614,7 @@ export function Provider({
           isFinished,
           isPlaying,
           removeHighlight,
+          replay,
           restart,
           setCurrentTime,
           togglePlayPause,

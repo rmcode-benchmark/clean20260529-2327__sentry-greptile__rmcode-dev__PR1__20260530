@@ -7,7 +7,6 @@ import {ButtonBar} from 'sentry/components/core/button/buttonBar';
 import {IconChevron} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
-import {defined} from 'sentry/utils';
 import parseLinkHeader from 'sentry/utils/parseLinkHeader';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
@@ -54,7 +53,7 @@ function Pagination({
     [navigate]
   );
 
-  if (!defined(pageLinks)) {
+  if (!pageLinks) {
     return null;
   }
 
@@ -69,7 +68,7 @@ function Pagination({
   return (
     <Wrapper className={className} data-test-id="pagination">
       {caption && <PaginationCaption>{caption}</PaginationCaption>}
-      <ButtonBar merged gap="none">
+      <ButtonBar merged>
         <Button
           icon={<IconChevron direction="left" />}
           aria-label={t('Previous')}
@@ -104,7 +103,7 @@ const Wrapper = styled('div')`
 
 const PaginationCaption = styled('span')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   margin-right: ${space(2)};
 `;
 

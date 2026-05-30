@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import Any, TypedDict
 from urllib.parse import urlencode
 
@@ -11,7 +11,7 @@ from rest_framework.serializers import ValidationError
 
 from sentry import options
 from sentry.constants import ObjectStatus
-from sentry.identity.pipeline import IdentityPipeline
+from sentry.identity.pipeline import IdentityProviderPipeline
 from sentry.integrations.base import (
     FeatureDescription,
     IntegrationData,
@@ -21,11 +21,10 @@ from sentry.integrations.base import (
     IntegrationProvider,
 )
 from sentry.integrations.models.integration import Integration
-from sentry.integrations.pipeline import IntegrationPipeline
 from sentry.integrations.services.integration import integration_service
 from sentry.organizations.services.organization.model import RpcOrganization
+from sentry.pipeline import NestedPipelineView
 from sentry.pipeline.views.base import PipelineView
-from sentry.pipeline.views.nested import NestedPipelineView
 from sentry.projects.services.project.model import RpcProject
 from sentry.projects.services.project_key import project_key_service
 from sentry.sentry_apps.logic import SentryAppCreator
@@ -367,16 +366,17 @@ class VercelIntegrationProvider(IntegrationProvider):
     # feature flag handler is in getsentry
     requires_feature_flag = True
 
-    def _identity_pipeline_view(self) -> PipelineView[IntegrationPipeline]:
-        return NestedPipelineView(
+    def get_pipeline_views(self) -> list[PipelineView]:
+        identity_pipeline_config = {"redirect_url": absolute_uri(self.oauth_redirect_url)}
+
+        identity_pipeline_view = NestedPipelineView(
             bind_key="identity",
             provider_key=self.key,
-            pipeline_cls=IdentityPipeline,
-            config={"redirect_url": absolute_uri(self.oauth_redirect_url)},
+            pipeline_cls=IdentityProviderPipeline,
+            config=identity_pipeline_config,
         )
 
-    def get_pipeline_views(self) -> Sequence[PipelineView[IntegrationPipeline]]:
-        return [self._identity_pipeline_view()]
+        return [identity_pipeline_view]
 
     def build_integration(self, state: Mapping[str, Any]) -> IntegrationData:
         data = state["identity"]["data"]

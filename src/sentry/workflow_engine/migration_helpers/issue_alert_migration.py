@@ -37,7 +37,6 @@ from sentry.workflow_engine.models.data_condition import (
     Condition,
     enforce_data_condition_json_schema,
 )
-from sentry.workflow_engine.types import ERROR_DETECTOR_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +82,7 @@ def ensure_default_error_detector(project: Project) -> Detector:
             detector, _ = Detector.objects.get_or_create(
                 type=ErrorGroupType.slug,
                 project=project,
-                defaults={"config": {}, "name": ERROR_DETECTOR_NAME},
+                defaults={"config": {}, "name": "Error Detector"},
             )
             return detector
     except UnableToAcquireLock:
@@ -131,19 +130,29 @@ class IssueAlertMigrator:
     def _create_detector_lookup(self) -> Detector:
 
         if self.is_dry_run:
+            created = True
             error_detector = Detector.objects.filter(
                 type=ErrorGroupType.slug, project=self.project
             ).first()
-            if not error_detector:
+            if error_detector:
+                created = not AlertRuleDetector.objects.filter(
+                    detector=error_detector, rule_id=self.rule.id
+                ).exists()
+            else:
                 error_detector = Detector(type=ErrorGroupType.slug, project=self.project)
 
         else:
             error_detector, _ = Detector.objects.get_or_create(
                 type=ErrorGroupType.slug,
                 project=self.project,
-                defaults={"config": {}, "name": ERROR_DETECTOR_NAME},
+                defaults={"config": {}, "name": "Error Detector"},
             )
-            AlertRuleDetector.objects.get_or_create(detector=error_detector, rule_id=self.rule.id)
+            _, created = AlertRuleDetector.objects.get_or_create(
+                detector=error_detector, rule_id=self.rule.id
+            )
+
+        if not created:
+            raise Exception("Issue alert already migrated")
 
         return error_detector
 
@@ -276,8 +285,6 @@ class IssueAlertMigrator:
             workflow = Workflow(**kwargs)
             workflow.full_clean(exclude=["when_condition_group"])
             workflow.validate_config(workflow.config_schema)
-            if AlertRuleWorkflow.objects.filter(rule_id=self.rule.id).exists():
-                raise Exception("Issue alert already migrated")
         else:
             workflow = Workflow.objects.create(**kwargs)
             workflow.update(date_added=self.rule.date_added)

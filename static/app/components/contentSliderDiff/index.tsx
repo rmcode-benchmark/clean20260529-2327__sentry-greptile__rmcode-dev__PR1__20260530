@@ -4,6 +4,7 @@ import styled from '@emotion/styled';
 import NegativeSpaceContainer from 'sentry/components/container/negativeSpaceContainer';
 import {IconGrabbable} from 'sentry/icons';
 import {space} from 'sentry/styles/space';
+import toPixels from 'sentry/utils/number/toPixels';
 import {useDimensions} from 'sentry/utils/useDimensions';
 import {useResizableDrawer} from 'sentry/utils/useResizableDrawer';
 
@@ -61,7 +62,7 @@ interface SideProps extends Pick<Props, 'onDragHandleMouseDown' | 'before' | 'af
 function Sides({onDragHandleMouseDown, viewDimensions, before, after}: SideProps) {
   const beforeElemRef = useRef<HTMLDivElement>(null);
   const dividerElem = useRef<HTMLDivElement>(null);
-  const width = `${viewDimensions.width}px`;
+  const width = toPixels(viewDimensions.width);
 
   const {onMouseDown} = useResizableDrawer({
     direction: 'left',
@@ -75,7 +76,7 @@ function Sides({onDragHandleMouseDown, viewDimensions, before, after}: SideProps
         beforeElemRef.current.style.width =
           viewDimensions.width === 0
             ? '100%'
-            : `${Math.max(BORDER_WIDTH, Math.min(maxWidth, newSize))}px`;
+            : (toPixels(Math.max(BORDER_WIDTH, Math.min(maxWidth, newSize))) ?? '0px');
       }
       if (dividerElem.current) {
         const adjustedLeft = `${clampedSize - 6}px`;
@@ -126,7 +127,7 @@ const Header = styled('div')`
   flex-direction: row;
   align-items: center;
   gap: ${space(1)};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
   line-height: 1.2;
   justify-content: space-between;
   margin-bottom: ${space(0.5)};

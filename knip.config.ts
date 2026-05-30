@@ -4,12 +4,9 @@ import type {KnipConfig} from 'knip';
 const productionEntryPoints = [
   // the main entry points - app, gsAdmin & gsApp
   'static/app/index.tsx',
-  // chartcuterie build script
-  'config/build-chartcuterie.ts',
   // dynamic imports _not_ recognized by knip
   'static/app/bootstrap/{index,initializeMain}.tsx',
   'static/gsApp/initializeBundleMetrics.tsx',
-  'static/gsApp/registerHooks.tsx',
   // defined in webpack.config pipelines
   'static/app/utils/statics-setup.tsx',
   'static/app/views/integrationPipeline/index.tsx',
@@ -27,13 +24,17 @@ const productionEntryPoints = [
 ];
 
 const testingEntryPoints = [
+  // benchmarks are opt-in for development
+  'static/app/**/*.benchmark.{js,mjs,ts,tsx}',
   // jest uses this
   'tests/js/test-balancer/index.js',
 ];
 
 const storyBookEntryPoints = [
   // our storybook implementation is here
-  'static/app/stories/storybook.tsx',
+  'static/app/stories/storyBook.tsx',
+  // we have some stories in mdx format
+  'static/app/**/*.mdx',
 ];
 
 const config: KnipConfig = {
@@ -45,8 +46,10 @@ const config: KnipConfig = {
   storybook: true,
   project: [
     'static/**/*.{js,mjs,ts,tsx}!',
-    'config/**/*.ts',
+    'static/app/**/*.mdx',
     'tests/js/**/*.{js,mjs,ts,tsx}',
+    // exclude this directory because it's how you set up mocks in jest (https://jestjs.io/docs/manual-mocks)
+    '!static/{app,gsApp}/**/__mocks__/**',
     // fixtures can be ignored in production - it's fine that they are only used in tests
     '!static/**/{fixtures,__fixtures__}/**!',
     // helper files for tests - it's fine that they are only used in tests
@@ -56,31 +59,23 @@ const config: KnipConfig = {
     '!static/app/stories/*.{js,mjs,ts,tsx}!',
   ],
   compilers: {
-    mdx: async text => String(await compile(text)),
+    mdx: async text => {
+      const result = await compile(text, {
+        providerImportSource: '@mdx-js/react',
+        jsx: true,
+        outputFormat: 'program',
+      });
+
+      return String(result);
+    },
   },
-  ignoreDependencies: [
-    'core-js',
-    'eslint-import-resolver-typescript', // used in eslint config
-    'jest-environment-jsdom', // used as testEnvironment in jest config
-    'swc-plugin-component-annotate', // used in rspack config, needs better knip plugin
-    '@swc/plugin-emotion', // used in rspack config, needs better knip plugin
-    'buffer', // rspack.ProvidePlugin, needs better knip plugin
-    'process', // rspack.ProvidePlugin, needs better knip plugin
-    '@types/webpack-env', // needed to make require.context work
-    '@types/stripe-v3', // needed for global `stripe` namespace typings
-    '@types/gtag.js', // needed for global `gtag` namespace typings
-    '@babel/preset-env', // Still used in jest
-    '@babel/preset-react', // Still used in jest
-    '@babel/preset-typescript', // Still used in jest
-    '@emotion/babel-plugin', // Still used in jest
-    'terser', // Still used in a loader
-  ],
   rules: {
     binaries: 'off',
+    dependencies: 'off',
     enumMembers: 'off',
     unlisted: 'off',
+    unresolved: 'off',
   },
-  include: ['nsExports', 'nsTypes'],
 };
 
 export default config;

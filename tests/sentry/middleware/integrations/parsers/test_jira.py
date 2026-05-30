@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import pytest
 import responses
 from django.http import HttpRequest, HttpResponse
 from django.test import RequestFactory, override_settings
@@ -202,8 +201,11 @@ class JiraRequestParserTest(TestCase):
 
         with patch.object(parser, "get_integration_from_request") as method:
             method.return_value = integration
-            # assert ValueError is raised if the integration is not valid
-            with pytest.raises(ValueError):
-                parser.get_response()
+            response = parser.get_response()
 
+        # Response should go to first region
+        assert isinstance(response, HttpResponse)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.content == b"region response"
+        assert len(responses.calls) == 1
         assert_no_webhook_payloads()

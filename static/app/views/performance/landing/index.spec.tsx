@@ -50,6 +50,7 @@ function WrappedComponent({data, withStaticFilters = false}: any) {
             selection={eventView.getPageFilters()}
             onboardingProject={undefined}
             handleSearch={searchHandlerMock}
+            handleTrendsClick={() => {}}
             setError={() => {}}
             withStaticFilters={withStaticFilters}
           />

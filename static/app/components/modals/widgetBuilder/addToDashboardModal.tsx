@@ -1,7 +1,7 @@
 import {Fragment, useEffect, useMemo, useState} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
-import type {Location} from 'history';
+import type {Location, Query} from 'history';
 
 import {
   fetchDashboard,
@@ -12,11 +12,10 @@ import {addSuccessMessage} from 'sentry/actionCreators/indicator';
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
 import {Button} from 'sentry/components/core/button';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
-import {Input} from 'sentry/components/core/input';
 import {Select} from 'sentry/components/core/select';
 import {t, tct} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
-import type {PageFilters, SelectValue} from 'sentry/types/core';
+import type {DateString, PageFilters, SelectValue} from 'sentry/types/core';
 import type {InjectedRouter} from 'sentry/types/legacyReactRouter';
 import type {Organization} from 'sentry/types/organization';
 import {MetricsCardinalityProvider} from 'sentry/utils/performance/contexts/metricsCardinality';
@@ -28,29 +27,38 @@ import {IndexedEventsSelectionAlert} from 'sentry/views/dashboards/indexedEvents
 import type {
   DashboardDetails,
   DashboardListItem,
-  DashboardWidgetSource,
   Widget,
 } from 'sentry/views/dashboards/types';
-import {
-  DEFAULT_WIDGET_NAME,
-  DisplayType,
-  MAX_WIDGETS,
-  WidgetType,
-} from 'sentry/views/dashboards/types';
+import {DisplayType, MAX_WIDGETS, WidgetType} from 'sentry/views/dashboards/types';
 import {
   eventViewFromWidget,
   getDashboardFiltersFromURL,
   getSavedFiltersAsPageFilters,
   getSavedPageFilters,
 } from 'sentry/views/dashboards/utils';
-import {SectionHeader} from 'sentry/views/dashboards/widgetBuilder/components/common/sectionHeader';
-import {NEW_DASHBOARD_ID} from 'sentry/views/dashboards/widgetBuilder/utils';
-import {convertWidgetToBuilderStateParams} from 'sentry/views/dashboards/widgetBuilder/utils/convertWidgetToBuilderStateParams';
+import {
+  type DataSet,
+  NEW_DASHBOARD_ID,
+} from 'sentry/views/dashboards/widgetBuilder/utils';
 import WidgetCard from 'sentry/views/dashboards/widgetCard';
 import {DashboardsMEPProvider} from 'sentry/views/dashboards/widgetCard/dashboardsMEPContext';
 import WidgetLegendNameEncoderDecoder from 'sentry/views/dashboards/widgetLegendNameEncoderDecoder';
 import WidgetLegendSelectionState from 'sentry/views/dashboards/widgetLegendSelectionState';
 import {MetricsDataSwitcher} from 'sentry/views/performance/landing/metricsDataSwitcher';
+
+type WidgetAsQueryParams = Query<{
+  defaultTableColumns: string[];
+  defaultTitle: string;
+  defaultWidgetQuery: string;
+  displayType: DisplayType;
+  environment: string[];
+  project: number[];
+  source: string;
+  dataset?: DataSet;
+  end?: DateString;
+  start?: DateString;
+  statsPeriod?: string | null;
+}>;
 
 type AddToDashboardModalActions =
   | 'add-and-open-dashboard'
@@ -63,9 +71,9 @@ export type AddToDashboardModalProps = {
   router: InjectedRouter;
   selection: PageFilters;
   widget: Widget;
+  widgetAsQueryParams: WidgetAsQueryParams;
   actions?: AddToDashboardModalActions[];
   allowCreateNewDashboard?: boolean;
-  source?: DashboardWidgetSource;
 };
 
 type Props = ModalRenderProps & AddToDashboardModalProps;
@@ -77,15 +85,6 @@ const DEFAULT_ACTIONS: AddToDashboardModalActions[] = [
   'open-in-widget-builder',
 ];
 
-const WIDGET_PREVIEW_HEIGHT = '200px';
-
-function getFallbackWidgetTitle(widget: Widget): string {
-  // Metric widgets have their default title derived from the query
-  return widget.title === '' && widget.widgetType === WidgetType.METRICS
-    ? DEFAULT_WIDGET_NAME
-    : widget.title;
-}
-
 function AddToDashboardModal({
   Header,
   Body,
@@ -96,9 +95,9 @@ function AddToDashboardModal({
   router,
   selection,
   widget,
+  widgetAsQueryParams,
   actions = DEFAULT_ACTIONS,
   allowCreateNewDashboard = true,
-  source,
 }: Props) {
   const api = useApi();
   const navigate = useNavigate();
@@ -107,18 +106,6 @@ function AddToDashboardModal({
     null
   );
   const [selectedDashboardId, setSelectedDashboardId] = useState<string | null>(null);
-  const [newWidgetTitle, setNewWidgetTitle] = useState<string>(
-    getFallbackWidgetTitle(widget)
-  );
-
-  // Set custom title, or fallback to default title for widget
-  const updateWidgetTitle = (newTitle: string) => {
-    if (newTitle === '') {
-      setNewWidgetTitle(getFallbackWidgetTitle(widget));
-      return;
-    }
-    setNewWidgetTitle(newTitle);
-  };
 
   useEffect(() => {
     // Track mounted state so we dont call setState on unmounted components
@@ -171,15 +158,11 @@ function AddToDashboardModal({
     const pathname =
       page === 'builder' ? `${dashboardsPath}${builderSuffix}` : dashboardsPath;
 
-    const widgetAsQueryParams = convertWidgetToBuilderStateParams(widget);
-
     router.push(
       normalizeUrl({
         pathname,
         query: {
           ...widgetAsQueryParams,
-          title: newWidgetTitle,
-          source,
           ...(selectedDashboard ? getSavedPageFilters(selectedDashboard) : {}),
         },
       })
@@ -196,15 +179,18 @@ function AddToDashboardModal({
     if (!(DisplayType.AREA && widget.queries[0]!.columns.length)) {
       orderby = ''; // Clear orderby if its not a top n visualization.
     }
-    const queries = widget.queries.map(query => ({
-      ...query,
-      orderby,
-    }));
+    const query = widget.queries[0]!;
+
+    const title =
+      // Metric widgets have their default title derived from the query
+      widget.title === '' && widget.widgetType !== WidgetType.METRICS
+        ? t('Custom Widget')
+        : widget.title;
 
     const newWidget = {
       ...widget,
-      title: newWidgetTitle,
-      queries,
+      title,
+      queries: [{...query, orderby}],
     };
 
     const newDashboard = {
@@ -289,15 +275,6 @@ function AddToDashboardModal({
           />
         </Wrapper>
         <Wrapper>
-          <SectionHeader title={t('Widget Name')} optional />
-          <Input
-            type="text"
-            aria-label={t('Optional Widget Name')}
-            placeholder={t('Name')}
-            onChange={e => updateWidgetTitle(e.target.value)}
-          />
-        </Wrapper>
-        <Wrapper>
           {t(
             'Any conflicting filters from this query will be overridden by Dashboard filters. This is a preview of how the widget will appear in your dashboard.'
           )}
@@ -305,7 +282,7 @@ function AddToDashboardModal({
         <MetricsCardinalityProvider organization={organization} location={location}>
           <MetricsDataSwitcher
             organization={organization}
-            eventView={eventViewFromWidget(newWidgetTitle, widget.queries[0]!, selection)}
+            eventView={eventViewFromWidget(widget.title, widget.queries[0]!, selection)}
             location={location}
             hideLoadingIndicator
           >
@@ -315,32 +292,31 @@ function AddToDashboardModal({
                   location={location}
                   forceTransactions={metricsDataSide.forceTransactionsOnly}
                 >
-                  <WidgetCardWrapper>
-                    <WidgetCard
-                      organization={organization}
-                      isEditingDashboard={false}
-                      showContextMenu={false}
-                      widgetLimitReached={false}
-                      selection={
-                        selectedDashboard
-                          ? getSavedFiltersAsPageFilters(selectedDashboard)
-                          : selection
-                      }
-                      dashboardFilters={
-                        getDashboardFiltersFromURL(location) ?? selectedDashboard?.filters
-                      }
-                      widget={{...widget, title: newWidgetTitle}}
-                      shouldResize
-                      widgetLegendState={widgetLegendState}
-                      onLegendSelectChanged={() => {}}
-                      legendOptions={
-                        widgetLegendState.widgetRequiresLegendUnselection(widget)
-                          ? {selected: unselectedReleasesForCharts}
-                          : undefined
-                      }
-                      disableFullscreen
-                    />
-                  </WidgetCardWrapper>
+                  <WidgetCard
+                    organization={organization}
+                    isEditingDashboard={false}
+                    showContextMenu={false}
+                    widgetLimitReached={false}
+                    selection={
+                      selectedDashboard
+                        ? getSavedFiltersAsPageFilters(selectedDashboard)
+                        : selection
+                    }
+                    dashboardFilters={
+                      getDashboardFiltersFromURL(location) ?? selectedDashboard?.filters
+                    }
+                    widget={widget}
+                    shouldResize={false}
+                    widgetLegendState={widgetLegendState}
+                    onLegendSelectChanged={() => {}}
+                    legendOptions={
+                      widgetLegendState.widgetRequiresLegendUnselection(widget)
+                        ? {selected: unselectedReleasesForCharts}
+                        : undefined
+                    }
+                    disableFullscreen
+                  />
+
                   <IndexedEventsSelectionAlert widget={widget} />
                 </MEPSettingProvider>
               </DashboardsMEPProvider>
@@ -350,7 +326,7 @@ function AddToDashboardModal({
       </Body>
 
       <Footer>
-        <StyledButtonBar gap="lg">
+        <StyledButtonBar gap={1.5}>
           {actions.includes('add-and-stay-on-current-page') && (
             <Button
               onClick={handleAddAndStayOnCurrentPage}
@@ -392,7 +368,7 @@ const Wrapper = styled('div')`
 `;
 
 const StyledButtonBar = styled(ButtonBar)`
-  @media (max-width: ${props => props.theme.breakpoints.sm}) {
+  @media (max-width: ${props => props.theme.breakpoints.small}) {
     grid-template-rows: repeat(2, 1fr);
     gap: ${space(1.5)};
     width: 100%;
@@ -401,10 +377,6 @@ const StyledButtonBar = styled(ButtonBar)`
       width: 100%;
     }
   }
-`;
-
-const WidgetCardWrapper = styled('div')`
-  height: ${WIDGET_PREVIEW_HEIGHT};
 `;
 
 export const modalCss = css`

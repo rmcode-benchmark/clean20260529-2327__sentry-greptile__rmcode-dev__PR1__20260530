@@ -15,7 +15,7 @@ from django.utils.translation import gettext as _
 from sentry import features, http
 from sentry.auth.exceptions import IdentityNotValid
 from sentry.constants import ObjectStatus
-from sentry.identity.pipeline import IdentityPipeline
+from sentry.identity.pipeline import IdentityProviderPipeline
 from sentry.identity.services.identity.model import RpcIdentity
 from sentry.identity.vsts.provider import get_user_info
 from sentry.integrations.base import (
@@ -29,7 +29,6 @@ from sentry.integrations.base import (
 from sentry.integrations.models.integration import Integration as IntegrationModel
 from sentry.integrations.models.integration_external_project import IntegrationExternalProject
 from sentry.integrations.models.organization_integration import OrganizationIntegration
-from sentry.integrations.pipeline import IntegrationPipeline
 from sentry.integrations.services.integration import integration_service
 from sentry.integrations.services.repository import RpcRepository, repository_service
 from sentry.integrations.source_code_management.repository import RepositoryIntegration
@@ -44,8 +43,7 @@ from sentry.integrations.vsts.issues import VstsIssuesSpec
 from sentry.models.apitoken import generate_token
 from sentry.models.repository import Repository
 from sentry.organizations.services.organization.model import RpcOrganization
-from sentry.pipeline.views.base import PipelineView
-from sentry.pipeline.views.nested import NestedPipelineView
+from sentry.pipeline import NestedPipelineView, Pipeline, PipelineView
 from sentry.shared_integrations.exceptions import (
     ApiError,
     IntegrationError,
@@ -144,7 +142,7 @@ class VstsIntegration(RepositoryIntegration, VstsIssuesSpec):
 
     @property
     def integration_name(self) -> str:
-        return IntegrationProviderSlug.AZURE_DEVOPS.value
+        return "vsts"
 
     def get_client(self) -> VstsApiClient:
         base_url = self.instance
@@ -467,21 +465,20 @@ class VstsIntegrationProvider(IntegrationProvider):
         )
         return ("vso.code", "vso.graph", "vso.serviceendpoint_manage", "vso.work_write")
 
-    def get_pipeline_views(self) -> Sequence[PipelineView[IntegrationPipeline]]:
+    def get_pipeline_views(self) -> list[PipelineView]:
         identity_pipeline_config = {
             "redirect_url": absolute_uri(self.oauth_redirect_url),
             "oauth_scopes": self.get_scopes(),
         }
 
-        return [
-            NestedPipelineView(
-                bind_key="identity",
-                provider_key=self.key,
-                pipeline_cls=IdentityPipeline,
-                config=identity_pipeline_config,
-            ),
-            AccountConfigView(),
-        ]
+        identity_pipeline_view = NestedPipelineView(
+            bind_key="identity",
+            provider_key=self.key,
+            pipeline_cls=IdentityProviderPipeline,
+            config=identity_pipeline_config,
+        )
+
+        return [identity_pipeline_view, AccountConfigView()]
 
     def build_integration(self, state: Mapping[str, Any]) -> IntegrationData:
         data = state["identity"]["data"]
@@ -502,7 +499,7 @@ class VstsIntegrationProvider(IntegrationProvider):
             "external_id": account["accountId"],
             "metadata": {"domain_name": base_url, "scopes": scopes},
             "user_identity": {
-                "type": IntegrationProviderSlug.AZURE_DEVOPS.value,
+                "type": "vsts",
                 "external_id": user["id"],
                 "scopes": scopes,
                 "data": oauth_data,
@@ -512,9 +509,7 @@ class VstsIntegrationProvider(IntegrationProvider):
         # TODO(iamrajjoshi): Clean this up this after Azure DevOps migration is complete
         try:
             integration_model = IntegrationModel.objects.get(
-                provider=IntegrationProviderSlug.AZURE_DEVOPS.value,
-                external_id=account["accountId"],
-                status=ObjectStatus.ACTIVE,
+                provider="vsts", external_id=account["accountId"], status=ObjectStatus.ACTIVE
             )
 
             # Get Integration Metadata
@@ -675,8 +670,8 @@ class VstsIntegrationProvider(IntegrationProvider):
         )
 
 
-class AccountConfigView:
-    def dispatch(self, request: HttpRequest, pipeline: IntegrationPipeline) -> HttpResponseBase:
+class AccountConfigView(PipelineView):
+    def dispatch(self, request: HttpRequest, pipeline: Pipeline) -> HttpResponseBase:
         with IntegrationPipelineViewEvent(
             IntegrationPipelineViewType.ACCOUNT_CONFIG,
             IntegrationDomain.SOURCE_CODE_MANAGEMENT,

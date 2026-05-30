@@ -1,7 +1,6 @@
 import {Outlet} from 'react-router-dom';
 import styled from '@emotion/styled';
 
-import CodecovQueryParamsProvider from 'sentry/components/codecov/container/codecovParamsProvider';
 import {FeatureBadge} from 'sentry/components/core/badge/featureBadge';
 import * as Layout from 'sentry/components/layouts/thirds';
 import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
@@ -18,17 +17,15 @@ export default function TestAnalyticsPageWrapper() {
           <HeaderContentBar>
             <Layout.Title>
               {TESTS_PAGE_TITLE}
-              <FeatureBadge type="new" />
+              <FeatureBadge type="new" variant="badge" />
             </Layout.Title>
           </HeaderContentBar>
         </Layout.HeaderContent>
       </Layout.Header>
       <Layout.Body>
-        <CodecovQueryParamsProvider>
-          <Layout.Main fullWidth>
-            <Outlet />
-          </Layout.Main>
-        </CodecovQueryParamsProvider>
+        <Layout.Main fullWidth>
+          <Outlet />
+        </Layout.Main>
       </Layout.Body>
     </SentryDocumentTitle>
   );

@@ -42,9 +42,7 @@ interface LogIssueDrawerProps {
 export function OurlogsDrawer({event, project, group}: LogIssueDrawerProps) {
   const setLogsSearch = useSetLogsSearch();
   const logsSearch = useLogsSearch();
-  const hasInfiniteFeature = useOrganization().features.includes(
-    'ourlogs-infinite-scroll'
-  );
+  const hasInfiniteFeature = useOrganization().features.includes('ourlogs-live-refresh');
   const {attributes: stringAttributes} = useTraceItemAttributes('string');
   const {attributes: numberAttributes} = useTraceItemAttributes('number');
 

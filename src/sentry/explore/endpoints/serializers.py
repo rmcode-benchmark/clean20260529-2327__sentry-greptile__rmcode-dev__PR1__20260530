@@ -1,6 +1,5 @@
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
-from rest_framework.exceptions import ParseError, ValidationError
 from rest_framework.serializers import ListField
 
 from sentry.constants import ALL_ACCESS_PROJECTS
@@ -11,54 +10,6 @@ from sentry.utils.dates import parse_stats_period, validate_interval
 class VisualizeSerializer(serializers.Serializer):
     chartType = serializers.IntegerField(required=False)
     yAxes = serializers.ListField(child=serializers.CharField())
-
-
-class GroupBySerializer(serializers.Serializer):
-    groupBy = serializers.CharField()
-
-
-class AggregateFieldSerializer(serializers.Serializer):
-    # visualizes
-    chartType = serializers.IntegerField(required=False)
-    yAxes = serializers.ListField(child=serializers.CharField(), required=False)
-
-    # group bys
-    groupBy = serializers.CharField(required=False)
-
-    def validate(self, data):
-        visualize_serializer = VisualizeSerializer(data=data)
-
-        group_by_serializer = GroupBySerializer(data=data)
-
-        # if one of them is valid, then it's good
-        if visualize_serializer.is_valid() != group_by_serializer.is_valid():
-            return data
-
-        if visualize_serializer.is_valid() and group_by_serializer.is_valid():
-            raise ParseError("Ambiguous aggregate field. Must specify groupBy or yAxes, not both.")
-
-        # when neither are valid, we need to do some better error handling
-        visualize_errors = visualize_serializer.errors
-        group_by_errors = group_by_serializer.errors
-
-        visualize_has_not_required_errors = any(
-            error.code != "required" for error in visualize_errors.get("yAxes", [])
-        )
-        group_by_has_not_required_errors = any(
-            error.code != "required" for error in group_by_errors.get("groupBy", [])
-        )
-
-        if visualize_has_not_required_errors:
-            visualize_serializer.is_valid(raise_exception=True)
-        elif group_by_has_not_required_errors:
-            group_by_serializer.is_valid(raise_exception=True)
-
-        raise ValidationError(
-            {
-                **visualize_errors,
-                **group_by_errors,
-            }
-        )
 
 
 @extend_schema_serializer(exclude_fields=["groupby"])
@@ -72,7 +23,7 @@ class QuerySerializer(serializers.Serializer):
     orderby = serializers.CharField(
         required=False,
         allow_null=True,
-        help_text="How to order the query results. Must be something in the `field` list.",
+        help_text="How to order the query results. Must be something in the `field` list, excluding equations.",
     )
     groupby = ListField(child=serializers.CharField(), required=False, allow_null=True)
     query = serializers.CharField(
@@ -86,17 +37,6 @@ class QuerySerializer(serializers.Serializer):
         required=False,
         allow_null=True,
         help_text="The visualizations to be plotted on the chart.",
-    )
-    aggregateField = ListField(
-        child=AggregateFieldSerializer(),
-        required=False,
-        allow_null=True,
-        help_text="The visualizations to be plotted on the chart.",
-    )
-    aggregateOrderby = serializers.CharField(
-        required=False,
-        allow_null=True,
-        help_text="How to order the query results. Must be something in the `aggregateField` list, excluding equations.",
     )
     mode = serializers.ChoiceField(
         choices=[
@@ -114,7 +54,7 @@ class ExploreSavedQuerySerializer(serializers.Serializer):
     projects = ListField(
         child=serializers.IntegerField(),
         required=False,
-        default=list,
+        default=[],
         help_text="The saved projects filter for this query.",
     )
     dataset = serializers.ChoiceField(
@@ -123,14 +63,10 @@ class ExploreSavedQuerySerializer(serializers.Serializer):
         help_text="The dataset you would like to query. `spans` is the only supported value for now.",
     )
     start = serializers.DateTimeField(
-        required=False,
-        allow_null=True,
-        help_text="The saved start time for this saved query.",
+        required=False, allow_null=True, help_text="The saved start time for this saved query."
     )
     end = serializers.DateTimeField(
-        required=False,
-        allow_null=True,
-        help_text="The saved end time for this saved query.",
+        required=False, allow_null=True, help_text="The saved end time for this saved query."
     )
     range = serializers.CharField(
         required=False,
@@ -171,8 +107,6 @@ class ExploreSavedQuerySerializer(serializers.Serializer):
             "groupby",
             "visualize",
             "mode",
-            "aggregateField",
-            "aggregateOrderby",
         ]
 
         for key in query_keys:

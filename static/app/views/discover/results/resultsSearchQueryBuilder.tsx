@@ -6,7 +6,6 @@ import {
   fetchSpanFieldValues,
   fetchTagValues,
 } from 'sentry/actionCreators/tags';
-import {makeFeatureFlagSearchKey} from 'sentry/components/events/featureFlags/utils';
 import {
   STATIC_FIELD_TAGS,
   STATIC_FIELD_TAGS_SET,
@@ -124,7 +123,6 @@ const getHasTag = (tags: TagCollection) => ({
 type Props = {
   customMeasurements?: CustomMeasurementCollection;
   dataset?: DiscoverDatasets;
-  disabled?: boolean;
   fields?: readonly Field[];
   includeSessionTagsValues?: boolean;
   includeTransactions?: boolean;
@@ -153,7 +151,6 @@ function ResultsSearchQueryBuilder(props: Props) {
     includeTransactions = true,
     placeholder,
     portalTarget,
-    disabled,
   } = props;
 
   const api = useApi();
@@ -194,7 +191,8 @@ function ResultsSearchQueryBuilder(props: Props) {
   const featureFlagTags: TagCollection = useMemo(
     () =>
       featureFlagsQuery.data?.reduce<TagCollection>((acc, tag) => {
-        const key = makeFeatureFlagSearchKey(tag.key);
+        // Wrap with flags[""]. flags[] is required for the search endpoint and "" is used to escape special characters.
+        const key = `flags["${tag.key}"]`;
         acc[key] = {...tag, kind: FieldKind.FEATURE_FLAG, key};
         return acc;
       }, {}) || {},
@@ -352,8 +350,8 @@ function ResultsSearchQueryBuilder(props: Props) {
 
   return (
     <SearchQueryBuilder
+      searchOnChange={organization.features.includes('ui-search-on-change')}
       placeholder={placeholderText}
-      disabled={disabled}
       filterKeys={getTagList}
       initialQuery={props.query ?? ''}
       onSearch={props.onSearch}
@@ -363,6 +361,7 @@ function ResultsSearchQueryBuilder(props: Props) {
       getTagValues={getEventFieldValues}
       recentSearches={props.recentSearches ?? SavedSearchType.EVENT}
       portalTarget={portalTarget}
+      showUnsubmittedIndicator
     />
   );
 }

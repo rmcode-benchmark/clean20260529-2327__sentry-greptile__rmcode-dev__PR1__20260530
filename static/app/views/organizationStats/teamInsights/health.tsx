@@ -13,7 +13,6 @@ import localStorage from 'sentry/utils/localStorage';
 import useRouteAnalyticsEventNames from 'sentry/utils/routeAnalytics/useRouteAnalyticsEventNames';
 import useOrganization from 'sentry/utils/useOrganization';
 import {useUserTeams} from 'sentry/utils/useUserTeams';
-import {usePrefersStackedNav} from 'sentry/views/nav/usePrefersStackedNav';
 import Header from 'sentry/views/organizationStats/header';
 
 import TeamStatsControls from './controls';
@@ -29,7 +28,6 @@ type Props = RouteComponentProps;
 function TeamStatsHealth({location, router}: Props) {
   const organization = useOrganization();
   const {teams, isLoading, isError} = useUserTeams();
-  const prefersStackedNav = usePrefersStackedNav();
 
   useRouteAnalyticsEventNames('team_insights.viewed', 'Team Insights: Viewed');
 
@@ -59,14 +57,12 @@ function TeamStatsHealth({location, router}: Props) {
     return <LoadingError />;
   }
 
-  const BodyWrapper = prefersStackedNav ? NewLayoutBody : Body;
-
   return (
     <Fragment>
       <SentryDocumentTitle title={t('Project Health')} orgSlug={organization.slug} />
       <Header organization={organization} activeTab="health" />
 
-      <BodyWrapper>
+      <Body>
         <TeamStatsControls
           location={location}
           router={router}
@@ -139,7 +135,7 @@ function TeamStatsHealth({location, router}: Props) {
             </DescriptionCard>
           </Layout.Main>
         )}
-      </BodyWrapper>
+      </Body>
     </Fragment>
   );
 }
@@ -147,9 +143,7 @@ function TeamStatsHealth({location, router}: Props) {
 export default TeamStatsHealth;
 
 const Body = styled(Layout.Body)`
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     display: block;
   }
 `;
-
-const NewLayoutBody = styled('div')``;

@@ -1097,6 +1097,32 @@ class ProjectUpdateTest(APITestCase):
         assert self.project.get_option("digests:mail:minimum_delay") == min_delay
         assert self.project.get_option("digests:mail:maximum_delay") == max_delay
 
+    def test_cap_secondary_grouping_expiry(self):
+        now = time()
+
+        response = self.get_response(self.org_slug, self.proj_slug, secondaryGroupingExpiry=0)
+        assert response.status_code == 400
+
+        expiry = int(now + 3600 * 24 * 1)
+        response = self.get_success_response(
+            self.org_slug, self.proj_slug, secondaryGroupingExpiry=expiry
+        )
+        assert response.data["secondaryGroupingExpiry"] == expiry
+
+        expiry = int(now + 3600 * 24 * 89)
+        response = self.get_success_response(
+            self.org_slug, self.proj_slug, secondaryGroupingExpiry=expiry
+        )
+        assert response.data["secondaryGroupingExpiry"] == expiry
+
+        # Larger timestamps are capped to 91 days:
+        expiry = int(now + 3600 * 24 * 365)
+        response = self.get_success_response(
+            self.org_slug, self.proj_slug, secondaryGroupingExpiry=expiry
+        )
+        expiry = response.data["secondaryGroupingExpiry"]
+        assert (now + 3600 * 24 * 90) < expiry < (now + 3600 * 24 * 92)
+
     @mock.patch("sentry.api.base.create_audit_entry")
     def test_redacted_symbol_source_secrets(self, create_audit_entry):
         with Feature(
@@ -1280,22 +1306,6 @@ class ProjectUpdateTest(APITestCase):
         self.organization.update_option("sentry:sampling_mode", DynamicSamplingMode.PROJECT.value)
         self.get_success_response(self.org_slug, self.proj_slug, targetSampleRate=0.1)
         assert self.project.get_option("sentry:target_sample_rate") == 0.1
-
-    def test_no_setting_grouping_configs(self):
-        response = self.get_error_response(
-            self.org_slug, self.proj_slug, groupingConfig="some config", status_code=400
-        )
-        assert "Grouping config cannot be manually set" in response.text
-
-        response = self.get_error_response(
-            self.org_slug, self.proj_slug, secondaryGroupingConfig="another config", status_code=400
-        )
-        assert "Secondary grouping config cannot be manually set" in response.text
-
-        response = self.get_error_response(
-            self.org_slug, self.proj_slug, secondaryGroupingExpiry=12311121, status_code=400
-        )
-        assert "Secondary grouping expiry cannot be manually set" in response.text
 
 
 class CopyProjectSettingsTest(APITestCase):
@@ -1563,7 +1573,7 @@ class ProjectDeleteTest(APITestCase):
         mock_call_seer_delete_project_grouping_records.assert_called_with(args=[self.project.id])
 
 
-class TestProjectDetailsBase(APITestCase, ABC):
+class TestProjectDetailsDynamicSamplingBase(APITestCase, ABC):
     endpoint = "sentry-api-0-project-details"
     method = "put"
 
@@ -1571,6 +1581,7 @@ class TestProjectDetailsBase(APITestCase, ABC):
         self.org_slug = self.project.organization.slug
         self.proj_slug = self.project.slug
         self.login_as(user=self.user)
+        self.new_ds_flag = "organizations:dynamic-sampling"
         self._apply_old_date_to_project_and_org()
 
     def _apply_old_date_to_project_and_org(self):
@@ -1585,12 +1596,11 @@ class TestProjectDetailsBase(APITestCase, ABC):
         self.project.update(date_added=old_date)
 
 
-class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
+class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsDynamicSamplingBase):
     endpoint = "sentry-api-0-project-details"
 
     def setUp(self):
         super().setUp()
-        self.new_ds_flag = "organizations:dynamic-sampling"
         self.url = reverse(
             "sentry-api-0-project-details",
             kwargs={
@@ -1624,7 +1634,7 @@ class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
         so they should get their actual bias preferences.
         """
 
-        new_biases = [{"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False}]
+        new_biases = [{"id": "boostEnvironments", "active": False}]
         self.project.update_option("sentry:dynamic_sampling_biases", new_biases)
         with Feature(
             {
@@ -1635,20 +1645,22 @@ class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
                 self.organization.slug, self.project.slug, method="get"
             )
             assert response.data["dynamicSamplingBiases"] == [
-                {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False},
-                {"id": RuleType.BOOST_LATEST_RELEASES_RULE.value, "active": True},
-                {"id": RuleType.IGNORE_HEALTH_CHECKS_RULE.value, "active": True},
-                {"id": RuleType.BOOST_KEY_TRANSACTIONS_RULE.value, "active": True},
-                {"id": RuleType.BOOST_LOW_VOLUME_TRANSACTIONS_RULE.value, "active": True},
+                {"id": "boostEnvironments", "active": False},
+                {
+                    "id": "boostLatestRelease",
+                    "active": True,
+                },
+                {"id": "ignoreHealthChecks", "active": True},
+                {"id": "boostKeyTransactions", "active": True},
+                {"id": "boostLowVolumeTransactions", "active": True},
                 {"id": RuleType.BOOST_REPLAY_ID_RULE.value, "active": True},
                 {"id": RuleType.RECALIBRATION_RULE.value, "active": True},
-                {"id": RuleType.MINIMUM_SAMPLE_RATE_RULE.value, "active": False},
             ]
 
     def test_get_dynamic_sampling_biases_with_previously_assigned_biases(self):
         self.project.update_option(
             "sentry:dynamic_sampling_biases",
-            [{"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False}],
+            [{"id": "boostEnvironments", "active": False}],
         )
 
         with Feature(
@@ -1660,14 +1672,16 @@ class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
                 self.organization.slug, self.project.slug, method="get"
             )
             assert response.data["dynamicSamplingBiases"] == [
-                {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False},
-                {"id": RuleType.BOOST_LATEST_RELEASES_RULE.value, "active": True},
-                {"id": RuleType.IGNORE_HEALTH_CHECKS_RULE.value, "active": True},
-                {"id": RuleType.BOOST_KEY_TRANSACTIONS_RULE.value, "active": True},
-                {"id": RuleType.BOOST_LOW_VOLUME_TRANSACTIONS_RULE.value, "active": True},
+                {"id": "boostEnvironments", "active": False},
+                {
+                    "id": "boostLatestRelease",
+                    "active": True,
+                },
+                {"id": "ignoreHealthChecks", "active": True},
+                {"id": "boostKeyTransactions", "active": True},
+                {"id": "boostLowVolumeTransactions", "active": True},
                 {"id": RuleType.BOOST_REPLAY_ID_RULE.value, "active": True},
                 {"id": RuleType.RECALIBRATION_RULE.value, "active": True},
-                {"id": RuleType.MINIMUM_SAMPLE_RATE_RULE.value, "active": False},
             ]
 
     def test_dynamic_sampling_bias_activation(self):
@@ -1678,7 +1692,7 @@ class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
         self.project.update_option(
             "sentry:dynamic_sampling_biases",
             [
-                {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False},
+                {"id": "boostEnvironments", "active": False},
                 {"id": RuleType.BOOST_REPLAY_ID_RULE.value, "active": False},
             ],
         )
@@ -1703,7 +1717,7 @@ class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
                 HTTP_AUTHORIZATION=authorization,
                 data={
                     "dynamicSamplingBiases": [
-                        {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": True},
+                        {"id": "boostEnvironments", "active": True},
                     ]
                 },
             )
@@ -1722,7 +1736,7 @@ class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
         self.project.update_option(
             "sentry:dynamic_sampling_biases",
             [
-                {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": True},
+                {"id": "boostEnvironments", "active": True},
                 {"id": RuleType.BOOST_REPLAY_ID_RULE.value, "active": False},
             ],
         )
@@ -1747,7 +1761,7 @@ class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
                 HTTP_AUTHORIZATION=authorization,
                 data={
                     "dynamicSamplingBiases": [
-                        {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False},
+                        {"id": "boostEnvironments", "active": False},
                         {"id": RuleType.BOOST_REPLAY_ID_RULE.value, "active": False},
                     ]
                 },
@@ -1781,14 +1795,16 @@ class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
         Test when user is on a new plan and is trying to update dynamic sampling features of a new plan
         """
         new_biases = [
-            {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False},
-            {"id": RuleType.BOOST_LATEST_RELEASES_RULE.value, "active": False},
-            {"id": RuleType.IGNORE_HEALTH_CHECKS_RULE.value, "active": False},
-            {"id": RuleType.BOOST_KEY_TRANSACTIONS_RULE.value, "active": False},
-            {"id": RuleType.BOOST_LOW_VOLUME_TRANSACTIONS_RULE.value, "active": False},
+            {"id": "boostEnvironments", "active": False},
+            {
+                "id": "boostLatestRelease",
+                "active": False,
+            },
+            {"id": "ignoreHealthChecks", "active": False},
+            {"id": "boostKeyTransactions", "active": False},
+            {"id": "boostLowVolumeTransactions", "active": False},
             {"id": RuleType.BOOST_REPLAY_ID_RULE.value, "active": False},
             {"id": RuleType.RECALIBRATION_RULE.value, "active": False},
-            {"id": RuleType.MINIMUM_SAMPLE_RATE_RULE.value, "active": False},
         ]
         with Feature(
             {
@@ -1868,142 +1884,6 @@ class TestProjectDetailsDynamicSamplingBiases(TestProjectDetailsBase):
                 "Error: Only 'id' and 'active' fields are allowed for bias."
             ]
 
-    def test_dynamic_sampling_bias_enable_audit_log(self):
-        """Test that enabling a dynamic sampling bias creates the correct audit log entry."""
-        with self.feature("organizations:dynamic-sampling"):
-            # Start with default biases
-            with outbox_runner():
-                self.get_success_response(
-                    self.org_slug, self.proj_slug, dynamicSamplingBiases=DEFAULT_BIASES
-                )
-
-                # Enable a specific bias
-                updated_biases = [
-                    {"id": RuleType.MINIMUM_SAMPLE_RATE_RULE.value, "active": True},
-                ]
-                self.get_success_response(
-                    self.org_slug, self.proj_slug, dynamicSamplingBiases=updated_biases
-                )
-
-            # Check audit log entry was created
-            with assume_test_silo_mode(SiloMode.CONTROL):
-                audit_entry = AuditLogEntry.objects.get(
-                    organization_id=self.organization.id,
-                    event=audit_log.get_event_id("SAMPLING_BIAS_ENABLED"),
-                    target_object=self.project.id,
-                )
-                assert audit_entry is not None
-                assert audit_entry.data["name"] == RuleType.MINIMUM_SAMPLE_RATE_RULE.value
-
-    def test_dynamic_sampling_bias_disable_audit_log(self):
-        """Test that disabling a dynamic sampling bias creates the correct audit log entry."""
-        with self.feature("organizations:dynamic-sampling"):
-            # Start with a bias enabled
-            with outbox_runner():
-                initial_biases = [{"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": True}]
-                self.get_success_response(
-                    self.org_slug, self.proj_slug, dynamicSamplingBiases=initial_biases
-                )
-
-                # Disable the bias
-                disabled_biases = [{"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False}]
-                self.get_success_response(
-                    self.org_slug, self.proj_slug, dynamicSamplingBiases=disabled_biases
-                )
-
-            # Check audit log entry was created
-            with assume_test_silo_mode(SiloMode.CONTROL):
-                audit_entry = AuditLogEntry.objects.get(
-                    organization_id=self.organization.id,
-                    event=audit_log.get_event_id("SAMPLING_BIAS_DISABLED"),
-                    target_object=self.project.id,
-                )
-                assert audit_entry is not None
-                assert audit_entry.data["name"] == RuleType.BOOST_ENVIRONMENTS_RULE.value
-
-    def test_dynamic_sampling_bias_add_new_bias_audit_log(self):
-        """Test that adding a new bias to existing biases creates the correct audit log entry."""
-        with self.feature("organizations:dynamic-sampling"):
-            # Start with some initial biases
-            initial_biases = [
-                {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False},
-                {"id": RuleType.BOOST_LATEST_RELEASES_RULE.value, "active": False},
-            ]
-            with outbox_runner():
-                self.get_success_response(
-                    self.org_slug, self.proj_slug, dynamicSamplingBiases=initial_biases
-                )
-
-                # Add a new bias that's enabled
-                expanded_biases = [
-                    {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False},
-                    {"id": RuleType.BOOST_LATEST_RELEASES_RULE.value, "active": False},
-                    {"id": RuleType.MINIMUM_SAMPLE_RATE_RULE.value, "active": True},
-                ]
-                self.get_success_response(
-                    self.org_slug, self.proj_slug, dynamicSamplingBiases=expanded_biases
-                )
-
-            # Check audit log entry was created for the newly enabled bias
-            with assume_test_silo_mode(SiloMode.CONTROL):
-                audit_entry = AuditLogEntry.objects.get(
-                    organization_id=self.organization.id,
-                    event=audit_log.get_event_id("SAMPLING_BIAS_ENABLED"),
-                    target_object=self.project.id,
-                )
-                assert audit_entry is not None
-                assert audit_entry.data["name"] == RuleType.MINIMUM_SAMPLE_RATE_RULE.value
-
-    def test_dynamic_sampling_bias_add_new_inactive_bias_no_audit_log(self):
-        """Test that adding a new bias as inactive does not create an audit log entry."""
-        with self.feature("organizations:dynamic-sampling"):
-            # Start with some initial biases
-            initial_biases = [
-                {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False},
-                {"id": RuleType.BOOST_LATEST_RELEASES_RULE.value, "active": False},
-            ]
-            with outbox_runner():
-                self.get_success_response(
-                    self.org_slug, self.proj_slug, dynamicSamplingBiases=initial_biases
-                )
-
-                # Add a new bias that's inactive
-                expanded_biases = [
-                    {"id": RuleType.BOOST_ENVIRONMENTS_RULE.value, "active": False},
-                    {"id": RuleType.BOOST_LATEST_RELEASES_RULE.value, "active": False},
-                    {"id": RuleType.MINIMUM_SAMPLE_RATE_RULE.value, "active": False},
-                ]
-                self.get_success_response(
-                    self.org_slug, self.proj_slug, dynamicSamplingBiases=expanded_biases
-                )
-
-            # Check that no audit log entry was created for the inactive bias
-            with assume_test_silo_mode(SiloMode.CONTROL):
-                audit_entries = AuditLogEntry.objects.filter(
-                    organization_id=self.organization.id,
-                    event=audit_log.get_event_id("SAMPLING_BIAS_ENABLED"),
-                    target_object=self.project.id,
-                )
-                assert audit_entries.count() == 0
-
-
-class TestTempestProjectDetails(TestProjectDetailsBase):
-    endpoint = "sentry-api-0-project-details"
-
-    def setUp(self):
-        super().setUp()
-        self.url = reverse(
-            "sentry-api-0-project-details",
-            kwargs={
-                "organization_id_or_slug": self.project.organization.slug,
-                "project_id_or_slug": self.project.slug,
-            },
-        )
-        self.login_as(user=self.user)
-        with assume_test_silo_mode(SiloMode.CONTROL):
-            token = ApiToken.objects.create(user=self.user, scope_list=["project:write"])
-        self.authorization = f"Bearer {token.token}"
-
     @with_feature("organizations:tempest-access")
     def test_put_tempest_fetch_screenshots(self):
         # assert default value is False, and that put request updates the value
@@ -2062,28 +1942,10 @@ class TestTempestProjectDetails(TestProjectDetailsBase):
         )
         assert "tempestFetchDumps" not in response.data
 
-
-class TestSeerProjectDetails(TestProjectDetailsBase):
-    endpoint = "sentry-api-0-project-details"
-
-    def setUp(self):
-        super().setUp()
-        self.url = reverse(
-            "sentry-api-0-project-details",
-            kwargs={
-                "organization_id_or_slug": self.project.organization.slug,
-                "project_id_or_slug": self.project.slug,
-            },
-        )
-        self.login_as(user=self.user)
-        with assume_test_silo_mode(SiloMode.CONTROL):
-            token = ApiToken.objects.create(user=self.user, scope_list=["project:write"])
-        self.authorization = f"Bearer {token.token}"
-
     def test_autofix_automation_tuning(self):
         # Test without feature flag - should fail
         resp = self.get_error_response(
-            self.org_slug, self.proj_slug, autofixAutomationTuning="off", status_code=400
+            self.org_slug, self.proj_slug, autofixAutomationTuning="low", status_code=400
         )
         assert (
             "trigger-autofix-on-issue-summary feature enabled"
@@ -2112,38 +1974,3 @@ class TestSeerProjectDetails(TestProjectDetailsBase):
             )
             assert self.project.get_option("sentry:autofix_automation_tuning") == "off"
             assert resp.data["autofixAutomationTuning"] == "off"
-
-    def test_seer_scanner_automation(self):
-        # Test without feature flag - should fail
-        resp = self.get_error_response(
-            self.org_slug, self.proj_slug, seerScannerAutomation=False, status_code=400
-        )
-        assert (
-            "trigger-autofix-on-issue-summary feature enabled"
-            in resp.data["seerScannerAutomation"][0]
-        )
-        assert self.project.get_option("sentry:seer_scanner_automation") is True  # default
-
-        # Test with feature flag but invalid value - should fail
-        with self.feature("organizations:trigger-autofix-on-issue-summary"):
-            resp = self.get_error_response(
-                self.org_slug, self.proj_slug, seerScannerAutomation="invalid", status_code=400
-            )
-            assert "Must be a valid boolean." in resp.data["seerScannerAutomation"][0]
-            assert self.project.get_option("sentry:seer_scanner_automation") is True  # default
-
-        # Test with feature flag and valid value - should succeed
-        with self.feature("organizations:trigger-autofix-on-issue-summary"):
-            resp = self.get_success_response(
-                self.org_slug, self.proj_slug, seerScannerAutomation=False
-            )
-            assert self.project.get_option("sentry:seer_scanner_automation") is False
-            assert resp.data["seerScannerAutomation"] is False
-
-        # Test setting back to on
-        with self.feature("organizations:trigger-autofix-on-issue-summary"):
-            resp = self.get_success_response(
-                self.org_slug, self.proj_slug, seerScannerAutomation=True
-            )
-            assert self.project.get_option("sentry:seer_scanner_automation") is True
-            assert resp.data["seerScannerAutomation"] is True

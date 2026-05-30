@@ -2,7 +2,6 @@ import logging
 
 import boto3
 from botocore.client import ClientError, Config
-from botocore.exceptions import ParamValidationError
 
 from sentry.integrations.base import FeatureDescription, IntegrationFeatures
 from sentry.plugins.bases.data_forwarding import DataForwardingPlugin
@@ -126,6 +125,7 @@ class AmazonSQSPlugin(CorePluginMixin, DataForwardingPlugin):
         }
 
         if not all((queue_url, access_key, secret_key, region)):
+            logger.info("sentry_plugins.amazon_sqs.skip_unconfigured", extra=logging_params)
             return
 
         boto3_args = {
@@ -169,6 +169,7 @@ class AmazonSQSPlugin(CorePluginMixin, DataForwardingPlugin):
                 # we want something like 2020-08-29 so we can store it by the date
                 date = event.datetime.strftime("%Y-%m-%d")
                 key = f"{event.project.slug}/{date}/{event.event_id}"
+                logger.info("sentry_plugins.amazon_sqs.s3_put_object", extra=logging_params)
                 s3_put_object(Bucket=s3_bucket, Body=json.dumps(payload), Key=key)
 
                 url = f"https://{s3_bucket}.s3-{region}.amazonaws.com/{key}"
@@ -178,32 +179,26 @@ class AmazonSQSPlugin(CorePluginMixin, DataForwardingPlugin):
             message = json.dumps(payload)
 
             if len(message) > 256 * 1024:
+                logger.info("sentry_plugins.amazon_sqs.skip_oversized", extra=logging_params)
                 return False
 
             sqs_send_message(message)
-
+            log_and_increment("sentry_plugins.amazon_sqs.message_sent")
         except ClientError as e:
-            if (
-                str(e).startswith("An error occurred (InvalidClientTokenId)")
-                or str(e).startswith("An error occurred (AccessDenied)")
-                or str(e).startswith("An error occurred (InvalidAccessKeyId)")
+            if str(e).startswith("An error occurred (InvalidClientTokenId)") or str(e).startswith(
+                "An error occurred (AccessDenied)"
             ):
                 # If there's an issue with the user's token then we can't do
-                # anything to recover. Just continue.
+                # anything to recover. Just log and continue.
+                log_and_increment("sentry_plugins.amazon_sqs.access_token_invalid")
                 return False
             elif str(e).endswith("must contain the parameter MessageGroupId."):
+                log_and_increment("sentry_plugins.amazon_sqs.missing_message_group_id")
                 return False
-            elif str(e).startswith("An error occurred (NoSuchBucket)") or str(e).startswith(
-                "An error occurred (IllegalLocationConstraintException)"
-            ):
+            elif str(e).startswith("An error occurred (NoSuchBucket)"):
                 # If there's an issue with the user's s3 bucket then we can't do
-                # anything to recover. Just continue.
-                return False
-            elif "AWS.SimpleQueueService.NonExistentQueue" in str(e):
-                # If the specified queue doesn't exist, we can't do anything to recover
+                # anything to recover. Just log and continue.
+                log_and_increment("sentry_plugins.amazon_sqs.s3_bucket_invalid")
                 return False
             raise
-        except ParamValidationError:
-            # The bucket name is invalid
-            return False
         return True

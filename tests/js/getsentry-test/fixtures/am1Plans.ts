@@ -1,9 +1,3 @@
-import {
-  SEER_TIERS,
-  SEER_TIERS_ANNUAL,
-  SEER_TIERS_DEVELOPER,
-  SEER_TIERS_TRIAL_OR_ENTERPRISE,
-} from 'getsentry-test/fixtures/am3Plans';
 import {SeerReservedBudgetCategoryFixture} from 'getsentry-test/fixtures/reservedBudget';
 
 import type {DataCategory} from 'sentry/types/core';
@@ -68,7 +62,6 @@ const AM1_TEAM_FEATURES = [
   'sso-basic',
   'weekly-reports',
   'on-demand-metrics-prefill',
-  'seer-billing',
 ];
 
 const AM1_BUSINESS_FEATURES = [
@@ -170,7 +163,6 @@ const AM1_PLANS: Record<string, Plan> = {
           events: 1,
         },
       ],
-      ...SEER_TIERS_DEVELOPER,
     },
     features: AM1_FREE_FEATURES,
     budgetTerm: BUDGET_TERM,
@@ -243,7 +235,6 @@ const AM1_PLANS: Record<string, Plan> = {
           events: 0,
         },
       ],
-      ...SEER_TIERS_TRIAL_OR_ENTERPRISE,
     },
     features: AM1_TRIAL_FEATURES,
     budgetTerm: BUDGET_TERM,
@@ -826,7 +817,6 @@ const AM1_PLANS: Record<string, Plan> = {
           events: 1,
         },
       ],
-      ...SEER_TIERS,
     },
     features: AM1_TEAM_FEATURES,
     budgetTerm: BUDGET_TERM,
@@ -1409,7 +1399,6 @@ const AM1_PLANS: Record<string, Plan> = {
           events: 1,
         },
       ],
-      ...SEER_TIERS_ANNUAL,
     },
     features: AM1_TEAM_FEATURES,
     budgetTerm: BUDGET_TERM,
@@ -1992,7 +1981,6 @@ const AM1_PLANS: Record<string, Plan> = {
           events: 1,
         },
       ],
-      ...SEER_TIERS,
     },
     features: AM1_BUSINESS_FEATURES,
     budgetTerm: BUDGET_TERM,
@@ -2575,7 +2563,6 @@ const AM1_PLANS: Record<string, Plan> = {
           events: 1,
         },
       ],
-      ...SEER_TIERS,
     },
     features: AM1_BUSINESS_FEATURES,
     budgetTerm: BUDGET_TERM,
@@ -2656,7 +2643,6 @@ const AM1_PLANS: Record<string, Plan> = {
           price: 0,
         },
       ],
-      ...SEER_TIERS_TRIAL_OR_ENTERPRISE,
     },
     budgetTerm: BUDGET_TERM,
     availableReservedBudgetTypes: AM1_AVAILABLE_RESERVED_BUDGET_TYPES,

@@ -2,7 +2,7 @@ import {Fragment, useCallback, useMemo} from 'react';
 import styled from '@emotion/styled';
 import {PlatformIcon} from 'platformicons';
 
-import {Link} from 'sentry/components/core/link';
+import Link from 'sentry/components/links/link';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {PlatformKey, Project} from 'sentry/types/project';
@@ -10,7 +10,8 @@ import {
   generateContinuousProfileFlamechartRouteWithQuery,
   generateProfileFlamechartRouteWithQuery,
 } from 'sentry/utils/profiling/routes';
-import {ellipsize} from 'sentry/utils/string/ellipsize';
+import {useLocation} from 'sentry/utils/useLocation';
+import {useNavigate} from 'sentry/utils/useNavigate';
 import useOrganization from 'sentry/utils/useOrganization';
 import useProjects from 'sentry/utils/useProjects';
 import {traceAnalytics} from 'sentry/views/performance/newTraceDetails/traceAnalytics';
@@ -20,10 +21,21 @@ import {
   isTransactionNode,
 } from 'sentry/views/performance/newTraceDetails/traceGuards';
 import {TraceTree} from 'sentry/views/performance/newTraceDetails/traceModels/traceTree';
+import type {TraceTreeNode} from 'sentry/views/performance/newTraceDetails/traceModels/traceTreeNode';
+import {useHasTraceTabsUI} from 'sentry/views/performance/newTraceDetails/useHasTraceTabsUI';
 
-export function TraceProfiles({tree}: {tree: TraceTree}) {
+export function TraceProfiles({
+  tree,
+  onScrollToNode,
+}: {
+  onScrollToNode: (node: TraceTreeNode<any>) => void;
+  tree: TraceTree;
+}) {
   const {projects} = useProjects();
   const organization = useOrganization();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const hasTraceTabsUi = useHasTraceTabsUI();
 
   const projectLookup: Record<string, PlatformKey | undefined> = useMemo(() => {
     return projects.reduce<Record<Project['slug'], Project['platform']>>(
@@ -51,9 +63,20 @@ export function TraceProfiles({tree}: {tree: TraceTree}) {
     [organization]
   );
 
+  const onNodeIdClick = useCallback(
+    (node: TraceTreeNode<TraceTree.NodeValue>) => {
+      navigate({
+        ...location,
+        hash: `#trace-waterfall`,
+      });
+      onScrollToNode(node);
+    },
+    [location, navigate, onScrollToNode]
+  );
+
   return (
     <ProfilesTable>
-      <ProfilesTableRow>
+      <ProfilesTableRow hasTraceTabsUi={hasTraceTabsUi}>
         <ProfilesTableTitle>{t('Profiled Events')}</ProfilesTableTitle>
         <ProfilesTableTitle>{t('Profile')}</ProfilesTableTitle>
       </ProfilesTableRow>
@@ -106,8 +129,14 @@ export function TraceProfiles({tree}: {tree: TraceTree}) {
             </Fragment>
           );
           return (
-            <ProfilesTableRow key={index}>
-              <div>{event}</div>
+            <ProfilesTableRow key={index} hasTraceTabsUi={hasTraceTabsUi}>
+              <div>
+                {hasTraceTabsUi ? (
+                  event
+                ) : (
+                  <a onClick={() => onNodeIdClick(node)}>{event}</a>
+                )}
+              </div>
               <div>
                 <Link to={link} onClick={() => onProfileLinkClick(profile)}>
                   {profileOrProfilerId.substring(0, 8)}
@@ -129,14 +158,22 @@ export function TraceProfiles({tree}: {tree: TraceTree}) {
               <span>{node.value.op ?? '<unknown>'}</span> —{' '}
               <span className="TraceDescription" title={node.value.description}>
                 {node.value.description
-                  ? ellipsize(node.value.description, 100)
+                  ? node.value.description.length > 100
+                    ? node.value.description.slice(0, 100).trim() + '\u2026'
+                    : node.value.description
                   : (spanId ?? 'unknown')}
               </span>
             </Fragment>
           );
           return (
-            <ProfilesTableRow key={index}>
-              <div>{event}</div>
+            <ProfilesTableRow key={index} hasTraceTabsUi={hasTraceTabsUi}>
+              <div>
+                {hasTraceTabsUi ? (
+                  event
+                ) : (
+                  <a onClick={() => onNodeIdClick(node)}>{event}</a>
+                )}
+              </div>
               <div>
                 <Link to={link} onClick={() => onProfileLinkClick(profile)}>
                   {profileOrProfilerId.substring(0, 8)}
@@ -152,12 +189,14 @@ export function TraceProfiles({tree}: {tree: TraceTree}) {
 }
 
 const ProfilesTable = styled('div')`
+  margin-top: ${space(1)};
   display: grid !important;
   grid-template-columns: 1fr min-content;
   grid-template-rows: auto;
   width: 100%;
   border: 1px solid ${p => p.theme.border};
   border-radius: ${p => p.theme.borderRadius};
+  overflow: hidden;
 
   > div {
     white-space: nowrap;
@@ -173,7 +212,7 @@ const ProfilesTable = styled('div')`
   }
 `;
 
-const ProfilesTableRow = styled('div')`
+const ProfilesTableRow = styled('div')<{hasTraceTabsUi: boolean}>`
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
@@ -189,9 +228,8 @@ const ProfilesTableRow = styled('div')`
   }
 
   &:first-child {
-    background-color: ${p => p.theme.background};
-    border-top-left-radius: ${p => p.theme.borderRadius};
-    border-top-right-radius: ${p => p.theme.borderRadius};
+    background-color: ${p =>
+      p.hasTraceTabsUi ? p.theme.background : p.theme.backgroundSecondary};
   }
 
   &:not(:last-child) {
@@ -201,7 +239,7 @@ const ProfilesTableRow = styled('div')`
 
 const ProfilesTableTitle = styled('div')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.md};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-size: ${p => p.theme.fontSizeMedium};
+  font-weight: ${p => p.theme.fontWeightBold};
   padding: 0 ${space(0.5)};
 `;

@@ -1,11 +1,11 @@
 import {useEffect, useMemo} from 'react';
 
+import OrganizationStore from 'sentry/stores/organizationStore';
 import TeamStore from 'sentry/stores/teamStore';
 import {useLegacyStore} from 'sentry/stores/useLegacyStore';
 import type {Team} from 'sentry/types/organization';
 import type {ApiQueryKey} from 'sentry/utils/queryClient';
 import {useApiQuery} from 'sentry/utils/queryClient';
-import useOrganization from 'sentry/utils/useOrganization';
 
 interface UseTeamsById {
   ids: string[] | undefined;
@@ -28,22 +28,37 @@ interface UseTeamsResult {
   teams: Team[];
 }
 
-function buildTeamsQueryKey(
-  orgSlug: string,
-  property: 'id' | 'slug',
-  values: string[]
-): ApiQueryKey {
-  if (property === 'id') {
-    return [
-      `/organizations/${orgSlug}/teams/`,
-      {query: {query: values.map(id => `id:${id}`).join(' ')}},
-    ];
+type TeamQuery = [field: string, ids: string[]];
+
+function buildTeamsQueryKey(orgSlug: string, teamQuery: TeamQuery | null): ApiQueryKey {
+  const query: {query?: string} = {};
+
+  if (teamQuery?.[1].length) {
+    query.query = `${teamQuery[0]}:${teamQuery[1].join(',')}`;
   }
 
-  return [
-    `/organizations/${orgSlug}/teams/`,
-    {query: {query: `slug:${values.join(',')}`}},
-  ];
+  return [`/organizations/${orgSlug}/teams/`, {query}];
+}
+
+/**
+ * @returns a tuple of the identifier field and the list of identifiers
+ */
+function getQueryFromOptions(options: UseTeamOptions): TeamQuery | null {
+  if ('ids' in options) {
+    if (!options.ids?.length) {
+      return null;
+    }
+    return ['id', options.ids];
+  }
+
+  if ('slugs' in options) {
+    if (!options.slugs?.length) {
+      return null;
+    }
+    return ['slug', options.slugs];
+  }
+
+  return null;
 }
 
 /**
@@ -53,44 +68,22 @@ function buildTeamsQueryKey(
  * ```
  */
 export function useTeamsById(options: UseTeamOptions = {}): UseTeamsResult {
-  const organization = useOrganization({allowNull: true});
+  const {organization} = useLegacyStore(OrganizationStore);
   const storeState = useLegacyStore(TeamStore);
 
-  const teamQueryValues = useMemo<{
-    property: 'id' | 'slug';
-    values: Set<string> | undefined;
-  } | null>(() => {
-    if ('ids' in options && options.ids?.length) {
-      return {property: 'id', values: new Set(options.ids)};
-    }
-
-    if ('slugs' in options && options.slugs?.length) {
-      return {property: 'slug', values: new Set(options.slugs)};
-    }
-
-    return null;
-  }, [options]);
-
-  const missingValues = teamQueryValues?.values
-    ? Array.from(teamQueryValues.values).filter(
-        value => !storeState.teams.some(team => team[teamQueryValues.property] === value)
-      )
+  const query = useMemo<TeamQuery | null>(() => getQueryFromOptions(options), [options]);
+  const missingIds = query
+    ? // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+      query[1].filter(id => !storeState.teams.some(team => team[query[0]] === id))
     : [];
 
   // Wait until the store has loaded to start fetching
   const shouldConsiderFetching = !!organization?.slug && !storeState.loading;
   // Only fetch if there are missing teams
-  const hasMissing = missingValues.length > 0;
+  const hasMissing = missingIds.length > 0;
   const queryEnabled = shouldConsiderFetching && hasMissing;
 
-  const queryKey = teamQueryValues
-    ? buildTeamsQueryKey(
-        organization?.slug ?? '',
-        teamQueryValues.property,
-        missingValues ?? []
-      )
-    : ([`/organizations/${organization?.slug}/teams/`] as const);
-
+  const queryKey = buildTeamsQueryKey(organization?.slug ?? '', query);
   const {
     data: additionalTeams = [],
     isPending,
@@ -108,12 +101,11 @@ export function useTeamsById(options: UseTeamOptions = {}): UseTeamsResult {
   }, [additionalTeams]);
 
   const teams = useMemo<Team[]>(() => {
-    return teamQueryValues
-      ? storeState.teams.filter(team =>
-          teamQueryValues.values?.has(team[teamQueryValues.property])
-        )
+    return query
+      ? // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
+        storeState.teams.filter(team => query[1].includes(team[query[0]]))
       : storeState.teams;
-  }, [storeState.teams, teamQueryValues]);
+  }, [storeState.teams, query]);
 
   return {
     teams,

@@ -86,18 +86,16 @@ describe('GroupReplaysPlayer', () => {
     fullReplayButtonProps: {},
     overlayContent: null,
     replayReaderResult: {
-      attachmentError: undefined,
       attachments: [],
       errors: [],
+      attachmentError: undefined,
       fetchError: undefined,
-      isError: false,
-      isPending: false,
+      fetching: false,
       onRetry: jest.fn(),
       projectSlug: ProjectFixture().slug,
       replay: mockReplay,
       replayId: mockReplayId,
       replayRecord: ReplayRecordFixture(),
-      status: 'success' as const,
     },
   };
 

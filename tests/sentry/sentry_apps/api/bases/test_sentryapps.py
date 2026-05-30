@@ -238,6 +238,7 @@ class IntegrationPlatformEndpointTest(TestCase):
         response = self.endpoint._handle_sentry_app_exception(error)
 
         assert response.status_code == 400
+        assert response.data == error.to_public_dict()
         assert response.exception is True
         assert response.data == {"detail": error.message}
 
@@ -252,6 +253,7 @@ class IntegrationPlatformEndpointTest(TestCase):
         response = self.endpoint._handle_sentry_app_exception(error)
 
         assert response.status_code == 400
+        assert response.data == error.to_public_dict()
         assert response.exception is True
         assert response.data == {"detail": error.message, "context": public_context}
 
@@ -263,6 +265,7 @@ class IntegrationPlatformEndpointTest(TestCase):
         response = self.endpoint._handle_sentry_app_exception(error)
 
         assert response.status_code == 500
+        assert response.data == error.to_public_dict()
         assert response.data == {
             "detail": f"An issue occured during the integration platform process. Sentry error ID: {None}"
         }

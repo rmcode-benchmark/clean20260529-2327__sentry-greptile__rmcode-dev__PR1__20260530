@@ -108,7 +108,7 @@ const SearchDetail = styled('div')`
 `;
 
 const ExtraDetail = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
   margin-top: ${space(0.5)};
 `;
@@ -137,6 +137,6 @@ const StyledPluginIcon = styled(PluginIcon)`
 const HighlightMarker = styled('mark')`
   padding: 0;
   background: transparent;
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
   color: ${p => p.theme.active};
 `;

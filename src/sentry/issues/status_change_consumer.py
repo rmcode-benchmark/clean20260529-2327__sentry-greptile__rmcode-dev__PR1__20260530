@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from sentry_sdk.tracing import NoOpSpan, Span, Transaction
@@ -10,7 +10,6 @@ from sentry_sdk.tracing import NoOpSpan, Span, Transaction
 from sentry.integrations.tasks.kick_off_status_syncs import kick_off_status_syncs
 from sentry.issues.escalating.escalating import manage_issue_states
 from sentry.issues.status_change_message import StatusChangeMessageData
-from sentry.models.activity import Activity
 from sentry.models.group import Group, GroupStatus
 from sentry.models.grouphash import GroupHash
 from sentry.models.groupinbox import (
@@ -24,13 +23,11 @@ from sentry.models.project import Project
 from sentry.types.activity import ActivityType
 from sentry.types.group import IGNORED_SUBSTATUS_CHOICES, GroupSubStatus
 from sentry.utils import metrics
-from sentry.utils.registry import Registry
 
 logger = logging.getLogger(__name__)
 
 
 def update_status(group: Group, status_change: StatusChangeMessageData) -> None:
-    activity_type: ActivityType | None = None
     new_status = status_change["new_status"]
     new_substatus = status_change["new_substatus"]
 
@@ -61,13 +58,11 @@ def update_status(group: Group, status_change: StatusChangeMessageData) -> None:
             return
 
     if new_status == GroupStatus.RESOLVED:
-        activity_type = ActivityType.SET_RESOLVED
         Group.objects.update_group_status(
             groups=[group],
             status=new_status,
             substatus=new_substatus,
-            activity_type=activity_type,
-            activity_data=status_change.get("activity_data"),
+            activity_type=ActivityType.SET_RESOLVED,
         )
         remove_group_from_inbox(group, action=GroupInboxRemoveAction.RESOLVED)
         kick_off_status_syncs.apply_async(
@@ -85,13 +80,11 @@ def update_status(group: Group, status_change: StatusChangeMessageData) -> None:
             )
             return
 
-        activity_type = ActivityType.SET_IGNORED
         Group.objects.update_group_status(
             groups=[group],
             status=new_status,
             substatus=new_substatus,
-            activity_type=activity_type,
-            activity_data=status_change.get("activity_data"),
+            activity_type=ActivityType.SET_IGNORED,
         )
         remove_group_from_inbox(group, action=GroupInboxRemoveAction.IGNORED)
         kick_off_status_syncs.apply_async(
@@ -129,7 +122,6 @@ def update_status(group: Group, status_change: StatusChangeMessageData) -> None:
             substatus=new_substatus,
             activity_type=activity_type,
             from_substatus=group.substatus,
-            activity_data=status_change.get("activity_data"),
         )
         add_group_to_inbox(group, group_inbox_reason)
         kick_off_status_syncs.apply_async(
@@ -144,27 +136,6 @@ def update_status(group: Group, status_change: StatusChangeMessageData) -> None:
             f"Unsupported status: {status_change['new_status']} {status_change['new_substatus']}"
         )
 
-    if activity_type is not None:
-        """
-        If we have set created an activity, then we'll also notify any registered handlers
-        that the group status has changed.
-
-        This is used to trigger the `workflow_engine` processing status changes.
-        """
-        latest_activity = (
-            Activity.objects.filter(group_id=group.id, type=activity_type.value)
-            .order_by("-datetime")
-            .first()
-        )
-        if latest_activity is not None:
-            metrics.incr(
-                "workflow_engine.issue_platform.status_change_handler",
-                amount=len(group_status_update_registry.registrations.keys()),
-                tags={"activity_type": activity_type.value},
-            )
-            for handler in group_status_update_registry.registrations.values():
-                handler(group, status_change, latest_activity)
-
 
 def get_group_from_fingerprint(project_id: int, fingerprint: Sequence[str]) -> Group | None:
     results = bulk_get_groups_from_fingerprints([(project_id, fingerprint)])
@@ -172,7 +143,7 @@ def get_group_from_fingerprint(project_id: int, fingerprint: Sequence[str]) -> G
 
 
 def bulk_get_groups_from_fingerprints(
-    project_fingerprint_pairs: Iterable[tuple[int, Sequence[str]]],
+    project_fingerprint_pairs: Iterable[tuple[int, Sequence[str]]]
 ) -> dict[tuple[int, tuple[str, ...]], Group]:
     """
     Returns a map of (project, fingerprint) to the group.
@@ -230,7 +201,6 @@ def _get_status_change_kwargs(payload: Mapping[str, Any]) -> Mapping[str, Any]:
         "project_id": payload["project_id"],
         "new_status": payload["new_status"],
         "new_substatus": payload.get("new_substatus", None),
-        "detector_id": payload.get("detector_id", None),
     }
 
     process_occurrence_data(data)
@@ -285,7 +255,3 @@ def process_status_change_message(
         update_status(group, status_change_data)
 
     return group
-
-
-GroupUpdateHandler = Callable[[Group, StatusChangeMessageData, Activity], None]
-group_status_update_registry = Registry[GroupUpdateHandler](enable_reverse_lookup=False)

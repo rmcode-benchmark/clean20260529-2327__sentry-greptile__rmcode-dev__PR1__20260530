@@ -2,16 +2,16 @@ import {useCallback, useEffect, useMemo, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {openModal} from 'sentry/actionCreators/modal';
+import {Flex} from 'sentry/components/container/flex';
 import {Alert} from 'sentry/components/core/alert';
 import {Button} from 'sentry/components/core/button';
 import {LinkButton} from 'sentry/components/core/button/linkButton';
-import {Flex} from 'sentry/components/core/layout';
-import {Link} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import {useOrganizationRepositories} from 'sentry/components/events/autofix/preferences/hooks/useOrganizationRepositories';
 import {useProjectSeerPreferences} from 'sentry/components/events/autofix/preferences/hooks/useProjectSeerPreferences';
 import {useUpdateProjectSeerPreferences} from 'sentry/components/events/autofix/preferences/hooks/useUpdateProjectSeerPreferences';
 import type {RepoSettings} from 'sentry/components/events/autofix/types';
+import Link from 'sentry/components/links/link';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import Panel from 'sentry/components/panels/panel';
 import PanelHeader from 'sentry/components/panels/panelHeader';
@@ -44,9 +44,6 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
   const [selectedRepoIds, setSelectedRepoIds] = useState<string[]>([]);
   const [repoSettings, setRepoSettings] = useState<Record<string, RepoSettings>>({});
   const [showSaveNotice, setShowSaveNotice] = useState(false);
-  const [automatedRunStoppingPoint, setAutomatedRunStoppingPoint] = useState<
-    'solution' | 'code_changes' | 'open_pr'
-  >('solution');
 
   useEffect(() => {
     if (repositories) {
@@ -73,9 +70,6 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
         });
 
         setRepoSettings(initialSettings);
-        setAutomatedRunStoppingPoint(
-          preference.automated_run_stopping_point || 'solution'
-        );
       } else if (codeMappingRepos?.length) {
         // Set default settings using codeMappingRepos when no preferences exist
         const repoIds = codeMappingRepos.map(repo => repo.external_id);
@@ -90,36 +84,26 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
         });
 
         setRepoSettings(initialSettings);
-        setAutomatedRunStoppingPoint('solution');
       }
     }
   }, [preference, repositories, codeMappingRepos, updateProjectSeerPreferences]);
 
   const updatePreferences = useCallback(
-    (
-      updatedIds?: string[],
-      updatedSettings?: Record<string, RepoSettings>,
-      newStoppingPoint?: 'solution' | 'code_changes' | 'open_pr'
-    ) => {
+    (updatedIds?: string[], updatedSettings?: Record<string, RepoSettings>) => {
       if (!repositories) {
         return;
       }
+
       const idsToUse = updatedIds || selectedRepoIds;
       const settingsToUse = updatedSettings || repoSettings;
-      const stoppingPointToUse = newStoppingPoint || automatedRunStoppingPoint;
       const selectedRepos = repositories.filter(repo =>
         idsToUse.includes(repo.externalId)
       );
+
       const reposData = selectedRepos.map(repo => {
         const [owner, name] = (repo.name || '/').split('/');
-        let provider = repo.provider?.id || '';
-        if (provider?.startsWith('integrations:')) {
-          provider = provider.split(':')[1]!;
-        }
-
         return {
-          integration_id: repo.integrationId,
-          provider,
+          provider: repo.provider?.name?.toLowerCase() || '',
           owner: owner || '',
           name: name || repo.name || '',
           external_id: repo.externalId,
@@ -127,19 +111,14 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
           instructions: settingsToUse[repo.externalId]?.instructions || '',
         };
       });
+
       updateProjectSeerPreferences({
         repositories: reposData,
-        automated_run_stopping_point: stoppingPointToUse,
       });
+
       setShowSaveNotice(true);
     },
-    [
-      repositories,
-      selectedRepoIds,
-      repoSettings,
-      automatedRunStoppingPoint,
-      updateProjectSeerPreferences,
-    ]
+    [repositories, selectedRepoIds, repoSettings, updateProjectSeerPreferences]
   );
 
   const handleSaveModalSelections = useCallback(
@@ -193,7 +172,7 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
     );
 
     const filteredSelected = selected.filter(
-      repo => repo.provider?.id && repo.provider.id !== 'unknown' && repo.integrationId
+      repo => repo.provider?.id && repo.provider.id !== 'unknown'
     );
 
     return {
@@ -220,7 +199,7 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
   return (
     <Panel>
       <PanelHeader hasButtons>
-        <Flex align="center" gap="xs">
+        <Flex align="center" gap={space(0.5)}>
           {t('Working Repositories')}
           <QuestionTooltip
             title={tct(
@@ -235,12 +214,12 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
         </Flex>
         <div style={{display: 'flex', alignItems: 'center', gap: space(1)}}>
           <LinkButton
-            size="sm"
+            size="xs"
             icon={<IconGithub />}
             to={`/settings/${organization.slug}/integrations/github/`}
             style={{textTransform: 'none'}}
           >
-            {t('Manage Integration')}
+            {t('Manage GitHub Integration')}
           </LinkButton>
           <Tooltip
             isHoverable
@@ -260,17 +239,10 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
             }
           >
             <Button
-              size="sm"
+              size="xs"
               icon={<IconAdd />}
               disabled={isRepoLimitReached || unselectedRepositories?.length === 0}
               onClick={openAddRepoModal}
-              priority={
-                !isFetchingRepositories &&
-                !isLoadingPreferences &&
-                filteredSelectedRepositories.length === 0
-                  ? 'primary'
-                  : 'default'
-              }
             >
               {t('Add Repos')}
             </Button>
@@ -279,7 +251,7 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
       </PanelHeader>
 
       {showSaveNotice && (
-        <Alert type="info" system>
+        <Alert type="info" showIcon system>
           {t(
             'Changes will apply on future Seer runs. Hit "Start Over" in the Seer panel to start a new run and use your new selected repositories.'
           )}
@@ -292,7 +264,7 @@ export function AutofixRepositories({project}: ProjectSeerProps) {
         </LoadingContainer>
       ) : filteredSelectedRepositories.length === 0 ? (
         <EmptyMessage>
-          {t("Seer can't see your code. Click 'Add Repos' to give Seer access.")}
+          {t('No repositories selected. Click "Add Repos" to get started.')}
         </EmptyMessage>
       ) : (
         <ReposContainer>
@@ -326,9 +298,9 @@ const ReposContainer = styled('div')`
 
 const EmptyMessage = styled('div')`
   padding: ${space(2)};
-  color: ${p => p.theme.errorText};
+  color: ${p => p.theme.subText};
   text-align: center;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 const LoadingContainer = styled('div')`
@@ -347,5 +319,5 @@ const StyledLoadingIndicator = styled(LoadingIndicator)`
 
 const LoadingMessage = styled('div')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;

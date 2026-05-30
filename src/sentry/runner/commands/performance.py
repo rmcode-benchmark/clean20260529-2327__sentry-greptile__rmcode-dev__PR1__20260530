@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-
-import os
 from inspect import isclass
 
 import click
@@ -19,23 +17,20 @@ def performance() -> None:
 
 
 @performance.command()
-@click.argument("path", type=click.Path(exists=True, path_type=str, file_okay=True, dir_okay=True))
+@click.argument("filename", type=click.Path(exists=True))
 @click.option(
-    "-d",
-    "--detector",
-    "detector_class",
-    help="Limit detection to only one detector class. Pass in the detector class name, i.e. NPlusOneAPICallsDetector ",
+    "-d", "--detector", "detector_class", help="Limit detection to only one detector class"
 )
 @click.option("-v", "--verbose", count=True)
 @configuration
-def detect(path: str, detector_class: str | None, verbose: int) -> None:
+def detect(filename: str, detector_class: str | None, verbose: int) -> None:
     """
-    Runs performance problem detection on event data in the supplied filename or directory
-    using default detector settings with every detector. Path should be a
-    path to a JSON event data file or directory containing JSON event data files or folders of JSON event data files.
+    Runs performance problem detection on event data in the supplied filename
+    using default detector settings with every detector. Filename should be a
+    path to a JSON event data file.
     """
-    from sentry.performance_issues import performance_detection
-    from sentry.performance_issues.base import PerformanceDetector
+    from sentry.utils.performance_issues import performance_detection
+    from sentry.utils.performance_issues.base import PerformanceDetector
 
     if detector_class:
         detector_classes = [performance_detection.__dict__[detector_class]]
@@ -48,44 +43,34 @@ def detect(path: str, detector_class: str | None, verbose: int) -> None:
 
     settings = performance_detection.get_detection_settings()
 
-    def run_detector_on_file(filepath: str) -> None:
-        if not filepath.endswith(".json"):
-            return
-        with open(filepath) as file:
-            data = json.loads(file.read())
+    with open(filename) as file:
+        data = json.loads(file.read())
+        if verbose > 1:
+            click.echo(f"Event ID: {data['event_id']}")
+
+        detectors = [cls(settings, data) for cls in detector_classes]
+
+        for detector in detectors:
+            if verbose > 0:
+                click.echo(f"Detecting using {detector.__class__.__name__}")
+
+            performance_detection.run_detector_on_data(detector, data)
+
             if verbose > 1:
-                click.echo(f"Event ID: {data['event_id']}")
+                if len(detector.stored_problems) == 0:
+                    click.echo("No problems detected")
+                else:
+                    click.echo(
+                        f"Found {len(detector.stored_problems)} {pluralize(len(detector.stored_problems), 'problem,problems')}"
+                    )
 
-            detectors = [cls(settings, data) for cls in detector_classes]
+            for problem in detector.stored_problems.values():
+                try:
+                    click.echo(problem.to_dict())
+                except AttributeError:
+                    click.echo(problem)
 
-            for detector in detectors:
-                if verbose > 0:
-                    click.echo(f"Detecting using {detector.__class__.__name__}")
-
-                performance_detection.run_detector_on_data(detector, data)
-
-                if verbose > 1:
-                    if len(detector.stored_problems) == 0:
-                        click.echo("No problems detected")
-                    else:
-                        click.echo(
-                            f"Found {len(detector.stored_problems)} {pluralize(len(detector.stored_problems), 'problem,problems')}"
-                        )
-
-                for problem in detector.stored_problems.values():
-                    try:
-                        click.echo(problem.to_dict())
-                    except AttributeError:
-                        click.echo(problem)
-
-                click.echo("\n")
-
-    if os.path.isdir(path):
-        for root, _, files in os.walk(path):
-            for file in files:
-                run_detector_on_file(os.path.join(root, file))
-    else:
-        run_detector_on_file(path)
+            click.echo("\n")
 
 
 @performance.command()
@@ -105,7 +90,7 @@ def timeit(filename: str, detector_class: str, n: int) -> None:
 
     import timeit
 
-    from sentry.performance_issues import performance_detection
+    from sentry.utils.performance_issues import performance_detection
 
     settings = performance_detection.get_detection_settings()
 

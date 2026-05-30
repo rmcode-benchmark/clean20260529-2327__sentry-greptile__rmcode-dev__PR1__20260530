@@ -1,7 +1,6 @@
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
-import {Flex} from 'sentry/components/core/layout';
 import {generateStats} from 'sentry/components/events/opsBreakdown';
 import {DividerSpacer} from 'sentry/components/performance/waterfall/miniHeader';
 import {t} from 'sentry/locale';
@@ -33,18 +32,18 @@ function ServiceBreakdown({
   if (!displayBreakdown) {
     return (
       <BreakDownWrapper>
-        <Flex align="center" justify="space-between">
+        <BreakDownRow>
           <div>{t('server side')}</div>
-          <Flex>
+          <FlexBox>
             <span>{'N/A'}</span>
-          </Flex>
-        </Flex>
-        <Flex align="center" justify="space-between">
+          </FlexBox>
+        </BreakDownRow>
+        <BreakDownRow>
           <div>{t('client side')}</div>
-          <Flex>
+          <FlexBox>
             <span>{'N/A'}</span>
-          </Flex>
-        </Flex>
+          </FlexBox>
+        </BreakDownRow>
       </BreakDownWrapper>
     );
   }
@@ -58,20 +57,20 @@ function ServiceBreakdown({
 
   return httpDuration ? (
     <BreakDownWrapper>
-      <Flex align="center" justify="space-between">
+      <BreakDownRow>
         <div>{t('server side')}</div>
-        <Flex>
+        <FlexBox>
           <Dur>{getDuration(httpDuration, 2, true)}</Dur>
           <Pct>{serverSidePct}%</Pct>
-        </Flex>
-      </Flex>
-      <Flex align="center" justify="space-between">
+        </FlexBox>
+      </BreakDownRow>
+      <BreakDownRow>
         <div>{t('client side')}</div>
-        <Flex>
+        <FlexBox>
           <Dur>{getDuration(totalDuration - httpDuration, 2, true)}</Dur>
           <Pct>{clientSidePct}%</Pct>
-        </Flex>
-      </Flex>
+        </FlexBox>
+      </BreakDownRow>
     </BreakDownWrapper>
   ) : null;
 }
@@ -152,10 +151,18 @@ const Pct = styled('div')`
   font-variant-numeric: tabular-nums;
 `;
 
-const BreakDownWrapper = styled('div')`
+const FlexBox = styled('div')`
   display: flex;
+`;
+
+const BreakDownWrapper = styled(FlexBox)`
   flex-direction: column;
   padding: ${space(2)};
+`;
+
+const BreakDownRow = styled(FlexBox)`
+  align-items: center;
+  justify-content: space-between;
 `;
 
 export default TraceViewHeader;

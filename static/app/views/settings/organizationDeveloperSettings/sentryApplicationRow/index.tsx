@@ -1,8 +1,9 @@
+import {PureComponent} from 'react';
 import styled from '@emotion/styled';
 
 import {openModal} from 'sentry/actionCreators/modal';
 import {SentryAppAvatar} from 'sentry/components/core/avatar/sentryAppAvatar';
-import {Link} from 'sentry/components/core/link';
+import Link from 'sentry/components/links/link';
 import {SentryAppPublishRequestModal} from 'sentry/components/modals/sentryAppPublishRequestModal/sentryAppPublishRequestModal';
 import PanelItem from 'sentry/components/panels/panelItem';
 import {space} from 'sentry/styles/space';
@@ -11,61 +12,72 @@ import type {Organization} from 'sentry/types/organization';
 
 import SentryApplicationRowButtons from './sentryApplicationRowButtons';
 
-interface Props {
+type Props = {
   app: SentryApp;
   onPublishSubmission: () => void;
   onRemoveApp: (app: SentryApp) => void;
   organization: Organization;
-}
+};
 
-export default function SentryApplicationRow({
-  app,
-  organization,
-  onPublishSubmission,
-  onRemoveApp,
-}: Props) {
-  const isInternal = app.status === 'internal';
+export default class SentryApplicationRow extends PureComponent<Props> {
+  get isInternal() {
+    return this.props.app.status === 'internal';
+  }
 
-  // no publishing for internal apps so hide the status on the developer
-  // settings page
-  const hideStatus = isInternal;
+  hideStatus() {
+    // no publishing for internal apps so hide the status on the developer settings page
+    return this.isInternal;
+  }
 
-  const handlePublish = () =>
+  renderStatus() {
+    const {app} = this.props;
+    if (this.hideStatus()) {
+      return null;
+    }
+    return <PublishStatus status={app.status} />;
+  }
+
+  handlePublish = () => {
+    const {app, onPublishSubmission} = this.props;
+
     openModal(deps => (
       <SentryAppPublishRequestModal
-        organization={organization}
+        organization={this.props.organization}
         app={app}
         onPublishSubmission={onPublishSubmission}
         {...deps}
       />
     ));
+  };
 
-  return (
-    <SentryAppItem data-test-id={app.slug}>
-      <StyledFlex>
-        <SentryAppAvatar sentryApp={app} size={36} />
-        <SentryAppBox>
-          <SentryAppName hideStatus={hideStatus}>
-            <Link to={`/settings/${organization.slug}/developer-settings/${app.slug}/`}>
-              {app.name}
-            </Link>
-          </SentryAppName>
-          <SentryAppDetails>
-            {!hideStatus && <PublishStatus status={app.status} />}
-          </SentryAppDetails>
-        </SentryAppBox>
+  render() {
+    const {app, organization, onRemoveApp} = this.props;
 
-        <Box>
-          <SentryApplicationRowButtons
-            organization={organization}
-            app={app}
-            onClickRemove={onRemoveApp}
-            onClickPublish={handlePublish}
-          />
-        </Box>
-      </StyledFlex>
-    </SentryAppItem>
-  );
+    return (
+      <SentryAppItem data-test-id={app.slug}>
+        <StyledFlex>
+          <SentryAppAvatar sentryApp={app} size={36} />
+          <SentryAppBox>
+            <SentryAppName hideStatus={this.hideStatus()}>
+              <Link to={`/settings/${organization.slug}/developer-settings/${app.slug}/`}>
+                {app.name}
+              </Link>
+            </SentryAppName>
+            <SentryAppDetails>{this.renderStatus()}</SentryAppDetails>
+          </SentryAppBox>
+
+          <Box>
+            <SentryApplicationRowButtons
+              organization={organization}
+              app={app}
+              onClickRemove={onRemoveApp}
+              onClickPublish={this.handlePublish}
+            />
+          </Box>
+        </StyledFlex>
+      </SentryAppItem>
+    );
+  }
 }
 
 const Flex = styled('div')`

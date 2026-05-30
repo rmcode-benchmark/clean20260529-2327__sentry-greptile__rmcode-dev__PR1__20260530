@@ -59,11 +59,6 @@ class RequestTimingMiddleware(MiddlewareMixin):
         if not view_path:
             return
 
-        if request.resolver_match is None or request.resolver_match.url_name is None:
-            url_name = "unreachable-unknown"
-        else:
-            url_name = request.resolver_match.url_name
-
         rate_limit_type = getattr(
             getattr(request, "rate_limit_metadata", None), "rate_limit_type", None
         )
@@ -75,7 +70,6 @@ class RequestTimingMiddleware(MiddlewareMixin):
             "rate_limit_type": (
                 getattr(rate_limit_type, "value", None) if rate_limit_type else None
             ),
-            "url_name": url_name,
         }
         metrics.incr("view.response", instance=view_path, tags=tags, skip_internal=False)
 

@@ -18,9 +18,8 @@ export interface GroupBy {
   groupBy: string;
 }
 
-export function isBaseVisualize(value: any): value is BaseVisualize {
+function _isBaseVisualize(value: any): value is BaseVisualize {
   return (
-    defined(value) &&
     typeof value === 'object' &&
     Array.isArray(value.yAxes) &&
     value.yAxes.every((v: any) => typeof v === 'string') &&
@@ -29,16 +28,11 @@ export function isBaseVisualize(value: any): value is BaseVisualize {
 }
 
 export function isGroupBy(value: any): value is GroupBy {
-  return defined(value) && typeof value === 'object' && typeof value.groupBy === 'string';
+  return typeof value === 'object' && typeof value.groupBy === 'string';
 }
 
 export function isVisualize(value: any): value is Visualize {
-  return (
-    defined(value) &&
-    typeof value === 'object' &&
-    'yAxis' in value &&
-    typeof value.yAxis === 'string'
-  );
+  return typeof value === 'object' && 'yAxes' in value && Array.isArray(value.yAxes);
 }
 
 export type BaseAggregateField = GroupBy | BaseVisualize;
@@ -72,6 +66,8 @@ export function getAggregateFieldsFromLocation(
     parseGroupByOrBaseVisualize(raw, organization)
   );
 
+  let i = 0;
+
   const aggregateFields: AggregateField[] = [];
 
   let hasGroupBys = false;
@@ -81,13 +77,15 @@ export function getAggregateFieldsFromLocation(
     if (isGroupBy(groupByOrBaseVisualize)) {
       aggregateFields.push(groupByOrBaseVisualize);
       hasGroupBys = true;
-    } else if (isBaseVisualize(groupByOrBaseVisualize)) {
+    } else if (_isBaseVisualize(groupByOrBaseVisualize)) {
       for (const yAxis of groupByOrBaseVisualize.yAxes) {
         aggregateFields.push(
-          new Visualize(yAxis, {
+          new Visualize([yAxis], {
+            label: String.fromCharCode(65 + i), // starts from 'A',
             chartType: groupByOrBaseVisualize.chartType,
           })
         );
+        i++;
         hasVisualizes = true;
       }
     }
@@ -113,12 +111,11 @@ export function updateLocationWithAggregateFields(
   aggregateFields: Array<GroupBy | BaseVisualize> | null | undefined
 ) {
   if (defined(aggregateFields)) {
-    location.query.aggregateField = aggregateFields.flatMap(aggregateField => {
-      if (isBaseVisualize(aggregateField)) {
-        const visualizes = Visualize.fromJSON(aggregateField);
-        return visualizes.map(visualize => JSON.stringify(visualize.toJSON()));
+    location.query.aggregateField = aggregateFields.map(aggregateField => {
+      if (_isBaseVisualize(aggregateField)) {
+        return JSON.stringify(Visualize.fromJSON(aggregateField).toJSON());
       }
-      return [JSON.stringify(aggregateField)];
+      return JSON.stringify(aggregateField);
     });
   } else if (aggregateFields === null) {
     delete location.query.aggregateField;

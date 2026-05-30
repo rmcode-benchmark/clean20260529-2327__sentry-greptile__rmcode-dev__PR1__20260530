@@ -279,8 +279,10 @@ function useOverlay({
           const trigger = interactOutsideTrigger.current;
           interactOutsideTrigger.current = null;
 
-          trigger?.focus();
-          trigger?.click();
+          requestAnimationFrame(() => {
+            trigger?.focus();
+            trigger?.click();
+          });
         }
 
         openState.close();

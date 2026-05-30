@@ -1,22 +1,25 @@
+import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
 import {LinkButton} from 'sentry/components/core/button/linkButton';
-import {Tooltip} from 'sentry/components/core/tooltip';
 import TextOverflow from 'sentry/components/textOverflow';
 import TimeSince from 'sentry/components/timeSince';
 import Version from 'sentry/components/version';
+import {IconReleases} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {Project} from 'sentry/types/project';
 import type {Deploy as DeployType} from 'sentry/types/release';
+import getDynamicText from 'sentry/utils/getDynamicText';
 
 const DEPLOY_COUNT = 2;
 
 type Props = {
   project: Project;
+  shorten?: boolean;
 };
 
-export function Deploys({project}: Props) {
+function Deploys({project, shorten}: Props) {
   const flattenedDeploys = Object.entries(project.latestDeploys || {}).map(
     ([environment, value]): Pick<
       DeployType,
@@ -31,11 +34,7 @@ export function Deploys({project}: Props) {
     .slice(0, DEPLOY_COUNT);
 
   if (!deploys.length) {
-    return (
-      <LinkButton size="sm" href="https://docs.sentry.io/product/releases/" external>
-        {t('Track Deploys')}
-      </LinkButton>
-    );
+    return <NoDeploys />;
   }
 
   return (
@@ -45,23 +44,25 @@ export function Deploys({project}: Props) {
           key={`${deploy.environment}-${deploy.version}`}
           deploy={deploy}
           project={project}
+          shorten={shorten}
         />
       ))}
     </DeployRows>
   );
 }
 
+export default Deploys;
+
 type DeployProps = Props & {
   deploy: Pick<DeployType, 'version' | 'dateFinished' | 'environment'>;
 };
 
-function Deploy({deploy, project}: DeployProps) {
+function Deploy({deploy, project, shorten}: DeployProps) {
   return (
-    <DeployRow>
-      <Tooltip showOnlyOnOverflow title={deploy.environment}>
-        <TextOverflow>{deploy.environment}</TextOverflow>
-      </Tooltip>
+    <Fragment>
+      <IconReleases size="sm" />
       <TextOverflow>
+        <Environment>{deploy.environment}</Environment>
         <Version
           version={deploy.version}
           projectId={project.id}
@@ -71,28 +72,60 @@ function Deploy({deploy, project}: DeployProps) {
       </TextOverflow>
 
       <DeployTime>
-        <TimeSince date={deploy.dateFinished} unitStyle="short" />
+        {getDynamicText({
+          fixed: '3 hours ago',
+          value: (
+            <TimeSince
+              date={deploy.dateFinished}
+              unitStyle={shorten ? 'short' : 'human'}
+            />
+          ),
+        })}
       </DeployTime>
-    </DeployRow>
+    </Fragment>
   );
 }
 
-const DeployRow = styled('div')`
-  display: grid;
-  grid-template-columns: subgrid;
-  grid-column: 1 / -1;
+function NoDeploys() {
+  return (
+    <GetStarted>
+      <LinkButton size="sm" href="https://docs.sentry.io/product/releases/" external>
+        {t('Track Deploys')}
+      </LinkButton>
+    </GetStarted>
+  );
+}
+const DeployContainer = styled('div')`
+  padding: ${space(2)};
+  height: 115px;
 `;
 
-const DeployRows = styled('div')`
+const DeployRows = styled(DeployContainer)`
   display: grid;
-  grid-template-columns: minmax(30px, 1fr) 1fr 1fr;
+  grid-template-columns: 30px 1fr 1fr;
   grid-template-rows: auto;
-  gap: ${space(0.5)} ${space(1)};
-  font-size: ${p => p.theme.fontSize.md};
+  grid-column-gap: ${space(1)};
+  grid-row-gap: ${space(1)};
+  font-size: ${p => p.theme.fontSizeMedium};
   line-height: 1.2;
+`;
+
+const Environment = styled('div')`
+  color: ${p => p.theme.textColor};
+  margin: 0;
 `;
 
 const DeployTime = styled('div')`
   color: ${p => p.theme.subText};
-  ${p => p.theme.overflowEllipsis}
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
 `;
+
+const GetStarted = styled(DeployContainer)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+export {DeployRows, GetStarted, TextOverflow};

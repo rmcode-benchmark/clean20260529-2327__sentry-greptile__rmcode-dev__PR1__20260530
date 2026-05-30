@@ -1,10 +1,8 @@
-from collections.abc import Callable
 from functools import wraps
-from typing import Concatenate
 
 from django.contrib.auth.models import AnonymousUser
-from django.http.response import HttpResponseBase
 from rest_framework.request import Request
+from rest_framework.response import Response
 
 from sentry.api.exceptions import PrimaryEmailVerificationRequired, SudoRequired
 from sentry.models.apikey import is_api_key_auth
@@ -25,12 +23,9 @@ def is_considered_sudo(request: Request) -> bool:
     )
 
 
-type _RFMethod[T, **P] = Callable[Concatenate[T, Request, P], HttpResponseBase]
-
-
-def sudo_required[T, **P](func: _RFMethod[T, P]) -> _RFMethod[T, P]:
+def sudo_required(func):
     @wraps(func)
-    def wrapped(self: T, request: Request, *args: P.args, **kwargs: P.kwargs) -> HttpResponseBase:
+    def wrapped(self, request: Request, *args, **kwargs) -> Response:
         # If we are already authenticated through an API key we do not
         # care about the sudo flag.
         if not is_considered_sudo(request):
@@ -42,9 +37,9 @@ def sudo_required[T, **P](func: _RFMethod[T, P]) -> _RFMethod[T, P]:
     return wrapped
 
 
-def primary_email_verification_required[T, **P](func: _RFMethod[T, P]) -> _RFMethod[T, P]:
+def primary_email_verification_required(func):
     @wraps(func)
-    def wrapped(self: T, request: Request, *args: P.args, **kwargs: P.kwargs) -> HttpResponseBase:
+    def wrapped(self, request: Request, *args, **kwargs) -> Response:
         if isinstance(request.user, AnonymousUser) or not request.user.has_verified_primary_email():
             raise PrimaryEmailVerificationRequired(request.user)
         return func(self, request, *args, **kwargs)

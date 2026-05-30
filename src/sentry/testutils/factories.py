@@ -8,7 +8,7 @@ import random
 import zipfile
 from base64 import b64encode
 from binascii import hexlify
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from enum import Enum
 from hashlib import sha1
@@ -30,7 +30,6 @@ from django.utils.text import slugify
 from sentry.auth.access import RpcBackedAccess
 from sentry.auth.services.auth.model import RpcAuthState, RpcMemberSsoState
 from sentry.constants import SentryAppInstallationStatus, SentryAppStatus
-from sentry.data_secrecy.models.data_access_grant import DataAccessGrant
 from sentry.event_manager import EventManager
 from sentry.eventstore.models import Event
 from sentry.hybridcloud.models.outbox import RegionOutbox, outbox_context
@@ -88,6 +87,7 @@ from sentry.models.dashboard_widget import (
 )
 from sentry.models.debugfile import ProjectDebugFile
 from sentry.models.environment import Environment
+from sentry.models.eventattachment import EventAttachment
 from sentry.models.files.control_file import ControlFile
 from sentry.models.files.file import File
 from sentry.models.group import Group
@@ -125,7 +125,6 @@ from sentry.notifications.models.notificationaction import (
 )
 from sentry.notifications.models.notificationsettingprovider import NotificationSettingProvider
 from sentry.organizations.services.organization import RpcOrganization, RpcUserOrganizationContext
-from sentry.performance_issues.performance_problem import PerformanceProblem
 from sentry.sentry_apps.installations import (
     SentryAppInstallationCreator,
     SentryAppInstallationTokenCreator,
@@ -139,6 +138,7 @@ from sentry.sentry_apps.models.sentry_app_installation_for_provider import (
     SentryAppInstallationForProvider,
 )
 from sentry.sentry_apps.models.servicehook import ServiceHook
+from sentry.sentry_apps.services.app.serial import serialize_sentry_app_installation
 from sentry.sentry_apps.services.hook import hook_service
 from sentry.sentry_apps.token_exchange.grant_exchanger import GrantExchanger
 from sentry.signals import project_created
@@ -160,7 +160,7 @@ from sentry.uptime.models import (
     UptimeSubscription,
     UptimeSubscriptionRegion,
 )
-from sentry.uptime.types import UptimeMonitorMode
+from sentry.uptime.types import ProjectUptimeSubscriptionMode
 from sentry.users.models.identity import Identity, IdentityProvider, IdentityStatus
 from sentry.users.models.user import User
 from sentry.users.models.user_avatar import UserAvatar
@@ -170,6 +170,7 @@ from sentry.users.models.userpermission import UserPermission
 from sentry.users.models.userrole import UserRole
 from sentry.users.services.user import RpcUser
 from sentry.utils import loremipsum
+from sentry.utils.performance_issues.performance_problem import PerformanceProblem
 from sentry.workflow_engine.models import (
     Action,
     ActionAlertRuleTriggerAction,
@@ -340,22 +341,6 @@ def _patch_artifact_manifest(path, org=None, release=None, project=None, extra_f
     for path in extra_files or {}:
         manifest["files"][path] = {"url": path}
     return orjson.dumps(manifest).decode()
-
-
-def _set_sample_rate_from_error_sampling(normalized_data: MutableMapping[str, Any]) -> None:
-    """Set 'sample_rate' on normalized_data if contexts.error_sampling.client_sample_rate is present and valid."""
-    client_sample_rate = None
-    try:
-        client_sample_rate = (
-            normalized_data.get("contexts", {}).get("error_sampling", {}).get("client_sample_rate")
-        )
-    except Exception:
-        pass
-    if client_sample_rate:
-        try:
-            normalized_data["sample_rate"] = float(client_sample_rate)
-        except Exception:
-            pass
 
 
 # TODO(dcramer): consider moving to something more scalable like factoryboy
@@ -569,11 +554,6 @@ class Factories:
             project_template = ProjectTemplate.objects.create(organization=organization, **kwargs)
 
         return project_template
-
-    @staticmethod
-    @assume_test_silo_mode(SiloMode.CONTROL)
-    def create_data_access_grant(**kwargs):
-        return DataAccessGrant.objects.create(**kwargs)
 
     @staticmethod
     @assume_test_silo_mode(SiloMode.REGION)
@@ -991,8 +971,6 @@ class Factories:
             provider = "asana"
         if not uid:
             uid = "abc-123"
-        if extra_data is None:
-            extra_data = {}
         usa = UserSocialAuth(user=user, provider=provider, uid=uid, extra_data=extra_data)
         usa.save()
         return usa
@@ -1053,9 +1031,6 @@ class Factories:
             assert not errors, errors
 
         normalized_data = manager.get_data()
-
-        _set_sample_rate_from_error_sampling(normalized_data)
-
         event = None
 
         # When fingerprint is present on transaction, inject performance problems
@@ -1131,6 +1106,25 @@ class Factories:
         with open(path) as f:
             file.putfile(f)
         return file
+
+    @staticmethod
+    @assume_test_silo_mode(SiloMode.REGION)
+    def create_event_attachment(event, file=None, **kwargs):
+        if file is None:
+            file = Factories.create_file(
+                name="log.txt",
+                size=32,
+                headers={"Content-Type": "text/plain"},
+                checksum="dc1e3f3e411979d336c3057cce64294f3420f93a",
+            )
+
+        return EventAttachment.objects.create(
+            project_id=event.project_id,
+            event_id=event.event_id,
+            file_id=file.id,
+            type=file.type,
+            **kwargs,
+        )
 
     @staticmethod
     @assume_test_silo_mode(SiloMode.REGION)
@@ -1291,6 +1285,7 @@ class Factories:
 
             install.status = SentryAppInstallationStatus.INSTALLED if status is None else status
             install.save()
+            rpc_install = serialize_sentry_app_installation(install, install.sentry_app)
             if not prevent_token_exchange and (
                 install.sentry_app.status != SentryAppStatus.INTERNAL
             ):
@@ -1298,7 +1293,7 @@ class Factories:
                 assert install.sentry_app.application is not None
                 assert install.sentry_app.proxy_user is not None
                 GrantExchanger(
-                    install=install,
+                    install=rpc_install,
                     code=install.api_grant.code,
                     client_id=install.sentry_app.application.client_id,
                     user=install.sentry_app.proxy_user,
@@ -2050,7 +2045,7 @@ class Factories:
         env: Environment | None,
         uptime_subscription: UptimeSubscription,
         status: int,
-        mode: UptimeMonitorMode,
+        mode: ProjectUptimeSubscriptionMode,
         name: str | None,
         owner: Actor | None,
         id: int | None,
@@ -2163,12 +2158,9 @@ class Factories:
     @staticmethod
     @assume_test_silo_mode(SiloMode.REGION)
     def create_data_condition_group(
-        organization: Organization | None = None,
         **kwargs,
     ) -> DataConditionGroup:
-        if organization is None:
-            organization = Factories.create_organization()
-        return DataConditionGroup.objects.create(organization=organization, **kwargs)
+        return DataConditionGroup.objects.create(**kwargs)
 
     @staticmethod
     @assume_test_silo_mode(SiloMode.REGION)
@@ -2189,12 +2181,8 @@ class Factories:
 
     @staticmethod
     @assume_test_silo_mode(SiloMode.REGION)
-    def create_data_condition(
-        condition_group: DataConditionGroup | None = None, **kwargs
-    ) -> DataCondition:
-        if condition_group is None:
-            condition_group = Factories.create_data_condition_group()
-        return DataCondition.objects.create(condition_group=condition_group, **kwargs)
+    def create_data_condition(**kwargs) -> DataCondition:
+        return DataCondition.objects.create(**kwargs)
 
     @staticmethod
     @assume_test_silo_mode(SiloMode.REGION)

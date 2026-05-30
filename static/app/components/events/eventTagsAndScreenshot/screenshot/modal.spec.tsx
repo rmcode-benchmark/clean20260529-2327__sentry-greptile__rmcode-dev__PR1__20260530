@@ -66,16 +66,7 @@ describe('ScreenshotModal', function () {
 
   it('renders with previous and next buttons when passed attachments', async function () {
     const eventAttachment = EventAttachmentFixture();
-    const attachments = [
-      eventAttachment,
-      EventAttachmentFixture({id: '2'}),
-      EventAttachmentFixture({name: 'other-image.png'}),
-      EventAttachmentFixture({
-        name: 'textfile.txt',
-        mimetype: 'text/plain',
-        headers: {'Content-Type': 'text/plain'},
-      }),
-    ];
+    const attachments = [eventAttachment, EventAttachmentFixture({id: '2'})];
 
     render(
       <ScreenshotModal
@@ -98,11 +89,11 @@ describe('ScreenshotModal', function () {
     );
 
     expect(screen.getByRole('button', {name: 'Previous'})).toBeDisabled();
-    expect(screen.getByText('1 of 2')).toBeInTheDocument();
+    expect(screen.getByTestId('pagination-header-text')).toHaveTextContent('1 of 2');
 
     await userEvent.click(screen.getByRole('button', {name: 'Next'}));
     expect(screen.getByRole('button', {name: 'Next'})).toBeDisabled();
-    expect(screen.getByText('2 of 2')).toBeInTheDocument();
+    expect(screen.getByTestId('pagination-header-text')).toHaveTextContent('2 of 2');
   });
 
   it('does not render pagination buttons when only one screenshot', function () {
@@ -129,6 +120,7 @@ describe('ScreenshotModal', function () {
     expect(screen.getByText(eventAttachment.name)).toBeInTheDocument();
 
     expect(screen.queryByRole('button', {name: 'Previous'})).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pagination-header-text')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', {name: 'Next'})).not.toBeInTheDocument();
   });
 });

@@ -32,7 +32,6 @@ from sentry.monitors.processing_errors.errors import ProcessingErrorsException, 
 from sentry.monitors.types import CheckinItem
 from sentry.testutils.asserts import assert_org_audit_log_exists
 from sentry.testutils.cases import TestCase
-from sentry.testutils.helpers.options import override_options
 from sentry.testutils.outbox import outbox_runner
 from sentry.utils import json
 from sentry.utils.outcomes import Outcome
@@ -475,37 +474,24 @@ class MonitorConsumerTest(TestCase):
         assert checkin.status == CheckInStatus.IN_PROGRESS
 
     def test_check_in_update_terminal_in_progress(self):
-        now = datetime.now()
-        now_tz = now.replace(tzinfo=UTC)
-
         monitor = self._create_monitor(slug="my-monitor")
-        self.send_checkin(monitor.slug, duration=10.0, ts=now - timedelta(minutes=5))
+        self.send_checkin(monitor.slug, duration=10.0)
         self.send_checkin(
             monitor.slug,
             guid=self.guid,
             status="in_progress",
             expected_error=ExpectNoProcessingError(),
-            ts=now - timedelta(minutes=4),
         )
 
         checkin = MonitorCheckIn.objects.get(guid=self.guid)
-
-        # date_in_progress and duration are updated
-        assert checkin.date_in_progress == now_tz - timedelta(minutes=4)
         assert checkin.duration == int(10.0 * 1000)
 
-        self.send_checkin(
-            monitor.slug,
-            duration=20.0,
-            status="error",
-            ts=now - timedelta(minutes=3),
-        )
+        self.send_checkin(monitor.slug, duration=20.0, status="error")
         self.send_checkin(
             monitor.slug,
             guid=self.guid,
             status="in_progress",
             expected_error=ExpectNoProcessingError(),
-            ts=now - timedelta(minutes=2),
         )
 
         checkin = MonitorCheckIn.objects.get(guid=self.guid)
@@ -720,7 +706,7 @@ class MonitorConsumerTest(TestCase):
         now = datetime.now()
         monitor = self._create_monitor(slug="my-monitor")
 
-        with override_options({"crons.per_monitor_rate_limit": 1}):
+        with mock.patch("sentry.monitors.consumers.monitor_consumer.CHECKIN_QUOTA_LIMIT", 1):
             # Try to ingest two the second will be rate limited
             self.send_checkin("my-monitor", ts=now)
             self.send_checkin(
@@ -893,36 +879,11 @@ class MonitorConsumerTest(TestCase):
 
         monitor = Monitor.objects.get(slug="my-monitor")
         assert monitor is not None
-        assert monitor.is_upserting
 
         env = Environment.objects.get(
             organization_id=monitor.organization_id, name="my-environment"
         )
         assert MonitorEnvironment.objects.filter(monitor=monitor, environment_id=env.id).exists()
-
-    def test_upsert_existing_monitor(self) -> None:
-        monitor = self._create_monitor(slug="my-monitor")
-        self.send_checkin(monitor.slug)
-
-        assert not monitor.is_upserting
-
-        # Update schedule via upsert
-        self.send_checkin(
-            "my-monitor",
-            monitor_config={"schedule": {"type": "crontab", "value": "13 * * * *"}},
-        )
-
-        monitor.refresh_from_db()
-        assert monitor.is_upserting
-        assert monitor.schedule.type == "crontab"
-        assert monitor.schedule.crontab == "13 * * * *"
-
-        # Check-in does not upsert resets is_upserting back to false
-        self.send_checkin(monitor.slug)
-
-        monitor.refresh_from_db()
-        assert not monitor.is_upserting
-        assert monitor.schedule.crontab == "13 * * * *"
 
     def test_monitor_upsert_empty_timezone(self):
         self.send_checkin(
@@ -940,49 +901,6 @@ class MonitorConsumerTest(TestCase):
         monitor = Monitor.objects.get(slug="my-monitor")
         assert monitor is not None
         assert "timezone" not in monitor.config
-
-    def test_team_name_as_owner(self):
-        monitor = self._create_monitor(slug="my-monitor", owner_user_id=self.user.id)
-        self.send_checkin(
-            "my-monitor",
-            monitor_config={
-                "schedule": {"type": "crontab", "value": "13 * * * *"},
-                "owner": f"team:{self.team.name}",
-            },
-        )
-        checkin = MonitorCheckIn.objects.get(guid=self.guid)
-        assert checkin.status == CheckInStatus.OK
-
-        monitor_environment = MonitorEnvironment.objects.get(id=checkin.monitor_environment.id)
-        assert monitor_environment.status == MonitorStatus.OK
-        monitor.refresh_from_db()
-        assert monitor.owner_user_id is None
-        assert monitor.owner_team_id == self.team.id
-
-    def test_user_name_as_owner(self):
-        named_user = self.create_user(
-            "admin2@localhost",
-            username="test_user",
-            is_superuser=True,
-            is_staff=True,
-            is_sentry_app=False,
-        )
-        monitor = self._create_monitor(slug="my-monitor", owner_user_id=named_user.id)
-
-        self.send_checkin(
-            "my-monitor",
-            monitor_config={
-                "schedule": {"type": "crontab", "value": "13 * * * *"},
-                "owner": f"user:{named_user.username}",
-            },
-        )
-        checkin = MonitorCheckIn.objects.get(guid=self.guid)
-        assert checkin.status == CheckInStatus.OK
-
-        monitor_environment = MonitorEnvironment.objects.get(id=checkin.monitor_environment.id)
-        assert monitor_environment.status == MonitorStatus.OK
-        assert monitor.owner_user_id == named_user.id
-        assert monitor.owner_team_id is None
 
     def test_monitor_upsert_invalid_slug(self):
         self.send_checkin(

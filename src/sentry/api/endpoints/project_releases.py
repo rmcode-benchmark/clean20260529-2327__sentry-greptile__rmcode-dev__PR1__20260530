@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import sentry_sdk
 from django.db import IntegrityError, router, transaction
 from django.db.models import Q
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from sentry import analytics
-from sentry.analytics.events.release_created import ReleaseCreatedEvent
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import region_silo_endpoint
 from sentry.api.bases.project import ProjectEndpoint, ProjectReleasePermission
@@ -24,7 +22,7 @@ from sentry.plugins.interfaces.releasehook import ReleaseHook
 from sentry.ratelimits.config import SENTRY_RATELIMITER_GROUP_DEFAULTS, RateLimitConfig
 from sentry.signals import release_created
 from sentry.types.activity import ActivityType
-from sentry.utils.sdk import bind_organization_context
+from sentry.utils.sdk import Scope, bind_organization_context
 
 
 @region_silo_endpoint
@@ -119,7 +117,7 @@ class ProjectReleasesEndpoint(ProjectEndpoint):
             data=request.data, context={"organization": project.organization}
         )
 
-        scope = sentry_sdk.get_isolation_scope()
+        scope = Scope.get_isolation_scope()
 
         if serializer.is_valid():
             result = serializer.validated_data
@@ -191,14 +189,13 @@ class ProjectReleasesEndpoint(ProjectEndpoint):
                 status = 201
 
             analytics.record(
-                ReleaseCreatedEvent(
-                    user_id=request.user.id if request.user and request.user.id else None,
-                    organization_id=project.organization_id,
-                    project_ids=[project.id],
-                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:256],
-                    created_status=status,
-                    auth_type=get_auth_api_token_type(request.auth),
-                )
+                "release.created",
+                user_id=request.user.id if request.user and request.user.id else None,
+                organization_id=project.organization_id,
+                project_ids=[project.id],
+                user_agent=request.META.get("HTTP_USER_AGENT", "")[:256],
+                created_status=status,
+                auth_type=get_auth_api_token_type(request.auth),
             )
 
             if is_org_auth_token_auth(request.auth):

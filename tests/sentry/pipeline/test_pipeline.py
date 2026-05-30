@@ -1,52 +1,41 @@
-from collections.abc import Sequence
-from functools import cached_property
-from typing import Never
 from unittest.mock import MagicMock, patch
 
 from django.contrib.sessions.backends.base import SessionBase
 from django.http import HttpRequest, HttpResponse
 
 from sentry.organizations.services.organization.serial import serialize_rpc_organization
-from sentry.pipeline.base import ERR_MISMATCHED_USER, Pipeline
-from sentry.pipeline.provider import PipelineProvider
-from sentry.pipeline.store import PipelineSessionStore
+from sentry.pipeline import Pipeline, PipelineProvider, PipelineView
+from sentry.pipeline.base import ERR_MISMATCHED_USER
 from sentry.silo.base import SiloMode
 from sentry.testutils.cases import TestCase
 from sentry.testutils.silo import assume_test_silo_mode, control_silo_test
 
 
-class PipelineStep:
+class PipelineStep(PipelineView):
     def dispatch(self, request, pipeline):
         pipeline.dispatch_count += 1
         pipeline.bind_state("some_state", "value")
 
 
-class DummyProvider(PipelineProvider["DummyPipeline"]):
+class DummyProvider(PipelineProvider):
     key = "dummy"
     name = "dummy"
-    pipeline_views: list[PipelineStep] = [PipelineStep(), PipelineStep()]
+    pipeline_views: list[PipelineView] = [PipelineStep(), PipelineStep()]
 
-    def get_pipeline_views(self) -> Sequence[PipelineStep]:
+    def get_pipeline_views(self) -> list[PipelineView]:
         return self.pipeline_views
 
 
-class DummyPipeline(Pipeline[Never, PipelineSessionStore]):
+class DummyPipeline(Pipeline):
     pipeline_name = "test_pipeline"
+
+    # Simplify tests, the manager can just be a dict.
+    provider_manager = {"dummy": DummyProvider()}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.finished = False
         self.dispatch_count = 0
-
-    @cached_property
-    def provider(self) -> DummyProvider:
-        ret = {"dummy": DummyProvider()}[self._provider_key]
-        ret.set_pipeline(self)
-        ret.update_config(self.config)
-        return ret
-
-    def get_pipeline_views(self) -> Sequence[PipelineStep]:
-        return self.provider.get_pipeline_views()
 
     def finish_pipeline(self):
         self.finished = True

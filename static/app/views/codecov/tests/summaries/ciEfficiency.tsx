@@ -1,7 +1,6 @@
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
-import {useCodecovContext} from 'sentry/components/codecov/context/codecovContext';
 import {
   SummaryEntries,
   SummaryEntry,
@@ -18,15 +17,12 @@ import {t} from 'sentry/locale';
 import {formatPercentRate, formatTimeDuration} from 'sentry/utils/formatters';
 
 function TotalTestsRunTimeTooltip() {
-  const {codecovPeriod} = useCodecovContext();
-
   return (
     <Fragment>
       <p>
         <ToolTipTitle>Impact:</ToolTipTitle>
         {/* TODO: this is a dynamic value based on the selector */}
-        The cumulative CI time spent running tests over the last{' '}
-        <strong>{codecovPeriod}</strong>.
+        The cumulative CI time spent running tests over the last <strong>30 days</strong>.
       </p>
       <p>
         <ToolTipTitle>What is it:</ToolTipTitle>
@@ -37,21 +33,16 @@ function TotalTestsRunTimeTooltip() {
 }
 
 interface SlowestTestsTooltipProps {
-  slowestTests?: number;
-  slowestTestsDuration?: number;
+  slowestTestsDuration: number;
 }
 
-function SlowestTestsTooltip({
-  slowestTests,
-  slowestTestsDuration,
-}: SlowestTestsTooltipProps) {
+function SlowestTestsTooltip({slowestTestsDuration}: SlowestTestsTooltipProps) {
   return (
     <Fragment>
-      {/* TODO: add t/tct for these tooltips */}
       <p>
         <ToolTipTitle>Impact:</ToolTipTitle>
-        The slowest <strong>{slowestTests}</strong> tests take{' '}
-        <strong>{formatTimeDuration(slowestTestsDuration, 2)}</strong> to run.
+        The slowest 100 tests take{' '}
+        <strong>{formatTimeDuration(slowestTestsDuration)}</strong> to run.
       </p>
       <p>
         <ToolTipTitle>What is it:</ToolTipTitle>
@@ -67,17 +58,17 @@ const ToolTipTitle = styled('strong')`
 `;
 
 interface CIEfficiencyBodyProps {
-  slowestTests?: number;
-  slowestTestsDuration?: number;
-  totalTestsRunTime?: number;
-  totalTestsRunTimeChange?: number | null;
+  slowestTests: number;
+  slowestTestsDuration: number;
+  totalTestsRunTime: number;
+  totalTestsRunTimeChange: number;
 }
 
 function CIEfficiencyBody({
   totalTestsRunTime,
   totalTestsRunTimeChange,
-  slowestTests,
   slowestTestsDuration,
+  slowestTests,
 }: CIEfficiencyBodyProps) {
   return (
     <SummaryEntries largeColumnSpan={8} smallColumnSpan={1}>
@@ -86,43 +77,33 @@ function CIEfficiencyBody({
           {t('Total Tests Run Time')}
         </SummaryEntryLabel>
         <SummaryEntryValue>
-          {totalTestsRunTime === undefined
-            ? '-'
-            : formatTimeDuration(totalTestsRunTime, 2)}
-          {typeof totalTestsRunTimeChange === 'number' &&
-            totalTestsRunTimeChange !== 0 && (
-              <Tag type={totalTestsRunTimeChange > 0 ? 'error' : 'success'}>
-                {formatPercentRate(totalTestsRunTimeChange)}
-              </Tag>
-            )}
+          {formatTimeDuration(totalTestsRunTime)}
+          <Tag type={totalTestsRunTimeChange > 0 ? 'error' : 'success'}>
+            {formatPercentRate(totalTestsRunTimeChange)}
+          </Tag>
         </SummaryEntryValue>
       </SummaryEntry>
       <SummaryEntry columns={3}>
         <SummaryEntryLabel
           showUnderline
-          body={
-            <SlowestTestsTooltip
-              slowestTests={slowestTests}
-              slowestTestsDuration={slowestTestsDuration}
-            />
-          }
+          body={<SlowestTestsTooltip slowestTestsDuration={slowestTestsDuration} />}
         >
-          {t('Slowest Tests (P95)')}
+          {t('Slowest Tests')}
         </SummaryEntryLabel>
-        {slowestTestsDuration === undefined ? (
-          <SummaryEntryValue>-</SummaryEntryValue>
-        ) : (
-          <SummaryEntryValueLink filterBy="slowestTests">
-            {formatTimeDuration(slowestTestsDuration, 2)}
-          </SummaryEntryValueLink>
-        )}
+        <SummaryEntryValueLink filterBy="slowest_tests">
+          {slowestTests}
+        </SummaryEntryValueLink>
       </SummaryEntry>
     </SummaryEntries>
   );
 }
 
-interface CIEfficiencyProps extends CIEfficiencyBodyProps {
+interface CIEfficiencyProps {
   isLoading: boolean;
+  slowestTests: number;
+  slowestTestsDuration: number;
+  totalTestsRunTime: number;
+  totalTestsRunTimeChange: number;
 }
 
 export function CIEfficiency({isLoading, ...bodyProps}: CIEfficiencyProps) {
@@ -139,7 +120,7 @@ export function CIEfficiency({isLoading, ...bodyProps}: CIEfficiencyProps) {
 const CIEfficiencyPanel = styled(Panel)`
   grid-column: span 24;
 
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     grid-column: span 8;
   }
 `;

@@ -99,7 +99,7 @@ const CursorLabel = styled(Overlay)`
   width: max-content;
   padding: ${space(0.75)} ${space(1)};
   color: ${p => p.theme.textColor};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   line-height: 1.2;
   position: fixed;
   pointer-events: none; /* Prevent tooltip from blocking mouse events */

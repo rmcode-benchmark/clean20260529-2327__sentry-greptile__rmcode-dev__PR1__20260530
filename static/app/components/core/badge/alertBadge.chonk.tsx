@@ -60,7 +60,7 @@ export const ChonkAlertBadgeDiamondBackground = chonkStyled('div')<AlertBadgePro
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: ${p => p.theme.radius.xs};
+  border-radius: ${p => p.theme.radius.mini};
 
   > svg {
     width: 13px;

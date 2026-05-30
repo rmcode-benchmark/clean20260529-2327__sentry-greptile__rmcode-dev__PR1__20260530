@@ -4,6 +4,7 @@ import {render, screen, userEvent, within} from 'sentry-test/reactTestingLibrary
 import PageFiltersStore from 'sentry/stores/pageFiltersStore';
 import type {TagCollection} from 'sentry/types/group';
 import {trackAnalytics} from 'sentry/utils/analytics';
+import {DiscoverDatasets} from 'sentry/utils/discover/types';
 import {FieldKind} from 'sentry/utils/fields';
 import {
   PageParamsProvider,
@@ -11,9 +12,8 @@ import {
   useExploreGroupBys,
 } from 'sentry/views/explore/contexts/pageParamsContext';
 import * as spanTagsModule from 'sentry/views/explore/contexts/spanTagsContext';
-import {TraceItemAttributeProvider} from 'sentry/views/explore/contexts/traceItemAttributeContext';
+import {SpanTagsProvider} from 'sentry/views/explore/contexts/spanTagsContext';
 import {SpansTabContent} from 'sentry/views/explore/spans/spansTab';
-import {TraceItemDataset} from 'sentry/views/explore/types';
 import type {PickableDays} from 'sentry/views/explore/utils';
 
 jest.mock('sentry/utils/analytics');
@@ -93,9 +93,9 @@ describe('SpansTabContent', function () {
   it('should fire analytics once per change', async function () {
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP_RPC} enabled>
           <SpansTabContent datePageFilterProps={datePageFilterProps} />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>,
       {organization}
     );
@@ -139,9 +139,9 @@ describe('SpansTabContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP_RPC} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>,
       {organization}
     );
@@ -186,7 +186,7 @@ describe('SpansTabContent', function () {
 
     beforeEach(function () {
       const useSpanTagsSpy = jest
-        .spyOn(spanTagsModule, 'useTraceItemTags')
+        .spyOn(spanTagsModule, 'useSpanTags')
         .mockImplementation(type => {
           switch (type) {
             case 'number':

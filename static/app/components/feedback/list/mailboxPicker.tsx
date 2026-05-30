@@ -1,7 +1,5 @@
-import {useTheme} from '@emotion/react';
-
+import {Flex} from 'sentry/components/container/flex';
 import {Badge} from 'sentry/components/core/badge';
-import {Flex} from 'sentry/components/core/layout';
 import {SegmentedControl} from 'sentry/components/core/segmentedControl';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import type decodeMailbox from 'sentry/components/feedback/decodeMailbox';
@@ -25,7 +23,6 @@ const MAILBOXES = [
 export default function MailboxPicker({onChange, value}: Props) {
   const organization = useOrganization();
   const {data} = useMailboxCounts({organization});
-  const theme = useTheme();
 
   const filteredMailboxes = MAILBOXES;
 
@@ -37,17 +34,17 @@ export default function MailboxPicker({onChange, value}: Props) {
         value={value}
         onChange={onChange}
       >
-        {filteredMailboxes.map(mailbox => {
+        {filteredMailboxes.map(c => {
           // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-          const count = data?.[mailbox.key];
+          const count = data?.[c.key];
           const display = count && count >= 100 ? '99+' : count;
           const title =
             count === 1 ? t('1 unassigned item') : t('%s unassigned items', display);
           return (
-            <SegmentedControl.Item key={mailbox.key} aria-label={mailbox.label}>
+            <SegmentedControl.Item key={c.key} aria-label={c.label}>
               <Tooltip disabled={!count} title={title}>
-                <Flex align="center" gap={theme.isChonk ? 'sm' : 'none'}>
-                  {mailbox.label}
+                <Flex align="center">
+                  {c.label}
                   {display ? <Badge type="default">{display}</Badge> : null}
                 </Flex>
               </Tooltip>

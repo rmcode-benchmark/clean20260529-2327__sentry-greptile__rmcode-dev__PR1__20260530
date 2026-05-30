@@ -26,14 +26,14 @@ describe('OrgDropdown', function () {
 
     expect(
       screen.getByRole('menuitemradio', {name: 'Organization Settings'})
-    ).toHaveAttribute('href', `/settings/${organization.slug}/`);
+    ).toHaveAttribute('href', `/organizations/${organization.slug}/settings/`);
     expect(screen.getByRole('menuitemradio', {name: 'Members'})).toHaveAttribute(
       'href',
-      `/settings/${organization.slug}/members/`
+      `/organizations/${organization.slug}/settings/members/`
     );
     expect(screen.getByRole('menuitemradio', {name: 'Teams'})).toHaveAttribute(
       'href',
-      `/settings/${organization.slug}/teams/`
+      `/organizations/${organization.slug}/settings/teams/`
     );
   });
 

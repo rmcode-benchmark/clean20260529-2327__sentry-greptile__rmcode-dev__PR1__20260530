@@ -1,5 +1,5 @@
 import {IndexRoute, Route} from 'sentry/components/route';
-import {makeLazyloadComponent as make} from 'sentry/makeLazyloadComponent';
+import {makeLazyloadComponent as make} from 'sentry/routes';
 
 export const automationRoutes = (
   <Route path="automations/">

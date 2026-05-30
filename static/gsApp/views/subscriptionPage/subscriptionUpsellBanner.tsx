@@ -198,7 +198,7 @@ const IntegationBannerTitle = styled('div')`
   display: flex;
   align-items: baseline;
   gap: ${space(1)};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   margin-bottom: ${space(1)};
   font-weight: 600;
 `;
@@ -226,7 +226,7 @@ const BannerImage = styled('img')`
   pointer-events: none;
   max-height: 90%;
 
-  @media (min-width: ${p => p.theme.breakpoints.xl}) {
+  @media (min-width: ${p => p.theme.breakpoints.xlarge}) {
     display: block;
   }
 `;

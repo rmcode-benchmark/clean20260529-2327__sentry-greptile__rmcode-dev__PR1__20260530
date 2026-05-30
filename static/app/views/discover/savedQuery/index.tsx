@@ -11,12 +11,11 @@ import Feature from 'sentry/components/acl/feature';
 import FeatureDisabled from 'sentry/components/acl/featureDisabled';
 import GuideAnchor from 'sentry/components/assistant/guideAnchor';
 import Banner from 'sentry/components/banner';
+import {Flex} from 'sentry/components/container/flex';
 import {Button} from 'sentry/components/core/button';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
 import {LinkButton} from 'sentry/components/core/button/linkButton';
 import {Input} from 'sentry/components/core/input';
-import {Flex} from 'sentry/components/core/layout';
-import {Tooltip} from 'sentry/components/core/tooltip';
 import {CreateAlertFromViewButton} from 'sentry/components/createAlertButton';
 import type {MenuItemProps} from 'sentry/components/dropdownMenu';
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
@@ -45,13 +44,10 @@ import {
   handleAddQueryToDashboard,
   SAVED_QUERY_DATASET_TO_WIDGET_TYPE,
 } from 'sentry/views/discover/utils';
-import {getExploreUrl} from 'sentry/views/explore/utils';
-import {deprecateTransactionAlerts} from 'sentry/views/insights/common/utils/hasEAPAlerts';
 
 import {
   getDatasetFromLocationOrSavedQueryDataset,
   getSavedQueryDataset,
-  getTransactionDeprecationMessage,
   handleCreateQuery,
   handleDeleteQuery,
   handleResetHomepageQuery,
@@ -111,7 +107,7 @@ function SaveAsDropdown({
             <StyledOverlay arrowProps={arrowProps} animated>
               <FocusScope contain restoreFocus autoFocus>
                 <form onSubmit={modifiedHandleCreateQuery}>
-                  <Flex gap="md" direction="column">
+                  <Flex gap={space(1)} column>
                     <Input
                       type="text"
                       name="query_name"
@@ -352,82 +348,35 @@ class SavedQueryButtonGroup extends PureComponent<Props, State> {
 
   renderButtonSaveAs(disabled: boolean) {
     const {queryName} = this.state;
-    const {organization, location, savedQuery} = this.props;
-    const currentDataset = getDatasetFromLocationOrSavedQueryDataset(
-      location,
-      savedQuery?.queryDataset
-    );
-
-    const deprecatingSaveAs =
-      currentDataset === DiscoverDatasets.TRANSACTIONS &&
-      organization.features.includes('discover-saved-queries-deprecation');
-
-    const tracesUrl = getExploreUrl({
-      organization,
-      query: 'is_transaction:true',
-    });
-
     return (
-      <Tooltip
-        disabled={
-          currentDataset !== DiscoverDatasets.TRANSACTIONS ||
-          !organization.features.includes('discover-saved-queries-deprecation')
-        }
-        isHoverable
-        title={getTransactionDeprecationMessage(tracesUrl)}
-      >
-        <SaveAsDropdown
-          queryName={queryName}
-          onChangeInput={this.onChangeInput}
-          modifiedHandleCreateQuery={this.handleCreateQuery}
-          disabled={disabled || deprecatingSaveAs}
-        />
-      </Tooltip>
+      <SaveAsDropdown
+        queryName={queryName}
+        onChangeInput={this.onChangeInput}
+        modifiedHandleCreateQuery={this.handleCreateQuery}
+        disabled={disabled}
+      />
     );
   }
 
   renderButtonSave(disabled: boolean) {
     const {isNewQuery, isEditingQuery} = this.state;
-    const {organization, savedQuery, location} = this.props;
-
-    const currentDataset = getDatasetFromLocationOrSavedQueryDataset(
-      location,
-      savedQuery?.queryDataset
-    );
-
-    const deprecatingTransactionsDataset =
-      currentDataset === DiscoverDatasets.TRANSACTIONS &&
-      organization.features.includes('discover-saved-queries-deprecation');
 
     if (!isNewQuery && !isEditingQuery) {
       return null;
     }
     // Existing query with edits, show save and save as.
     if (!isNewQuery && isEditingQuery) {
-      const tracesUrl = getExploreUrl({
-        organization,
-        query: 'is_transaction:true',
-      });
-
       return (
         <Fragment>
-          <Tooltip
-            title={
-              deprecatingTransactionsDataset &&
-              getTransactionDeprecationMessage(tracesUrl)
-            }
-            isHoverable
+          <Button
+            onClick={this.handleUpdateQuery}
+            data-test-id="discover2-savedquery-button-update"
+            disabled={disabled}
+            size="sm"
           >
-            <Button
-              onClick={this.handleUpdateQuery}
-              data-test-id="discover2-savedquery-button-update"
-              disabled={disabled || deprecatingTransactionsDataset}
-              size="sm"
-            >
-              <IconUpdate />
-              {t('Save Changes')}
-            </Button>
-          </Tooltip>
+            <IconUpdate />
+            {t('Save Changes')}
+          </Button>
           {this.renderButtonSaveAs(disabled)}
         </Fragment>
       );
@@ -462,13 +411,6 @@ class SavedQueryButtonGroup extends PureComponent<Props, State> {
       location,
       savedQuery?.queryDataset
     );
-
-    if (
-      currentDataset === DiscoverDatasets.TRANSACTIONS &&
-      deprecateTransactionAlerts(organization)
-    ) {
-      return null;
-    }
 
     let alertType: any;
     let buttonEventView = eventView;
@@ -635,30 +577,12 @@ class SavedQueryButtonGroup extends PureComponent<Props, State> {
     const {organization, eventView, savedQuery, yAxis, router, location, isHomepage} =
       this.props;
 
-    const currentDataset = getDatasetFromLocationOrSavedQueryDataset(
-      location,
-      savedQuery?.queryDataset
-    );
-
-    const deprecatingTransactionsDataset =
-      currentDataset === DiscoverDatasets.TRANSACTIONS &&
-      organization.features.includes('discover-saved-queries-deprecation');
-
     const contextMenuItems: MenuItemProps[] = [];
-
-    const tracesUrl = getExploreUrl({
-      organization,
-      query: 'is_transaction:true',
-    });
 
     if (organization.features.includes('dashboards-edit')) {
       contextMenuItems.push({
         key: 'add-to-dashboard',
         label: t('Add to Dashboard'),
-        disabled: deprecatingTransactionsDataset,
-        tooltipOptions: {isHoverable: true},
-        tooltip:
-          deprecatingTransactionsDataset && getTransactionDeprecationMessage(tracesUrl),
         onAction: () => {
           handleAddQueryToDashboard({
             organization,
@@ -710,7 +634,7 @@ class SavedQueryButtonGroup extends PureComponent<Props, State> {
     );
 
     return (
-      <ResponsiveButtonBar>
+      <ResponsiveButtonBar gap={1}>
         {this.renderQueryButton(disabled => this.renderSaveAsHomepage(disabled))}
         {this.renderQueryButton(disabled => this.renderButtonSave(disabled))}
         <Feature organization={organization} features="incidents">
@@ -726,7 +650,7 @@ class SavedQueryButtonGroup extends PureComponent<Props, State> {
 }
 
 const ResponsiveButtonBar = styled(ButtonBar)`
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     margin-top: 0;
   }
 `;

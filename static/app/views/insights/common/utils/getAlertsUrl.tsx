@@ -15,19 +15,15 @@ export function getAlertsUrl({
   name,
   interval,
   dataset = Dataset.GENERIC_METRICS,
-  eventTypes = 'transaction',
-  referrer,
 }: {
   aggregate: string;
   organization: Organization;
   pageFilters: PageFilters;
   dataset?: Dataset;
-  eventTypes?: string;
   interval?: string;
   name?: string;
   project?: Project;
   query?: string;
-  referrer?: string;
 }) {
   const statsPeriod = getStatsPeriod(pageFilters);
   const environment = pageFilters.environments;
@@ -36,13 +32,12 @@ export function getAlertsUrl({
     aggregate,
     dataset,
     project: project?.slug,
-    eventTypes,
+    eventTypes: 'transaction',
     query,
     statsPeriod,
     environment,
     name,
     interval: supportedInterval,
-    referrer,
   };
 
   return (

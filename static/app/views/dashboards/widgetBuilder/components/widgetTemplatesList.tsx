@@ -65,7 +65,7 @@ function WidgetTemplatesList({
   return (
     <Fragment>
       {widgets.map((widget, index) => {
-        const iconColor = theme.chart.getColorPalette(widgets.length - 1)?.[index]!;
+        const iconColor = theme.chart.getColorPalette(widgets.length - 2)?.[index]!;
 
         const Icon = getWidgetIcon(widget.displayType);
         const lastWidget = index === widgets.length - 1;
@@ -172,13 +172,13 @@ const TemplateCard = styled('div')<{selected: boolean}>`
 `;
 
 const WidgetTitle = styled('h3')`
-  font-size: ${p => p.theme.fontSize.lg};
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-size: ${p => p.theme.fontSizeLarge};
+  font-weight: ${p => p.theme.fontWeightNormal};
   margin-bottom: ${space(0.25)};
 `;
 
 const WidgetDescription = styled('p')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   color: ${p => p.theme.subText};
   margin-bottom: 0;
 `;

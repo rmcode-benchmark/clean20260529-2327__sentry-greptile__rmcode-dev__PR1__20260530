@@ -12,7 +12,11 @@ from sentry.issues.grouptype import (
     ProfileFunctionRegressionType,
 )
 from sentry.models.group import Group
-from sentry.testutils.cases import MetricsEnhancedPerformanceTestCase, ProfilesSnubaTestCase
+from sentry.testutils.cases import (
+    AcceptanceTestCase,
+    MetricsEnhancedPerformanceTestCase,
+    ProfilesSnubaTestCase,
+)
 from sentry.testutils.helpers.datetime import before_now
 from sentry.testutils.helpers.features import with_feature
 from tests.sentry.issues.test_utils import OccurrenceTestMixin
@@ -21,6 +25,7 @@ pytestmark = pytest.mark.sentry_metrics
 
 
 class TestSlackImageBlockBuilder(
+    AcceptanceTestCase,
     MetricsEnhancedPerformanceTestCase,
     ProfilesSnubaTestCase,
     OccurrenceTestMixin,
@@ -65,7 +70,7 @@ class TestSlackImageBlockBuilder(
         assert "_media/" in image_block["image_url"]
 
     @with_feature("organizations:performance-use-metrics")
-    @patch("sentry.performance_issues.detectors.utils.escape_transaction")
+    @patch("sentry.utils.performance_issues.detectors.utils.escape_transaction")
     def test_caching(self, mock_escape_transaction):
         mock_escape_transaction.return_value = "Test Transaction"
         group = self._create_endpoint_regression_issue()

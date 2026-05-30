@@ -2,7 +2,6 @@ from sentry.constants import SentryAppStatus
 from sentry.models.apiapplication import ApiApplication
 from sentry.models.apitoken import ApiToken
 from sentry.sentry_apps.models.sentry_app import SentryApp
-from sentry.sentry_apps.models.sentry_app_avatar import SentryAppAvatar
 from sentry.sentry_apps.models.sentry_app_component import SentryAppComponent
 from sentry.sentry_apps.models.sentry_app_installation import SentryAppInstallation
 from sentry.sentry_apps.services.app import (
@@ -11,7 +10,6 @@ from sentry.sentry_apps.services.app import (
     RpcSentryAppComponent,
     RpcSentryAppInstallation,
 )
-from sentry.sentry_apps.services.app.model import RpcSentryAppAvatar
 
 
 def serialize_api_application(api_app: ApiApplication | None) -> RpcApiApplication | None:
@@ -24,11 +22,7 @@ def serialize_api_application(api_app: ApiApplication | None) -> RpcApiApplicati
     )
 
 
-def serialize_sentry_app(
-    app: SentryApp, avatars: list[SentryAppAvatar] | None = None
-) -> RpcSentryApp:
-    if avatars is None:
-        avatars = []
+def serialize_sentry_app(app: SentryApp) -> RpcSentryApp:
     return RpcSentryApp(
         id=app.id,
         scope_list=app.scope_list,
@@ -48,7 +42,6 @@ def serialize_sentry_app(
         is_publish_request_inprogress=app.status == SentryAppStatus.PUBLISH_REQUEST_INPROGRESS,
         status=SentryAppStatus.as_str(app.status),
         metadata=app.metadata,
-        avatars=[serialize_sentry_app_avatar(avatar) for avatar in avatars],
     )
 
 
@@ -84,14 +77,4 @@ def serialize_sentry_app_component(component: SentryAppComponent) -> RpcSentryAp
         sentry_app_id=component.sentry_app_id,
         type=component.type,
         app_schema=component.schema,
-    )
-
-
-def serialize_sentry_app_avatar(avatar: SentryAppAvatar) -> RpcSentryAppAvatar:
-    return RpcSentryAppAvatar(
-        id=avatar.id,
-        ident=avatar.ident,
-        sentry_app_id=avatar.sentry_app_id,
-        avatar_type=avatar.avatar_type,
-        color=avatar.color,
     )

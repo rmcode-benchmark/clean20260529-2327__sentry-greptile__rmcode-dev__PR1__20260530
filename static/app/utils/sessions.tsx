@@ -185,7 +185,7 @@ export function getCountSeries(
 }
 
 export function initSessionsChart(theme: Theme) {
-  const colors = theme.chart.getColorPalette(15);
+  const colors = theme.chart.getColorPalette(14);
   return {
     [SessionStatus.HEALTHY]: {
       seriesName: sessionTerm.healthy,

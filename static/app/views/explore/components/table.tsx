@@ -2,8 +2,8 @@ import type React from 'react';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
 import styled from '@emotion/styled';
 
-import {COL_WIDTH_MINIMUM} from 'sentry/components/tables/gridEditable';
-import type {Alignments} from 'sentry/components/tables/gridEditable/sortLink';
+import {COL_WIDTH_MINIMUM} from 'sentry/components/gridEditable';
+import type {Alignments} from 'sentry/components/gridEditable/sortLink';
 import {
   Body as _TableWrapper,
   Grid as _Table,
@@ -13,7 +13,7 @@ import {
   GridHead,
   GridHeadCell,
   GridRow,
-} from 'sentry/components/tables/gridEditable/styles';
+} from 'sentry/components/gridEditable/styles';
 import {space} from 'sentry/styles/space';
 import {defined} from 'sentry/utils';
 import {Actions} from 'sentry/views/discover/table/cellAction';
@@ -53,7 +53,6 @@ export const ALLOWED_CELL_ACTIONS: Actions[] = [
   Actions.EXCLUDE,
   Actions.SHOW_GREATER_THAN,
   Actions.SHOW_LESS_THAN,
-  Actions.COPY_TO_CLIPBOARD,
 ];
 
 const MINIMUM_COLUMN_WIDTH = COL_WIDTH_MINIMUM;
@@ -74,7 +73,7 @@ export function useTableStyles(
       : options?.prefixColumnWidth;
 
   const resizingColumnIndex = useRef<number | null>(null);
-  const columnWidthsRef = useRef<Array<number | null>>(fields.map(_ => null));
+  const columnWidthsRef = useRef<Array<number | null>>(fields.map(() => null));
 
   useEffect(() => {
     columnWidthsRef.current = fields.map(

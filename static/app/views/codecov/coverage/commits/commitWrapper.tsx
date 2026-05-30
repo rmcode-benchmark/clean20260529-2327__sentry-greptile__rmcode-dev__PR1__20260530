@@ -16,7 +16,7 @@ export default function CommitDetailWrapper() {
         <Layout.HeaderContent>
           <HeaderContentBar>
             <Layout.Title>
-              Commit Page Wrapper <FeatureBadge type="new" />
+              Commit Page Wrapper <FeatureBadge type="new" variant="badge" />
             </Layout.Title>
           </HeaderContentBar>
         </Layout.HeaderContent>

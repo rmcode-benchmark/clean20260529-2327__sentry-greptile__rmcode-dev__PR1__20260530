@@ -1,4 +1,3 @@
-import sentry_sdk
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema, extend_schema_serializer
 from rest_framework.exceptions import ParseError
@@ -39,7 +38,7 @@ from sentry.models.release import Release, ReleaseStatus
 from sentry.models.releases.exceptions import ReleaseCommitError, UnsafeReleaseDeletion
 from sentry.snuba.sessions import STATS_PERIODS
 from sentry.types.activity import ActivityType
-from sentry.utils.sdk import bind_organization_context
+from sentry.utils.sdk import Scope, bind_organization_context
 
 
 class InvalidSortException(Exception):
@@ -436,7 +435,7 @@ class OrganizationReleaseDetailsEndpoint(
         """
         bind_organization_context(organization)
 
-        scope = sentry_sdk.get_isolation_scope()
+        scope = Scope.get_isolation_scope()
         scope.set_tag("version", version)
         try:
             release = Release.objects.get(organization_id=organization, version=version)

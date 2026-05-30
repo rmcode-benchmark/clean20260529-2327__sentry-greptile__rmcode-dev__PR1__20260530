@@ -14,8 +14,9 @@ import {decodeScalar} from 'sentry/utils/queryString';
 import type RequestError from 'sentry/utils/requestError/requestError';
 import useOrganization from 'sentry/utils/useOrganization';
 import usePageFilters from 'sentry/utils/usePageFilters';
+import {useSyncedLocalStorageState} from 'sentry/utils/useSyncedLocalStorageState';
+import {TRACE_FORMAT_PREFERENCE_KEY} from 'sentry/views/performance/newTraceDetails/traceHeader/styles';
 import type {TraceTree} from 'sentry/views/performance/newTraceDetails/traceModels/traceTree';
-import {useIsEAPTraceEnabled} from 'sentry/views/performance/newTraceDetails/useIsEAPTraceEnabled';
 
 const DEFAULT_TIMESTAMP_LIMIT = 10_000;
 const DEFAULT_LIMIT = 1_000;
@@ -28,6 +29,7 @@ export function getTraceQueryParams(
   limit: number;
   targetId: string | undefined;
   timestamp: string | undefined;
+  useSpans: number;
   demo?: string;
   pageEnd?: string;
   pageStart?: string;
@@ -70,6 +72,7 @@ export function getTraceQueryParams(
     limit,
     timestamp: timestamp?.toString(),
     targetId,
+    useSpans: 1,
   };
   for (const key in queryParams) {
     if (
@@ -170,7 +173,6 @@ function useDemoTrace(
 }
 
 type UseTraceParams = {
-  additionalAttributes?: string[];
   limit?: number;
   timestamp?: number;
   traceSlug?: string;
@@ -195,7 +197,12 @@ export function useTrace(
   }, [options.limit, options.timestamp, query.trace_format]);
 
   const isDemoMode = Boolean(queryParams.demo);
-  const isEAPEnabled = useIsEAPTraceEnabled();
+  const [storedTraceFormat] = useSyncedLocalStorageState(
+    TRACE_FORMAT_PREFERENCE_KEY,
+    'non-eap'
+  );
+  const isEAPEnabled =
+    organization.features.includes('trace-spans-format') && storedTraceFormat === 'eap';
   const hasValidTrace = Boolean(options.traceSlug && organization.slug);
 
   const demoTrace = useDemoTrace(queryParams.demo, organization);
@@ -214,13 +221,7 @@ export function useTrace(
   const eapTraceQuery = useApiQuery<TraceTree.EAPTrace>(
     [
       `/organizations/${organization.slug}/trace/${options.traceSlug ?? ''}/`,
-      {
-        query: {
-          ...queryParams,
-          project: -1,
-          additional_attributes: options.additionalAttributes,
-        },
-      },
+      {query: {...queryParams, project: -1}},
     ],
     {
       staleTime: Infinity,

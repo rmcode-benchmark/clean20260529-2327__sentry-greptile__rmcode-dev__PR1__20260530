@@ -10,7 +10,6 @@ import {
 
 import {useLocation} from 'sentry/utils/useLocation';
 import usePageFilters from 'sentry/utils/usePageFilters';
-import {SAMPLING_MODE} from 'sentry/views/explore/hooks/useProgressiveQuery';
 import {HTTPSamplesPanel} from 'sentry/views/insights/http/components/httpSamplesPanel';
 
 jest.mock('sentry/utils/useLocation');
@@ -112,6 +111,7 @@ describe('HTTPSamplesPanel', () => {
   describe('Status panel', () => {
     let eventsStatsRequestMock: jest.Mock;
     let samplesRequestMock: jest.Mock;
+    let spanFieldTagsMock: jest.Mock;
 
     beforeEach(() => {
       jest.mocked(useLocation).mockReturnValue({
@@ -195,6 +195,21 @@ describe('HTTPSamplesPanel', () => {
           meta: {},
         },
       });
+
+      spanFieldTagsMock = MockApiClient.addMockResponse({
+        url: `/organizations/${organization.slug}/spans/fields/`,
+        method: 'GET',
+        body: [
+          {
+            key: 'api_key',
+            name: 'Api Key',
+          },
+          {
+            key: 'bytes.size',
+            name: 'Bytes.Size',
+          },
+        ],
+      });
     });
 
     it('fetches panel data', async () => {
@@ -206,7 +221,7 @@ describe('HTTPSamplesPanel', () => {
         expect.objectContaining({
           method: 'GET',
           query: {
-            dataset: 'spans',
+            dataset: 'spansMetrics',
             environment: [],
             field: [
               'epm()',
@@ -218,9 +233,9 @@ describe('HTTPSamplesPanel', () => {
             ],
             per_page: 50,
             project: [],
-            query: 'span.op:http.client !has:span.domain transaction:/api/0/users',
+            query:
+              'span.module:http span.op:http.client !has:span.domain transaction:/api/0/users',
             referrer: 'api.performance.http.samples-panel-metrics-ribbon',
-            sampling: SAMPLING_MODE.NORMAL,
             statsPeriod: '10d',
           },
         })
@@ -232,8 +247,7 @@ describe('HTTPSamplesPanel', () => {
         expect.objectContaining({
           method: 'GET',
           query: {
-            dataset: 'spans',
-            sampling: SAMPLING_MODE.NORMAL,
+            dataset: 'spansMetrics',
             environment: [],
             excludeOther: 0,
             field: ['span.status_code', 'count()'],
@@ -243,7 +257,7 @@ describe('HTTPSamplesPanel', () => {
             per_page: 50,
             project: [],
             query:
-              'span.op:http.client !has:span.domain transaction:/api/0/users span.status_code:[300,301,302,303,304,305,307,308]',
+              'span.module:http span.op:http.client !has:span.domain transaction:/api/0/users span.status_code:[300,301,302,303,304,305,307,308]',
             referrer: 'api.performance.http.samples-panel-response-code-chart',
             statsPeriod: '10d',
             topEvents: '5',
@@ -259,10 +273,9 @@ describe('HTTPSamplesPanel', () => {
         expect.objectContaining({
           method: 'GET',
           query: expect.objectContaining({
-            dataset: 'spans',
-            sampling: SAMPLING_MODE.NORMAL,
+            dataset: 'spansIndexed',
             query:
-              'span.op:http.client !has:span.domain transaction:/api/0/users span.status_code:[300,301,302,303,304,305,307,308]',
+              'span.module:http span.op:http.client !has:span.domain transaction:/api/0/users span.status_code:[300,301,302,303,304,305,307,308]',
             project: [],
             field: [
               'project',
@@ -277,6 +290,19 @@ describe('HTTPSamplesPanel', () => {
             referrer: 'api.performance.http.samples-panel-response-code-samples',
             statsPeriod: '10d',
           }),
+        })
+      );
+
+      expect(spanFieldTagsMock).toHaveBeenNthCalledWith(
+        1,
+        `/organizations/${organization.slug}/spans/fields/`,
+        expect.objectContaining({
+          method: 'GET',
+          query: {
+            project: [],
+            environment: [],
+            statsPeriod: '1h',
+          },
         })
       );
 
@@ -313,6 +339,7 @@ describe('HTTPSamplesPanel', () => {
   describe('Duration panel', () => {
     let chartRequestMock: jest.Mock;
     let samplesRequestMock: jest.Mock;
+    let spanFieldTagsMock: jest.Mock;
 
     beforeEach(() => {
       jest.mocked(useLocation).mockReturnValue({
@@ -365,6 +392,21 @@ describe('HTTPSamplesPanel', () => {
           },
         },
       });
+
+      spanFieldTagsMock = MockApiClient.addMockResponse({
+        url: `/organizations/${organization.slug}/spans/fields/`,
+        method: 'GET',
+        body: [
+          {
+            key: 'api_key',
+            name: 'Api Key',
+          },
+          {
+            key: 'bytes.size',
+            name: 'Bytes.Size',
+          },
+        ],
+      });
     });
 
     it('fetches panel data', async () => {
@@ -378,14 +420,13 @@ describe('HTTPSamplesPanel', () => {
         expect.objectContaining({
           method: 'GET',
           query: expect.objectContaining({
-            dataset: 'spans',
-            sampling: SAMPLING_MODE.NORMAL,
+            dataset: 'spansMetrics',
             environment: [],
             interval: '30m',
             per_page: 50,
             project: [],
             query:
-              'span.op:http.client span.domain:"\\*.sentry.dev" transaction:/api/0/users',
+              'span.module:http span.op:http.client span.domain:"\\*.sentry.dev" transaction:/api/0/users',
             referrer: 'api.performance.http.samples-panel-duration-chart',
             statsPeriod: '10d',
             yAxis: 'avg(span.self_time)',
@@ -400,7 +441,7 @@ describe('HTTPSamplesPanel', () => {
           method: 'GET',
           query: expect.objectContaining({
             query:
-              'span.op:http.client span.domain:"\\*.sentry.dev" transaction:/api/0/users',
+              'span.module:http span.op:http.client span.domain:"\\*.sentry.dev" transaction:/api/0/users',
             project: [],
             additionalFields: [
               'id',
@@ -416,6 +457,19 @@ describe('HTTPSamplesPanel', () => {
             referrer: 'api.performance.http.samples-panel-duration-samples',
             statsPeriod: '10d',
           }),
+        })
+      );
+
+      expect(spanFieldTagsMock).toHaveBeenNthCalledWith(
+        1,
+        `/organizations/${organization.slug}/spans/fields/`,
+        expect.objectContaining({
+          method: 'GET',
+          query: {
+            project: [],
+            environment: [],
+            statsPeriod: '1h',
+          },
         })
       );
     });
@@ -456,7 +510,7 @@ describe('HTTPSamplesPanel', () => {
 
       expect(screen.getByRole('link', {name: 'b1bf1acde131623a'})).toHaveAttribute(
         'href',
-        '/organizations/org-slug/traces/trace/2b60b2eb415c4bfba3efeaf65c21c605/?domain=%2A.sentry.dev&eventId=11c910c9c10b3ec4ecf8f209b8c6ce48&node=span-b1bf1acde131623a&node=txn-11c910c9c10b3ec4ecf8f209b8c6ce48&panel=duration&source=requests_module&statsPeriod=10d&timestamp=1711398696&transaction=%2Fapi%2F0%2Fusers&transactionMethod=GET'
+        '/organizations/org-slug/insights/backend/javascript:11c910c9c10b3ec4ecf8f209b8c6ce48/?domain=%2A.sentry.dev&panel=duration&statsPeriod=10d&transactionMethod=GET#span-b1bf1acde131623a'
       );
 
       expect(screen.getByRole('cell', {name: '200'})).toBeInTheDocument();

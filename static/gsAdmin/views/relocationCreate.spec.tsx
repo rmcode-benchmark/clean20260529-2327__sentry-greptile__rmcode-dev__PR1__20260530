@@ -2,6 +2,7 @@ import {render, screen, userEvent, waitFor} from 'sentry-test/reactTestingLibrar
 
 import {addErrorMessage} from 'sentry/actionCreators/indicator';
 import ConfigStore from 'sentry/stores/configStore';
+import {browserHistory} from 'sentry/utils/browserHistory';
 
 import RelocationCreate from 'admin/views/relocationCreate';
 
@@ -18,7 +19,9 @@ describe('Relocation Create', function () {
   });
 
   it('renders', async function () {
-    render(<RelocationCreate />);
+    render(<RelocationCreate />, {
+      deprecatedRouterMocks: true,
+    });
     expect(await screen.findByRole('heading', {name: 'Relocation'})).toBeInTheDocument();
     expect(screen.getByText('Region')).toBeInTheDocument();
     expect(screen.getByText('Upload relocation file data')).toBeInTheDocument();
@@ -27,7 +30,9 @@ describe('Relocation Create', function () {
   });
 
   it('accepts a file upload', async function () {
-    render(<RelocationCreate />);
+    render(<RelocationCreate />, {
+      deprecatedRouterMocks: true,
+    });
     const relocationFile = new File(['hello'], 'hello.tar', {type: 'file'});
     const input = screen.getByLabelText('file-upload');
     await userEvent.upload(input, relocationFile);
@@ -35,7 +40,9 @@ describe('Relocation Create', function () {
   });
 
   it('rejects png file upload', async function () {
-    render(<RelocationCreate />);
+    render(<RelocationCreate />, {
+      deprecatedRouterMocks: true,
+    });
     const relocationFile = new File(['hello'], 'hello.png', {type: 'file'});
     const input = screen.getByLabelText('file-upload');
     // Force file to be uploaded and ignore accept attribute
@@ -44,7 +51,9 @@ describe('Relocation Create', function () {
   });
 
   it('rejects large file upload', async function () {
-    render(<RelocationCreate />);
+    render(<RelocationCreate />, {
+      deprecatedRouterMocks: true,
+    });
     const relocationFile = new File(['hello'], 'hello.tar', {type: 'file'});
     Object.defineProperty(relocationFile, 'size', {value: 200e6 + 1});
     const input = screen.getByLabelText('file-upload');
@@ -55,7 +64,9 @@ describe('Relocation Create', function () {
   });
 
   it('throws error if owner is missing when form is submitted', async function () {
-    render(<RelocationCreate />);
+    render(<RelocationCreate />, {
+      deprecatedRouterMocks: true,
+    });
     const relocationFile = new File(['hello'], 'hello.tar', {type: 'file'});
     const fileInput = screen.getByLabelText('file-upload');
     const orgsInput = screen.getByLabelText('orgs-input');
@@ -68,7 +79,9 @@ describe('Relocation Create', function () {
   });
 
   it('throws error if org slugs are missing when form is submitted', async function () {
-    render(<RelocationCreate />);
+    render(<RelocationCreate />, {
+      deprecatedRouterMocks: true,
+    });
     const relocationFile = new File(['hello'], 'hello.tar', {type: 'file'});
     const fileInput = screen.getByLabelText('file-upload');
     const ownerInput = screen.getByLabelText('owner-input');
@@ -81,7 +94,9 @@ describe('Relocation Create', function () {
   });
 
   it('throws error if file is missing when form is submitted', async function () {
-    render(<RelocationCreate />);
+    render(<RelocationCreate />, {
+      deprecatedRouterMocks: true,
+    });
     const ownerInput = screen.getByLabelText('owner-input');
     const orgsInput = screen.getByLabelText('orgs-input');
     await userEvent.type(orgsInput, 'testorg');
@@ -121,7 +136,9 @@ describe('Relocation Create', function () {
       },
     });
 
-    const {router} = render(<RelocationCreate />);
+    render(<RelocationCreate />, {
+      deprecatedRouterMocks: true,
+    });
     const relocationFile = new File(['hello'], 'hello.tar', {type: 'file'});
     const fileInput = screen.getByLabelText('file-upload');
     const ownerInput = screen.getByLabelText('owner-input');
@@ -132,10 +149,8 @@ describe('Relocation Create', function () {
     await userEvent.click(screen.getByRole('button', {name: 'Submit'}));
     await waitFor(() => expect(mockapi).toHaveBeenCalled());
     expect(mockapi).toHaveBeenCalled();
-    expect(router.location).toEqual(
-      expect.objectContaining({
-        pathname: `/_admin/relocations/test/d39f84fc-554a-4d7d-95b7-78f983bcba73/`,
-      })
+    expect(browserHistory.push).toHaveBeenCalledWith(
+      `/_admin/relocations/test/d39f84fc-554a-4d7d-95b7-78f983bcba73/`
     );
   });
 });

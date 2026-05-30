@@ -1,6 +1,7 @@
 import {OrganizationFixture} from 'sentry-fixture/organization';
 import {TeamFixture} from 'sentry-fixture/team';
 
+import {initializeOrg} from 'sentry-test/initializeOrg';
 import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
 import TeamStore from 'sentry/stores/teamStore';
@@ -28,18 +29,21 @@ describe('TeamMembers', () => {
   });
 
   it('can request membership', async () => {
+    const {routerProps, router} = initializeOrg({
+      organization,
+      router: {
+        params: {orgId: organization.slug, teamId: team.slug},
+      },
+    });
+
     render(
-      <TeamDetails>
+      <TeamDetails {...routerProps}>
         <div data-test-id="test" />
       </TeamDetails>,
       {
         organization,
-        initialRouterConfig: {
-          location: {
-            pathname: `/settings/${organization.slug}/teams/${team.slug}/`,
-          },
-          route: '/settings/:orgId/teams/:teamId/',
-        },
+        router,
+        deprecatedRouterMocks: true,
       }
     );
 
@@ -49,22 +53,24 @@ describe('TeamMembers', () => {
     expect(screen.queryByTestId('test')).not.toBeInTheDocument();
   });
 
-  it('displays children', async () => {
+  it('displays children', () => {
+    const {router, routerProps} = initializeOrg({
+      organization,
+      router: {
+        params: {orgId: organization.slug, teamId: teamHasAccess.slug},
+      },
+    });
     render(
-      <TeamDetails>
+      <TeamDetails {...routerProps}>
         <div data-test-id="test" />
       </TeamDetails>,
       {
         organization,
-        initialRouterConfig: {
-          location: {
-            pathname: `/settings/${organization.slug}/teams/${teamHasAccess.slug}/`,
-          },
-          route: '/settings/:orgId/teams/:teamId/',
-        },
+        router,
+        deprecatedRouterMocks: true,
       }
     );
 
-    expect(await screen.findByTestId('test')).toBeInTheDocument();
+    expect(screen.getByTestId('test')).toBeInTheDocument();
   });
 });

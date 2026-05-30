@@ -8,7 +8,6 @@ from sentry.workflow_engine.processors.data_condition_group import (
     ProcessedDataConditionGroup,
     evaluate_data_conditions,
     get_data_conditions_for_group,
-    get_slow_conditions_for_groups,
     process_data_condition_group,
 )
 from sentry.workflow_engine.types import DetectorPriorityLevel
@@ -25,6 +24,18 @@ class TestGetDataConditionsForGroup(TestCase):
 
 
 class TestProcessDataConditionGroup(TestCase):
+    def test_process_data_condition_group(self):
+        with mock.patch(
+            "sentry.workflow_engine.processors.data_condition_group.logger"
+        ) as mock_logger:
+            expected_result = ProcessedDataConditionGroup(logic_result=False, condition_results=[])
+            expected_remaining_conditions: list[DataCondition] = []
+            assert process_data_condition_group(1, 1) == (
+                expected_result,
+                expected_remaining_conditions,
+            )
+            assert mock_logger.exception.call_args[0][0] == "DataConditionGroup does not exist"
+
     def test_process_data_condition_group__exists__fails(self):
         data_condition_group = self.create_data_condition_group()
         self.create_data_condition(
@@ -36,7 +47,7 @@ class TestProcessDataConditionGroup(TestCase):
             condition_results=[],
         )
         expected_remaining_conditions: list[DataCondition] = []
-        assert process_data_condition_group(data_condition_group, 1) == (
+        assert process_data_condition_group(data_condition_group.id, 1) == (
             expected_result,
             expected_remaining_conditions,
         )
@@ -59,44 +70,7 @@ class TestProcessDataConditionGroup(TestCase):
                 )
             ],
         )
-        assert process_data_condition_group(data_condition_group, 10) == (expected_result, [])
-
-    def test__fetch_conditions__no_prefetch(self):
-        data_condition_group = self.create_data_condition_group()
-        self.condition = self.create_data_condition(
-            condition_group=data_condition_group,
-            type=Condition.GREATER,
-            comparison=5,
-            condition_result=DetectorPriorityLevel.HIGH,
-        )
-
-        with mock.patch(
-            "sentry.workflow_engine.processors.data_condition_group.get_data_conditions_for_group"
-        ) as mock_fetch_conditions:
-            process_data_condition_group(data_condition_group, 10)
-            mock_fetch_conditions.assert_called_once_with(data_condition_group.id)
-
-    def test_fetch_conditions__with_prefetch(self):
-        data_condition_group = self.create_data_condition_group()
-        self.condition = self.create_data_condition(
-            condition_group=data_condition_group,
-            type=Condition.GREATER,
-            comparison=5,
-            condition_result=DetectorPriorityLevel.HIGH,
-        )
-
-        prefetched_group = (
-            DataConditionGroup.objects.filter(id=data_condition_group.id)
-            .prefetch_related("conditions")
-            .first()
-        )
-        assert prefetched_group is not None
-
-        with mock.patch(
-            "sentry.workflow_engine.processors.data_condition_group.get_data_conditions_for_group"
-        ) as mock_fetch_conditions:
-            process_data_condition_group(prefetched_group, 10)
-            mock_fetch_conditions.assert_not_called()
+        assert process_data_condition_group(data_condition_group.id, 10) == (expected_result, [])
 
 
 class TestEvaluationConditionCase(TestCase):
@@ -370,7 +344,7 @@ class TestEvaluateConditionGroupWithSlowConditions(TestCase):
         )
 
         group_evaluation, remaining_conditions = process_data_condition_group(
-            self.data_condition_group,
+            self.data_condition_group.id,
             10,
             True,
         )
@@ -385,7 +359,7 @@ class TestEvaluateConditionGroupWithSlowConditions(TestCase):
     def test_basic_only_slow_conditions(self):
         self.data_condition.delete()
         group_evaluation, remaining_conditions = process_data_condition_group(
-            self.data_condition_group,
+            self.data_condition_group.id,
             10,
             True,
         )
@@ -409,7 +383,7 @@ class TestEvaluateConditionGroupWithSlowConditions(TestCase):
 
     def test_short_circuit_with_all(self):
         group_evaluation, remaining_conditions = process_data_condition_group(
-            self.data_condition_group,
+            self.data_condition_group.id,
             1,
             True,
         )
@@ -421,7 +395,7 @@ class TestEvaluateConditionGroupWithSlowConditions(TestCase):
     def test_short_circuit_with_any(self):
         self.data_condition_group.update(logic_type=DataConditionGroup.Type.ANY)
         group_evaluation, remaining_conditions = process_data_condition_group(
-            self.data_condition_group,
+            self.data_condition_group.id,
             10,
             True,
         )
@@ -431,45 +405,3 @@ class TestEvaluateConditionGroupWithSlowConditions(TestCase):
             ProcessedDataCondition(logic_result=True, condition=self.data_condition, result=True)
         ]
         assert remaining_conditions == []
-
-
-class TestGetSlowConditionsForGroups(TestCase):
-    def setUp(self):
-        super().setUp()
-        self.dcg: DataConditionGroup = self.create_data_condition_group()
-
-    def create_slow_condition(self, condition_group: DataConditionGroup) -> DataCondition:
-        return self.create_data_condition(
-            condition_group=condition_group,
-            type=Condition.EVENT_FREQUENCY_COUNT,
-            comparison={
-                "interval": "1d",
-                "value": 7,
-            },
-        )
-
-    def test_get_slow_conditions_for_groups_basic(self) -> None:
-        condition = self.create_slow_condition(self.dcg)
-        assert get_slow_conditions_for_groups([self.dcg.id]) == {self.dcg.id: [condition]}
-
-    def test_get_slow_conditions_for_groups__no_slow_conditions(self) -> None:
-        self.create_data_condition(condition_group=self.dcg, type=Condition.EQUAL)
-        assert get_slow_conditions_for_groups([self.dcg.id]) == {self.dcg.id: []}
-
-    def test_multiple_dcgs(self) -> None:
-        dcg2 = self.create_data_condition_group()
-        condition1 = self.create_slow_condition(self.dcg)
-        condition2 = self.create_slow_condition(dcg2)
-        self.create_data_condition(condition_group=self.dcg, type=Condition.EQUAL)
-        condition4 = self.create_slow_condition(dcg2)
-        dcg3 = self.create_data_condition_group()
-        condition5 = self.create_slow_condition(dcg3)
-        assert get_slow_conditions_for_groups([self.dcg.id, dcg2.id]) == {
-            self.dcg.id: [condition1],
-            dcg2.id: [condition2, condition4],
-        }
-        assert get_slow_conditions_for_groups([self.dcg.id, dcg2.id, dcg3.id]) == {
-            self.dcg.id: [condition1],
-            dcg2.id: [condition2, condition4],
-            dcg3.id: [condition5],
-        }

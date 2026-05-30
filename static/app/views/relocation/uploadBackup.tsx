@@ -5,7 +5,8 @@ import {motion} from 'framer-motion';
 import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {Client} from 'sentry/api';
 import {Button} from 'sentry/components/core/button';
-import {IconDelete, IconFile, IconUpload} from 'sentry/icons';
+import Well from 'sentry/components/well';
+import {IconFile, IconUpload} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import testableTransition from 'sentry/utils/testableTransition';
@@ -14,6 +15,15 @@ import {useUser} from 'sentry/utils/useUser';
 import StepHeading from 'sentry/views/relocation/components/stepHeading';
 
 import type {StepProps} from './types';
+
+type UploadWellProps = {
+  centered: boolean;
+  draggedOver: boolean;
+  onDragEnter: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDragOver: (e: React.DragEvent | DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+};
 
 const DEFAULT_ERROR_MSG = t(
   'An error has occurred while trying to start relocation job. Please contact support for further assistance.'
@@ -124,25 +134,19 @@ export function UploadBackup({relocationState, onComplete}: StepProps) {
           )}
         </p>
         {file ? (
-          <FinishedWell>
-            <IconFile size="lg" />
-            <FileInfo>
-              <div>{file.name}</div>
-              <Button
-                aria-label={t('Remove file')}
-                icon={<IconDelete />}
-                borderless
-                size="xs"
-                onClick={() => setFile(undefined)}
-              />
-            </FileInfo>
-            <Button
+          <FinishedWell centered>
+            <IconFile className="file-icon" size="xl" />
+            <div>
+              <p>{file.name}</p>
+              <a onClick={() => setFile(undefined)}>{t('Remove file')}</a>
+            </div>
+            <StartRelocationButton
               priority="primary"
               onClick={handleStartRelocation}
               icon={<IconUpload className="upload-icon" size="xs" />}
             >
               {t('Start Relocation')}
-            </Button>
+            </StartRelocationButton>
           </FinishedWell>
         ) : (
           <UploadWell
@@ -150,6 +154,7 @@ export function UploadBackup({relocationState, onComplete}: StepProps) {
             onDragOver={event => event.preventDefault()}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
+            centered
             aria-label={t('dropzone')}
             draggedOver={dragCounter > 0}
           >
@@ -210,42 +215,39 @@ const Wrapper = styled('div')`
   }
 `;
 
-const FinishedWell = styled('div')`
-  display: grid;
-  grid-template-columns: max-content 1fr max-content;
-  gap: ${space(1)};
-  align-items: center;
-
-  justify-content: center;
-  margin: ${space(2)} 0;
-  padding: ${space(2)} ${space(3)};
-  border-radius: 3px;
-  border: 1px solid ${p => p.theme.border};
-  background: ${p => p.theme.backgroundSecondary};
+const StartRelocationButton = styled(Button)`
+  margin-left: auto;
 `;
 
-const FileInfo = styled('div')`
+const FinishedWell = styled(Well)`
   display: flex;
   align-items: center;
-  gap: ${space(0.5)};
+  text-align: left;
+  div {
+    margin-left: ${space(2)};
+    line-height: 1;
+  }
+  a {
+    color: ${p => p.theme.translucentGray200};
+    font-size: 14px;
+  }
+  a:hover {
+    color: ${p => p.theme.subText};
+  }
 `;
 
-const UploadWell = styled('div')<{draggedOver: boolean}>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin: ${space(2)} 0;
-  padding: ${space(2)} ${space(3)};
+const UploadWell = styled(Well)<UploadWellProps>`
+  margin-top: ${space(2)};
   height: 140px;
-  border-radius: 3px;
-  border: 1px ${props => (props.draggedOver ? 'solid' : 'dashed')} ${p => p.theme.border};
-  background: ${props =>
-    props.draggedOver ? p => p.theme.purple100 : p => p.theme.surface400};
-
+  border-style: ${props => (props.draggedOver ? 'solid' : 'dashed')};
+  border-width: medium;
+  align-items: center;
+  .file-icon,
   .upload-icon {
     color: ${p => p.theme.gray500};
   }
+  background: ${props =>
+    props.draggedOver ? p => p.theme.purple100 : p => p.theme.surface400};
 `;
 
 const UploadInput = styled('input')`

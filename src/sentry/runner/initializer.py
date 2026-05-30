@@ -11,7 +11,6 @@ from django.conf import settings
 
 from sentry.silo.patches.silo_aware_transaction_patch import patch_silo_aware_atomic
 from sentry.utils import warnings
-from sentry.utils.arroyo import initialize_arroyo_main
 from sentry.utils.sdk import configure_sdk
 from sentry.utils.warnings import DeprecatedSettingWarning
 
@@ -387,8 +386,6 @@ def initialize_app(config: dict[str, Any], skip_service_validation: bool = False
     setup_services(validate=not skip_service_validation)
 
     import_grouptype()
-
-    initialize_arroyo_main()
 
     # Hacky workaround to dynamically set the CSRF_TRUSTED_ORIGINS for self hosted
     if settings.SENTRY_SELF_HOSTED and not settings.CSRF_TRUSTED_ORIGINS:

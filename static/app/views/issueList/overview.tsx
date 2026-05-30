@@ -16,7 +16,7 @@ import * as Layout from 'sentry/components/layouts/thirds';
 import {extractSelectionParameters} from 'sentry/components/organizations/pageFilters/utils';
 import type {CursorHandler} from 'sentry/components/pagination';
 import QueryCount from 'sentry/components/queryCount';
-import {DEFAULT_STATS_PERIOD} from 'sentry/constants';
+import {DEFAULT_QUERY, DEFAULT_STATS_PERIOD} from 'sentry/constants';
 import {t, tct} from 'sentry/locale';
 import GroupStore from 'sentry/stores/groupStore';
 import IssueListCacheStore from 'sentry/stores/IssueListCacheStore';
@@ -59,7 +59,7 @@ import {usePrefersStackedNav} from 'sentry/views/nav/usePrefersStackedNav';
 
 import IssueListFilters from './filters';
 import IssueListHeader from './header';
-import {DEFAULT_QUERY, type QueryCounts} from './utils';
+import type {QueryCounts} from './utils';
 import {
   DEFAULT_ISSUE_STREAM_SORT,
   FOR_REVIEW_QUERIES,
@@ -82,7 +82,6 @@ interface Props
     Record<PropertyKey, string | undefined>,
     {searchId?: string}
   > {
-  headerActions?: ReactNode;
   initialQuery?: string;
   shouldFetchOnMount?: boolean;
   title?: ReactNode;
@@ -98,6 +97,7 @@ interface EndpointParams extends Partial<PageFilters['datetime']> {
   query?: string;
   sort?: string;
   statsPeriod?: string | null;
+  useGroupSnubaDataset?: boolean;
 }
 
 type CountsEndpointParams = Omit<EndpointParams, 'cursor' | 'page' | 'query'> & {
@@ -125,12 +125,11 @@ function useIssuesINPObserver() {
 
 function useSavedSearches() {
   const organization = useOrganization();
-  const prefersStackedNav = usePrefersStackedNav();
   const {data: savedSearches = [], isPending} = useFetchSavedSearchesForOrg(
     {
       orgSlug: organization.slug,
     },
-    {enabled: !prefersStackedNav}
+    {enabled: !organization.features.includes('issue-stream-custom-views')}
   );
 
   const params = useParams();
@@ -138,7 +137,8 @@ function useSavedSearches() {
 
   return {
     savedSearches,
-    savedSearchLoading: !prefersStackedNav && isPending,
+    savedSearchLoading:
+      !organization.features.includes('issue-stream-custom-views') && isPending,
     savedSearch: selectedSavedSearch,
     selectedSearchId: params.searchId ?? null,
   };
@@ -163,7 +163,6 @@ function IssueListOverview({
   shouldFetchOnMount = true,
   title = t('Issues'),
   titleDescription,
-  headerActions,
 }: Props) {
   const location = useLocation();
   const organization = useOrganization();
@@ -225,7 +224,10 @@ function IssueListOverview({
 
   const getQueryFromSavedSearchOrLocation = useCallback(
     (props: {location: Location; savedSearch: SavedSearch | null}): string => {
-      if (!prefersStackedNav && props.savedSearch) {
+      if (
+        !organization.features.includes('issue-stream-custom-views') &&
+        props.savedSearch
+      ) {
         return props.savedSearch.query;
       }
 
@@ -237,7 +239,7 @@ function IssueListOverview({
 
       return initialQuery;
     },
-    [prefersStackedNav, initialQuery]
+    [organization.features, initialQuery]
   );
 
   const getSortFromSavedSearchOrLocation = useCallback(
@@ -309,9 +311,13 @@ function IssueListOverview({
       params.groupStatsPeriod = groupStatsPeriod;
     }
 
+    if (location.query.useGroupSnubaDataset) {
+      params.useGroupSnubaDataset = true;
+    }
+
     // only include defined values.
     return pickBy(params, v => defined(v)) as EndpointParams;
-  }, [selection, query, sort, getGroupStatsPeriod]);
+  }, [selection, location, query, sort, getGroupStatsPeriod]);
 
   const requestParams = useMemo(() => {
     // Used for Issue Stream Performance project, enabled means we are doing saved search look up in the backend
@@ -652,6 +658,7 @@ function IssueListOverview({
     query,
     num_issues: groups.length,
     total_issues_count: queryCount,
+    issue_views_enabled: organization.features.includes('issue-stream-custom-views'),
     sort,
     realtime_active: realtimeActive,
     is_view: urlParams.viewId ? true : false,
@@ -1090,7 +1097,6 @@ function IssueListOverview({
           description={titleDescription}
           realtimeActive={realtimeActive}
           onRealtimeChange={onRealtimeChange}
-          headerActions={headerActions}
         />
       ) : (
         <IssueListHeader
@@ -1182,7 +1188,7 @@ const StyledMain = styled('section')`
   grid-area: content;
   padding: ${space(2)};
 
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     padding: ${space(3)} ${space(4)};
   }
 `;

@@ -1,11 +1,13 @@
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 
+import GuideAnchor from 'sentry/components/assistant/guideAnchor';
 import {DatePageFilter} from 'sentry/components/organizations/datePageFilter';
 import {EnvironmentPageFilter} from 'sentry/components/organizations/environmentPageFilter';
 import PageFilterBar from 'sentry/components/organizations/pageFilterBar';
 import {ProjectPageFilter} from 'sentry/components/organizations/projectPageFilter';
 import {space} from 'sentry/styles/space';
+import useOrganization from 'sentry/utils/useOrganization';
 import IssueListSortOptions from 'sentry/views/issueList/actions/sortOptions';
 import {IssueSearchWithSavedSearches} from 'sentry/views/issueList/issueSearchWithSavedSearches';
 import {IssueViewSaveButton} from 'sentry/views/issueList/issueViews/issueViewSaveButton';
@@ -20,15 +22,23 @@ interface Props {
 }
 
 function IssueListFilters({query, sort, onSortChange, onSearch}: Props) {
+  const organization = useOrganization();
+
+  const hasIssueViews = organization.features.includes('issue-stream-custom-views');
   const prefersStackedNav = usePrefersStackedNav();
 
   return (
     <FiltersContainer prefersStackedNav={prefersStackedNav}>
-      <StyledPageFilterBar>
-        <ProjectPageFilter />
-        <EnvironmentPageFilter />
-        <DatePageFilter />
-      </StyledPageFilterBar>
+      <GuideAnchor
+        target="issue_views_page_filters_persistence"
+        disabled={!hasIssueViews}
+      >
+        <StyledPageFilterBar>
+          <ProjectPageFilter />
+          <EnvironmentPageFilter />
+          <DatePageFilter />
+        </StyledPageFilterBar>
+      </GuideAnchor>
 
       <Search {...{query, onSearch}} />
 
@@ -63,14 +73,14 @@ const FiltersContainer = styled('div')<{prefersStackedNav: boolean}>`
             'search'
             'sort-save';
 
-          @media (min-width: ${p.theme.breakpoints.xs}) {
+          @media (min-width: ${p.theme.breakpoints.xsmall}) {
             grid-template-columns: 1fr auto;
             grid-template-areas:
               'page-filters sort-save'
               'search search';
           }
 
-          @media (min-width: ${p.theme.breakpoints.xl}) {
+          @media (min-width: ${p.theme.breakpoints.xlarge}) {
             grid-template-columns: auto 1fr auto;
             grid-template-areas: 'page-filters search sort-save';
           }
@@ -82,14 +92,14 @@ const FiltersContainer = styled('div')<{prefersStackedNav: boolean}>`
             'search'
             'sort-save';
 
-          @media (min-width: ${p.theme.breakpoints.xs}) {
+          @media (min-width: ${p.theme.breakpoints.xsmall}) {
             grid-template-columns: auto 1fr;
             grid-template-areas:
               'page-filters sort-save'
               'search search';
           }
 
-          @media (min-width: ${p.theme.breakpoints.lg}) {
+          @media (min-width: ${p.theme.breakpoints.large}) {
             grid-template-columns: auto 1fr auto;
             grid-template-areas: 'page-filters search sort-save';
           }

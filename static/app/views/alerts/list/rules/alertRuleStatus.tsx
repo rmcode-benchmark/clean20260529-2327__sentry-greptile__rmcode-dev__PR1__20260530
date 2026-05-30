@@ -1,6 +1,5 @@
 import styled from '@emotion/styled';
 
-import {Flex} from 'sentry/components/core/layout';
 import {IconArrow, IconMute, IconNot} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
@@ -89,7 +88,7 @@ export default function AlertRuleStatus({rule}: Props) {
   }
 
   return (
-    <Flex align="center">
+    <FlexCenter>
       {rule.detectionType !== AlertRuleComparisonType.DYNAMIC && (
         <IconArrow color={iconColor} direction={iconDirection} />
       )}
@@ -110,7 +109,7 @@ export default function AlertRuleStatus({rule}: Props) {
           )}
         </TriggerText>
       )}
-    </Flex>
+    </FlexCenter>
   );
 }
 
@@ -125,4 +124,10 @@ const TriggerText = styled('div')`
   margin-left: ${space(1)};
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+`;
+
+// TODO: explore utilizing the FlexContainer from app/components/container/flex.tsx
+const FlexCenter = styled('div')`
+  display: flex;
+  align-items: center;
 `;

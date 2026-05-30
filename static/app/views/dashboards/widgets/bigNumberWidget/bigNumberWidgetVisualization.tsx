@@ -202,7 +202,7 @@ const NumberContainerOverride = styled('div')`
 
 const LoadingPlaceholder = styled('span')`
   color: ${p => p.theme[DEEMPHASIS_COLOR_NAME]};
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
 `;
 
 BigNumberWidgetVisualization.LoadingPlaceholder = function () {

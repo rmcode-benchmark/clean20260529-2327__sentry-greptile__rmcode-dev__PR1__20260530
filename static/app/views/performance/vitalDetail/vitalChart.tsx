@@ -125,7 +125,7 @@ function VitalChart({
                 }
 
                 const colors =
-                  (results && theme.chart.getColorPalette(results.length - 1)) || [];
+                  (results && theme.chart.getColorPalette(results.length - 2)) || [];
 
                 const {smoothedResults} = transformEventStatsSmoothed(results);
 

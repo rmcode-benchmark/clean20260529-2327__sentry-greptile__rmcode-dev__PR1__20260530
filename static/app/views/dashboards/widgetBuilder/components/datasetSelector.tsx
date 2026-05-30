@@ -1,13 +1,7 @@
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
-import {FeatureBadge} from 'sentry/components/core/badge/featureBadge';
-import {Link} from 'sentry/components/core/link';
-import type {
-  RadioGroupProps,
-  RadioOption,
-} from 'sentry/components/forms/controls/radioGroup';
-import RadioGroup from 'sentry/components/forms/controls/radioGroup';
+import RadioGroup, {type RadioOption} from 'sentry/components/forms/controls/radioGroup';
 import ExternalLink from 'sentry/components/links/externalLink';
 import {t, tct} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
@@ -20,7 +14,6 @@ import {useWidgetBuilderContext} from 'sentry/views/dashboards/widgetBuilder/con
 import {useCacheBuilderState} from 'sentry/views/dashboards/widgetBuilder/hooks/useCacheBuilderState';
 import useDashboardWidgetSource from 'sentry/views/dashboards/widgetBuilder/hooks/useDashboardWidgetSource';
 import useIsEditingWidget from 'sentry/views/dashboards/widgetBuilder/hooks/useIsEditingWidget';
-import {useSegmentSpanWidgetState} from 'sentry/views/dashboards/widgetBuilder/hooks/useSegmentSpanWidgetState';
 
 function WidgetBuilderDatasetSelector() {
   const organization = useOrganization();
@@ -28,52 +21,16 @@ function WidgetBuilderDatasetSelector() {
   const source = useDashboardWidgetSource();
   const isEditing = useIsEditingWidget();
   const {cacheBuilderState, restoreOrSetBuilderState} = useCacheBuilderState();
-  const {setSegmentSpanBuilderState} = useSegmentSpanWidgetState();
-  const disabledChoices: RadioGroupProps<WidgetType>['disabledChoices'] = [];
 
   const datasetChoices: Array<RadioOption<WidgetType>> = [];
   datasetChoices.push([WidgetType.ERRORS, t('Errors')]);
-  if (organization.features.includes('discover-saved-queries-deprecation')) {
-    disabledChoices.push([
-      WidgetType.TRANSACTIONS,
-      tct('This dataset is is no longer supported. Please use the [spans] dataset.', {
-        spans: (
-          <Link
-            to=""
-            onClick={() => {
-              cacheBuilderState(state.dataset ?? WidgetType.ERRORS);
-              setSegmentSpanBuilderState();
-            }}
-          >
-            {t('spans')}
-          </Link>
-        ),
-      }),
-    ]);
-  }
+  datasetChoices.push([WidgetType.TRANSACTIONS, t('Transactions')]);
 
   if (organization.features.includes('visibility-explore-view')) {
     datasetChoices.push([WidgetType.SPANS, t('Spans')]);
   }
-  if (organization.features.includes('ourlogs-dashboards')) {
-    datasetChoices.push([
-      WidgetType.LOGS,
-      <FeatureBadgeAlignmentWrapper aria-label={t('Logs')} key={'dataset-choice-logs'}>
-        {t('Logs')}{' '}
-        <FeatureBadge
-          type="beta"
-          tooltipProps={{
-            title: t(
-              'This feature is available for early adopters and the UX may change'
-            ),
-          }}
-        />
-      </FeatureBadgeAlignmentWrapper>,
-    ]);
-  }
   datasetChoices.push([WidgetType.ISSUE, t('Issues')]);
   datasetChoices.push([WidgetType.RELEASE, t('Releases')]);
-  datasetChoices.push([WidgetType.TRANSACTIONS, t('Transactions')]);
 
   return (
     <Fragment>
@@ -92,8 +49,6 @@ function WidgetBuilderDatasetSelector() {
         label={t('Dataset')}
         value={state.dataset ?? WidgetType.ERRORS}
         choices={datasetChoices}
-        disabledChoices={disabledChoices}
-        tooltipIsHoverable
         onChange={(newDataset: WidgetType) => {
           // Set the current dataset state in local storage for recovery
           // when the user navigates back to this dataset
@@ -120,17 +75,11 @@ function WidgetBuilderDatasetSelector() {
 
 export default WidgetBuilderDatasetSelector;
 
-const FeatureBadgeAlignmentWrapper = styled('div')`
-  ${FeatureBadge} {
-    position: relative;
-    top: -1px;
-  }
-`;
-
 const DatasetChoices = styled(RadioGroup<WidgetType>)`
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  gap: ${space(2)};
 `;
 
 const StyledSectionHeader = styled(SectionHeader)`

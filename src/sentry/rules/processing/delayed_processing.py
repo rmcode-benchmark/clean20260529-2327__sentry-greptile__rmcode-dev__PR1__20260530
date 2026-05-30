@@ -8,7 +8,6 @@ from typing import Any, DefaultDict, NamedTuple
 
 import sentry_sdk
 from celery import Task
-from celery.exceptions import SoftTimeLimitExceeded
 from django.db.models import OuterRef, Subquery
 
 from sentry import buffer, features, nodestore
@@ -493,8 +492,6 @@ def fire_rules(
     alert_rules: list[Rule],
     project: Project,
 ) -> None:
-    from sentry.notifications.notification_action.utils import should_fire_workflow_actions
-
     now = datetime.now(tz=timezone.utc)
     project_id = project.id
     with track_batch_performance(
@@ -521,7 +518,6 @@ def fire_rules(
         group_id_to_group = {group.id: group for group in group_to_groupevent.keys()}
         for rule, group_ids in rules_to_fire.items():
             with tracker.track(f"rule_{rule.id}"):
-                sentry_sdk.get_current_scope().set_tag("rule_id", rule.id)
                 frequency = rule.data.get("frequency") or Rule.DEFAULT_FREQUENCY
                 freq_offset = now - timedelta(minutes=frequency)
                 for group_id in group_ids:
@@ -551,7 +547,7 @@ def fire_rules(
                                 "group_id": group.id,
                             },
                         )
-                        continue
+                        break
 
                     updated = (
                         GroupRuleStatus.objects.filter(id=status.id)
@@ -569,7 +565,7 @@ def fire_rules(
                                 "group_id": group.id,
                             },
                         )
-                        continue
+                        break
 
                     notification_uuid = str(uuid.uuid4())
                     groupevent = group_to_groupevent[group]
@@ -598,19 +594,9 @@ def fire_rules(
                         is_post_process=False,
                     ).values()
 
-                    if not should_fire_workflow_actions(group.organization, group.type):
-                        for callback, futures in callback_and_futures:
-                            try:
-                                callback(groupevent, futures)
-                            except SoftTimeLimitExceeded:
-                                # If we're out of time, we don't want to continue.
-                                # Raise so we can retry.
-                                raise
-                            except Exception as e:
-                                func_name = getattr(callback, "__name__", str(callback))
-                                logger.exception(
-                                    "%s.process_error", func_name, extra={"exception": e}
-                                )
+                    # TODO(cathy): add opposite of the FF organizations:workflow-engine-trigger-actions
+                    for callback, futures in callback_and_futures:
+                        safe_execute(callback, groupevent, futures)
 
                     if log_config.num_events_issue_debugging:
                         logger.info(
@@ -667,7 +653,6 @@ def apply_delayed(project_id: int, batch_key: str | None = None, *args: Any, **k
     """
     Grab rules, groups, and events from the Redis buffer, evaluate the "slow" conditions in a bulk snuba query, and fire them if they pass
     """
-    sentry_sdk.get_current_scope().set_tag("project_id", project_id)
     with sentry_sdk.start_span(
         op="delayed_processing.prepare_data", name="Fetch data from buffers in delayed processing"
     ):
@@ -689,7 +674,6 @@ def apply_delayed(project_id: int, batch_key: str | None = None, *args: Any, **k
                 "rules_to_groups": rules_to_groups,
             },
         )
-    sentry_sdk.get_current_scope().set_tag("organization_slug", project.organization.slug)
 
     with (
         metrics.timer("delayed_processing.get_condition_group_results.duration"),

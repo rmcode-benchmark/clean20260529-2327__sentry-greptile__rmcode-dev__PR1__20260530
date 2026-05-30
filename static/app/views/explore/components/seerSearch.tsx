@@ -2,10 +2,11 @@ import React, {useCallback, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {addErrorMessage} from 'sentry/actionCreators/indicator';
+import {SeerIcon, SeerLoadingIcon} from 'sentry/components/ai/SeerIcon';
 import {Button} from 'sentry/components/core/button';
 import {Input} from 'sentry/components/core/input';
 import {useSearchQueryBuilder} from 'sentry/components/searchQueryBuilder/context';
-import {IconClose, IconMegaphone, IconSearch, IconSeer} from 'sentry/icons';
+import {IconClose, IconMegaphone, IconSearch} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import {trackAnalytics} from 'sentry/utils/analytics';
@@ -18,8 +19,7 @@ import usePageFilters from 'sentry/utils/usePageFilters';
 import useProjects from 'sentry/utils/useProjects';
 import QueryTokens from 'sentry/views/explore/components/queryTokens';
 import {Mode} from 'sentry/views/explore/contexts/pageParamsContext/mode';
-import {useTraceExploreAiQuerySetup} from 'sentry/views/explore/hooks/useTraceExploreAiQuerySetup';
-import {formatQueryToNaturalLanguage, getExploreUrl} from 'sentry/views/explore/utils';
+import {getExploreUrl} from 'sentry/views/explore/utils';
 import type {ChartType} from 'sentry/views/insights/common/components/chart';
 
 interface Visualization {
@@ -42,7 +42,7 @@ interface SeerSearchResults {
 function SeerHeader({title, loading = false}: {title: string; loading?: boolean}) {
   return (
     <QueryResultsHeader>
-      <IconSeer variant={loading ? 'loading' : 'default'} color="purple300" />
+      {loading ? <StyledSeerLoadingIcon /> : <StyledIconSeer />}
       <QueryResultsTitle>{title}</QueryResultsTitle>
     </QueryResultsHeader>
   );
@@ -51,7 +51,7 @@ function SeerHeader({title, loading = false}: {title: string; loading?: boolean}
 function SeerSearchSkeleton() {
   return (
     <LoadingSkeleton>
-      <SeerHeader title={t('Thinking...')} loading />
+      <SeerHeader title={t('Seer is thinking...')} loading />
       <SkeletonCellsContainer>
         <SkeletonCell>
           <SkeletonLine width="95%" />
@@ -67,28 +67,19 @@ function SeerSearchSkeleton() {
   );
 }
 
-interface SeerSearchProps {
-  initialQuery?: string;
-}
-
-export function SeerSearch({initialQuery = ''}: SeerSearchProps) {
-  const formattedInitialQuery = formatQueryToNaturalLanguage(initialQuery);
+export function SeerSearch() {
   const {setDisplaySeerResults} = useSearchQueryBuilder();
-  const [searchQuery, setSearchQuery] = useState(formattedInitialQuery);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const openForm = useFeedbackForm();
-  const organization = useOrganization();
-  const areAiFeaturesAllowed =
-    !organization?.hideAiFeatures && organization.features.includes('gen-ai-features');
 
   const [rawResult, setRawResult] = useState<SeerSearchResults | null>(null);
   const api = useApi();
+  const organization = useOrganization();
   const pageFilters = usePageFilters();
   const {projects} = useProjects();
   const memberProjects = projects.filter(p => p.isMember);
   const navigate = useNavigate();
-
-  useTraceExploreAiQuerySetup({enableAISearch: areAiFeaturesAllowed && isDropdownOpen});
 
   const {mutate: submitQuery, isPending} = useMutation({
     mutationFn: async (query: string) => {
@@ -162,18 +153,13 @@ export function SeerSearch({initialQuery = ''}: SeerSearchProps) {
 
       const {query, visualizations, groupBys, sort, statsPeriod} = result;
 
-      const start = pageFilters.selection.datetime.start?.valueOf();
-      const end = pageFilters.selection.datetime.end?.valueOf();
-
       const selection = {
         ...pageFilters.selection,
         datetime: {
-          start: start
-            ? new Date(start).toISOString()
-            : pageFilters.selection.datetime.start,
-          end: end ? new Date(end).toISOString() : pageFilters.selection.datetime.end,
+          start: pageFilters.selection.datetime.start,
+          end: pageFilters.selection.datetime.end,
+          period: statsPeriod,
           utc: pageFilters.selection.datetime.utc,
-          period: statsPeriod || pageFilters.selection.datetime.period,
         },
       };
       const mode = groupBys.length > 0 ? Mode.AGGREGATE : Mode.SAMPLES;
@@ -255,7 +241,7 @@ export function SeerSearch({initialQuery = ''}: SeerSearchProps) {
                 });
                 setDisplaySeerResults(false);
               }}
-              aria-label={t('Close Seer Search')}
+              aria-label={t('Close Seer search')}
               borderless
             />
           </PositionedCloseButtonContainer>
@@ -286,7 +272,7 @@ export function SeerSearch({initialQuery = ''}: SeerSearchProps) {
             </QueryResultsSection>
           ) : (
             <SeerContent>
-              <SeerHeader title={t("Describe what you're looking for!")} />
+              <SeerHeader title={t("Type something in and I'll do my best to help")} />
             </SeerContent>
           )}
 
@@ -317,23 +303,22 @@ export function SeerSearch({initialQuery = ''}: SeerSearchProps) {
 
 const SeerContainer = styled('div')`
   position: relative;
+  width: 100%;
 `;
 
 const SearchForm = styled('form')`
-  position: relative;
-  z-index: 1005;
+  width: 100%;
 `;
 
 const SearchInputContainer = styled('div')<{isDropdownOpen: boolean}>`
   display: flex;
   align-items: center;
   width: 100%;
+  border: 1px solid ${p => p.theme.border};
   border-radius: ${p => p.theme.borderRadius};
   border-bottom-left-radius: ${p => (p.isDropdownOpen ? '0' : p.theme.borderRadius)};
   border-bottom-right-radius: ${p => (p.isDropdownOpen ? '0' : p.theme.borderRadius)};
   background: ${p => p.theme.background};
-  border: 1px solid ${p => p.theme.border};
-  height: 38px;
 
   &:focus-within {
     border-color: ${p => p.theme.purple300};
@@ -342,14 +327,18 @@ const SearchInputContainer = styled('div')<{isDropdownOpen: boolean}>`
 `;
 
 const SearchInput = styled(Input)<{isDropdownOpen: boolean}>`
-  font-size: ${p => p.theme.fontSize.md};
-  line-height: 1rem;
+  flex: 1;
+  font-size: ${p => p.theme.fontSizeMedium};
+  padding: ${space(1.5)} ${space(2)} ${space(1.5)} 0;
   border: none;
-  background: transparent;
-  padding-left: 32px;
+  border-bottom-left-radius: ${p => (p.isDropdownOpen ? '0' : p.theme.borderRadius)};
+  border-bottom-right-radius: ${p => (p.isDropdownOpen ? '0' : p.theme.borderRadius)};
+
+  &::placeholder {
+    color: ${p => p.theme.subText};
+  }
 
   &:focus {
-    border: none;
     outline: none;
     box-shadow: none;
   }
@@ -362,13 +351,14 @@ const DropdownContent = styled('div')`
   right: 0;
   background: ${p => p.theme.background};
   border: 1px solid ${p => p.theme.border};
+  border-top: none;
   border-radius: ${p => p.theme.borderRadius};
   border-top-left-radius: 0;
   border-top-right-radius: 0;
-  border-top: none;
   box-shadow: ${p => p.theme.dropShadowHeavy};
   display: flex;
   flex-direction: column;
+  min-height: 300px;
   z-index: ${p => p.theme.zIndex.dropdown};
 `;
 
@@ -383,14 +373,15 @@ const SeerFooter = styled('div')`
   justify-content: flex-end;
   padding: ${space(1.5)};
   border-top: 1px solid ${p => p.theme.border};
+  background: ${p => p.theme.purple100};
 `;
 
 const SearchIcon = styled(IconSearch)`
   color: ${p => p.theme.subText};
   height: 22px;
-  position: absolute;
-  top: ${space(1)};
-  left: ${space(1.5)};
+  margin-left: ${space(1.5)};
+  margin-right: ${space(1)};
+  flex-shrink: 0;
 `;
 
 const PositionedCloseButtonContainer = styled('div')`
@@ -411,15 +402,23 @@ const QueryResultsHeader = styled('div')`
   gap: ${space(1)};
 
   background: ${p => p.theme.purple100};
-  padding: ${space(1.5)} ${space(2)};
+  padding: ${space(2)};
   width: 100%;
 `;
 
 const QueryResultsTitle = styled('h3')`
-  font-size: ${p => p.theme.fontSize.md};
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-size: ${p => p.theme.fontSizeMedium};
+  font-weight: ${p => p.theme.fontWeightNormal};
   color: ${p => p.theme.textColor};
   margin: 0;
+`;
+
+const StyledIconSeer = styled(SeerIcon)`
+  color: ${p => p.theme.purple300};
+`;
+
+const StyledSeerLoadingIcon = styled(SeerLoadingIcon)`
+  color: ${p => p.theme.purple300};
 `;
 
 const QueryResultItem = styled('div')`
@@ -444,7 +443,7 @@ const NoneOfTheseItem = styled('div')`
   transition: background-color 0.2s ease;
   user-select: none;
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 
   &:hover {
     background-color: ${p => p.theme.backgroundSecondary};

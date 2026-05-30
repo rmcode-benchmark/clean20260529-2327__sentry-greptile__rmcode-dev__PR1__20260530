@@ -358,12 +358,7 @@ export function stringifyToken(token: TokenResult<Token>): string {
       return token.value;
     case Token.VALUE_TEXT_LIST: {
       const textListItems = token.items
-        .map(item => {
-          if (item.value?.value) {
-            return item.value.quoted ? `"${item.value.value}"` : item.value.value;
-          }
-          return '';
-        })
+        .map(item => item.value?.text ?? '')
         .filter(text => text.length > 0);
       return `[${textListItems.join(',')}]`;
     }

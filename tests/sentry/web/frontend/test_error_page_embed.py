@@ -3,6 +3,7 @@ from unittest import mock
 from urllib.parse import quote, urlencode
 from uuid import uuid4
 
+from django.test import override_settings
 from django.urls import reverse
 
 from sentry.models.environment import Environment
@@ -12,6 +13,7 @@ from sentry.testutils.helpers.datetime import before_now
 from sentry.types.region import get_local_region
 
 
+@override_settings(ROOT_URLCONF="sentry.conf.urls")
 class ErrorPageEmbedTest(TestCase):
     def setUp(self):
         super().setUp()
@@ -200,6 +202,7 @@ class ErrorPageEmbedTest(TestCase):
         assert not UserReport.objects.exists()
 
 
+@override_settings(ROOT_URLCONF="sentry.conf.urls")
 class ErrorPageEmbedEnvironmentTest(TestCase):
     def setUp(self):
         self.project = self.create_project()
@@ -242,7 +245,7 @@ class ErrorPageEmbedEnvironmentTest(TestCase):
         assert response.status_code == 200, response.content
         assert UserReport.objects.get(event_id=self.event_id).environment_id == self.environment.id
 
-    @mock.patch("sentry.feedback.usecases.ingest.create_feedback.produce_occurrence_to_kafka")
+    @mock.patch("sentry.feedback.usecases.create_feedback.produce_occurrence_to_kafka")
     def test_calls_feedback_shim_if_ff_enabled(self, mock_produce_occurrence_to_kafka):
         self.make_event(environment=self.environment.name, event_id=self.event_id)
         self.client.post(
@@ -264,7 +267,7 @@ class ErrorPageEmbedEnvironmentTest(TestCase):
         assert mock_event_data["contexts"]["feedback"]["associated_event_id"] == self.event_id
         assert mock_event_data["level"] == "error"
 
-    @mock.patch("sentry.feedback.usecases.ingest.create_feedback.produce_occurrence_to_kafka")
+    @mock.patch("sentry.feedback.usecases.create_feedback.produce_occurrence_to_kafka")
     def test_does_not_call_feedback_shim_no_event_if_ff_enabled(
         self, mock_produce_occurrence_to_kafka
     ):

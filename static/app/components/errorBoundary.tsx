@@ -56,17 +56,6 @@ class ErrorBoundary extends Component<Props, State> {
     error: null,
   };
 
-  componentDidMount(): void {
-    // Reset error state on HMR (Hot Module Replacement) in development
-    // This ensures that when React Fast Refresh occurs, the error boundary
-    // doesn't persist stale error state after code fixes
-    if (process.env.NODE_ENV === 'development') {
-      if (typeof module !== 'undefined' && module.hot) {
-        module.hot.accept(this.handleClose);
-      }
-    }
-  }
-
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     const {errorTag} = this.props;
 
@@ -92,18 +81,9 @@ class ErrorBoundary extends Component<Props, State> {
     });
   }
 
-  componentWillUnmount(): void {
-    // Clean up HMR listeners to prevent memory leaks
-    if (process.env.NODE_ENV === 'development') {
-      if (typeof module !== 'undefined' && module.hot) {
-        module.hot.dispose(this.handleClose);
-      }
-    }
-  }
-
-  handleClose = () => {
+  handleClose() {
     this.setState({error: null});
-  };
+  }
 
   render() {
     const {error} = this.state;
@@ -126,10 +106,12 @@ class ErrorBoundary extends Component<Props, State> {
     if (mini) {
       return (
         <Alert.Container>
-          <Alert type="error" className={className}>
+          <Alert type="error" showIcon className={className}>
             <AlertContent>
               {message || t('There was a problem rendering this component')}
-              {this.props.allowDismiss && <IconClose onClick={this.handleClose} />}
+              {this.props.allowDismiss && (
+                <IconClose onClick={() => this.handleClose()} />
+              )}
             </AlertContent>
           </Alert>
         </Alert.Container>

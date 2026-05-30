@@ -75,7 +75,7 @@ describe('ApiTokens', function () {
 
     render(<ApiTokens />);
     renderGlobalModal();
-    const removeButton = await screen.findByRole('button', {name: 'Revoke'});
+    const removeButton = await screen.findByRole('button', {name: 'Remove'});
     expect(removeButton).toBeInTheDocument();
     expect(deleteTokenMock).not.toHaveBeenCalled();
 

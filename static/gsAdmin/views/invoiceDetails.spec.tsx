@@ -2,6 +2,7 @@ import {OrganizationFixture} from 'sentry-fixture/organization';
 import {UserFixture} from 'sentry-fixture/user';
 
 import {InvoiceFixture} from 'getsentry-test/fixtures/invoice';
+import {initializeOrg} from 'sentry-test/initializeOrg';
 import {
   render,
   renderGlobalModal,
@@ -57,13 +58,19 @@ describe('InvoiceDetails', function () {
         body: InvoiceFixture({isClosed: true}),
       });
 
-      render(<InvoiceDetails />, {
-        initialRouterConfig: {
-          location: {
-            pathname: `/organizations/${mockOrg.slug}/invoices/us/${invoice.id}/`,
+      const {router} = initializeOrg({
+        router: {
+          params: {
+            orgId: mockOrg.slug,
+            invoiceId: invoice.id,
+            region: 'us',
           },
-          route: `/organizations/:orgId/invoices/:region/:invoiceId/`,
         },
+      });
+
+      render(<InvoiceDetails />, {
+        router,
+        deprecatedRouterMocks: true,
       });
 
       await userEvent.click(
@@ -85,13 +92,19 @@ describe('InvoiceDetails', function () {
         host: 'https://de.sentry.io',
       });
 
-      render(<InvoiceDetails />, {
-        initialRouterConfig: {
-          location: {
-            pathname: `/organizations/${mockOrg.slug}/invoices/de/${invoice.id}/`,
+      const {router} = initializeOrg({
+        router: {
+          params: {
+            orgId: mockOrg.slug,
+            invoiceId: invoice.id,
+            region: 'de',
           },
-          route: `/organizations/:orgId/invoices/:region/:invoiceId/`,
         },
+      });
+
+      render(<InvoiceDetails />, {
+        router,
+        deprecatedRouterMocks: true,
       });
 
       await userEvent.click(
@@ -114,13 +127,19 @@ describe('InvoiceDetails', function () {
         host: 'https://us.sentry.io',
       });
 
-      render(<InvoiceDetails />, {
-        initialRouterConfig: {
-          location: {
-            pathname: `/organizations/${mockOrg.slug}/invoices/us/${invoice.id}/`,
+      const {router} = initializeOrg({
+        router: {
+          params: {
+            orgId: mockOrg.slug,
+            invoiceId: invoice.id,
+            region: 'us',
           },
-          route: `/organizations/:orgId/invoices/:region/:invoiceId/`,
         },
+      });
+
+      render(<InvoiceDetails />, {
+        router,
+        deprecatedRouterMocks: true,
       });
 
       await userEvent.click(
@@ -143,6 +162,16 @@ describe('InvoiceDetails', function () {
         host: 'https://us.sentry.io',
       });
 
+      const {router} = initializeOrg({
+        router: {
+          params: {
+            orgId: mockOrg.slug,
+            invoiceId: invoice.id,
+            region: 'us',
+          },
+        },
+      });
+
       const updateMock = MockApiClient.addMockResponse({
         url: `/customers/${mockOrg.slug}/invoices/${invoice.id}/retry-payment/`,
         method: 'PUT',
@@ -152,12 +181,8 @@ describe('InvoiceDetails', function () {
       });
 
       render(<InvoiceDetails />, {
-        initialRouterConfig: {
-          location: {
-            pathname: `/organizations/${mockOrg.slug}/invoices/us/${invoice.id}/`,
-          },
-          route: `/organizations/:orgId/invoices/:region/:invoiceId/`,
-        },
+        router,
+        deprecatedRouterMocks: true,
       });
 
       await userEvent.click(
@@ -179,13 +204,19 @@ describe('InvoiceDetails', function () {
         host: 'https://us.sentry.io',
       });
 
-      render(<InvoiceDetails />, {
-        initialRouterConfig: {
-          location: {
-            pathname: `/organizations/${mockOrg.slug}/invoices/us/${invoice.id}/`,
+      const {router} = initializeOrg({
+        router: {
+          params: {
+            orgId: mockOrg.slug,
+            invoiceId: invoice.id,
+            region: 'us',
           },
-          route: `/organizations/:orgId/invoices/:region/:invoiceId/`,
         },
+      });
+
+      render(<InvoiceDetails />, {
+        router,
+        deprecatedRouterMocks: true,
       });
 
       await userEvent.click(

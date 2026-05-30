@@ -16,10 +16,9 @@ import ArchiveActions, {getArchiveActions} from 'sentry/components/actions/archi
 import ResolveActions from 'sentry/components/actions/resolve';
 import {renderArchiveReason} from 'sentry/components/archivedBox';
 import GuideAnchor from 'sentry/components/assistant/guideAnchor';
-import {openConfirmModal} from 'sentry/components/confirm';
+import {Flex} from 'sentry/components/container/flex';
 import {Button} from 'sentry/components/core/button';
 import {LinkButton} from 'sentry/components/core/button/linkButton';
-import {Flex} from 'sentry/components/core/layout';
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
 import {EnvironmentPageFilter} from 'sentry/components/organizations/environmentPageFilter';
 import {renderResolutionReason} from 'sentry/components/resolutionBox';
@@ -339,12 +338,19 @@ export function GroupActions({group, project, disabled, event}: GroupActionsProp
   };
 
   const openDeleteModal = () =>
-    openConfirmModal({
-      message: t('Deleting this issue is permanent. Are you sure you wish to continue?'),
-      priority: 'danger',
-      confirmText: t('Delete'),
-      onConfirm: onDelete,
-    });
+    openModal(({Body, Footer, closeModal}: ModalRenderProps) => (
+      <Fragment>
+        <Body>
+          {t('Deleting this issue is permanent. Are you sure you wish to continue?')}
+        </Body>
+        <Footer>
+          <Button onClick={closeModal}>{t('Cancel')}</Button>
+          <Button style={{marginLeft: space(1)}} priority="primary" onClick={onDelete}>
+            {t('Delete')}
+          </Button>
+        </Footer>
+      </Fragment>
+    ));
 
   const openDiscardModal = () => {
     openModal(renderDiscardModal);
@@ -386,7 +392,7 @@ export function GroupActions({group, project, disabled, event}: GroupActionsProp
           <ResolvedActionWapper>
             <ResolvedWrapper>
               <IconCheckmark size="md" />
-              <Flex direction="column">
+              <Flex column>
                 {isResolved ? resolvedCopyCap || t('Resolved') : t('Archived')}
                 <ReasonBanner>
                   {group.status === 'resolved'
@@ -558,10 +564,9 @@ export function GroupActions({group, project, disabled, event}: GroupActionsProp
             key: 'delete-issue',
             priority: 'danger',
             label: t('Delete'),
-            disabled: !hasDeleteAccess || !deleteCap.enabled,
-            details: hasDeleteAccess
-              ? deleteCap.disabledReason
-              : t('Only admins can delete issues'),
+            hidden: !hasDeleteAccess,
+            disabled: !deleteCap.enabled,
+            details: deleteCap.disabledReason,
             onAction: openDeleteModal,
           },
           {
@@ -676,7 +681,7 @@ const ResolvedWrapper = styled('div')`
   align-items: center;
   color: ${p => p.theme.green400};
   font-weight: bold;
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
 `;
 
 const ResolvedActionWapper = styled('div')`
@@ -688,5 +693,5 @@ const ResolvedActionWapper = styled('div')`
 const ReasonBanner = styled('div')`
   font-weight: normal;
   color: ${p => p.theme.green400};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;

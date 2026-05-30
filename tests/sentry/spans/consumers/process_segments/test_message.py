@@ -95,7 +95,7 @@ class TestSpansTask(TestCase):
         assert child_tags["transaction"] == segment_tags["transaction"]
         assert child_tags["transaction.method"] == segment_tags["transaction.method"]
         assert child_tags["transaction.op"] == segment_tags["transaction.op"]
-        assert child_tags["user"] == segment_tags["user"]
+        assert child_tags["user"] == segment_tags["user"]  # type: ignore[typeddict-item]
 
     def test_enrich_spans_no_segment(self):
         spans = self.generate_basic_spans()
@@ -125,14 +125,14 @@ class TestSpansTask(TestCase):
         )
         assert release.date_added.timestamp() == spans[0]["end_timestamp_precise"]
 
-    @override_options({"spans.process-segments.detect-performance-problems.enable": True})
+    @override_options({"standalone-spans.detect-performance-problems.enable": True})
     @mock.patch("sentry.issues.ingest.send_issue_occurrence_to_eventstream")
     def test_n_plus_one_issue_detection(self, mock_eventstream):
         spans = self.generate_n_plus_one_spans()
         with mock.patch(
-            "sentry.issues.grouptype.PerformanceStreamedSpansGroupTypeExperimental.released",
-            return_value=True,
-        ):
+            "sentry.issues.grouptype.PerformanceStreamedSpansGroupTypeExperimental.released"
+        ) as mock_released:
+            mock_released.return_value = True
             process_segment(spans)
 
         mock_eventstream.assert_called_once()
@@ -145,7 +145,7 @@ class TestSpansTask(TestCase):
         ]
         assert performance_problem.type == PerformanceStreamedSpansGroupTypeExperimental
 
-    @override_options({"spans.process-segments.detect-performance-problems.enable": True})
+    @override_options({"standalone-spans.detect-performance-problems.enable": True})
     @mock.patch("sentry.issues.ingest.send_issue_occurrence_to_eventstream")
     @pytest.mark.xfail(reason="batches without segment spans are not supported yet")
     def test_n_plus_one_issue_detection_without_segment_span(self, mock_eventstream):
@@ -199,20 +199,3 @@ class TestSpansTask(TestCase):
             ).hexdigest()
         ]
         assert performance_problem.type == PerformanceStreamedSpansGroupTypeExperimental
-
-    @mock.patch("sentry.spans.consumers.process_segments.message.track_outcome")
-    def test_skip_produce_does_not_track_outcomes(self, mock_track_outcome):
-        """Test that outcomes are not tracked when skip_produce=True"""
-        spans = self.generate_basic_spans()
-
-        # Process with skip_produce=True
-        process_segment(spans, skip_produce=True)
-
-        # Verify track_outcome was not called
-        mock_track_outcome.assert_not_called()
-
-        # Process with skip_produce=False (default)
-        process_segment(spans, skip_produce=False)
-
-        # Verify track_outcome was called once
-        mock_track_outcome.assert_called_once()

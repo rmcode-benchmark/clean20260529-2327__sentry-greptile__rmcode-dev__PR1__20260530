@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 
-import sentry_sdk
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.request import Request
 
@@ -15,7 +14,7 @@ from sentry.integrations.tasks import create_comment, update_comment
 from sentry.models.group import Group, GroupStatus, get_group_with_redirect
 from sentry.models.grouplink import GroupLink
 from sentry.models.organization import Organization
-from sentry.utils.sdk import bind_organization_context
+from sentry.utils.sdk import Scope, bind_organization_context
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ class GroupEndpoint(Endpoint):
 
         self.check_object_permissions(request, group)
 
-        sentry_sdk.get_isolation_scope().set_tag("project", group.project_id)
+        Scope.get_isolation_scope().set_tag("project", group.project_id)
 
         # we didn't bind context above, so do it now
         if not organization:

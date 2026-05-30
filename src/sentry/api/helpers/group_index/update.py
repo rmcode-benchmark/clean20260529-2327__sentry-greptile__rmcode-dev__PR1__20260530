@@ -645,8 +645,8 @@ def process_group_resolution(
         update_group_open_period(
             group=group,
             new_status=GroupStatus.RESOLVED,
-            resolution_time=now,
-            resolution_activity=activity,
+            activity=activity,
+            should_reopen_open_period=False,
         )
 
 
@@ -656,8 +656,8 @@ def merge_groups(
     acting_user: RpcUser | User | None,
     referer: str,
 ) -> MergedGroup:
-    issue_stream_regex = r"^(\/organizations\/[^/]+)?\/issues\/$"
-    similar_issues_tab_regex = r"^(\/organizations\/[^/]+)?\/issues\/\d+\/similar\/$"
+    issue_stream_regex = r"^(\/organizations\/[^\/]+)?\/issues\/$"
+    similar_issues_tab_regex = r"^(\/organizations\/[^\/]+)?\/issues\/\d+\/similar\/$"
 
     metrics.incr(
         "grouping.merge_issues",
@@ -702,14 +702,6 @@ def handle_other_status_updates(
             status=new_status, substatus=new_substatus
         )
         GroupResolution.objects.filter(group__in=group_ids).delete()
-        # Also delete commit/PR resolution links when unresolving to prevent
-        # showing old "resolved by commit" after manual re-resolution
-        if new_status in (GroupStatus.UNRESOLVED, GroupStatus.IGNORED):
-            GroupLink.objects.filter(
-                group_id__in=group_ids,
-                linked_type=GroupLink.LinkedType.commit,
-                relationship=GroupLink.Relationship.resolves,
-            ).delete()
         if new_status == GroupStatus.IGNORED:
             if new_substatus == GroupSubStatus.UNTIL_ESCALATING:
                 result["statusDetails"] = handle_archived_until_escalating(

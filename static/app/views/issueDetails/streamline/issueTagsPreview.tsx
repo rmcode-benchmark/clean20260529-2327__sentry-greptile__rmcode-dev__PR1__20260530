@@ -5,9 +5,9 @@ import styled from '@emotion/styled';
 import Color from 'color';
 
 import {LinkButton} from 'sentry/components/core/button/linkButton';
-import {Link} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import {DeviceName} from 'sentry/components/deviceName';
+import Link from 'sentry/components/links/link';
 import Placeholder from 'sentry/components/placeholder';
 import TextOverflow from 'sentry/components/textOverflow';
 import {
@@ -228,7 +228,7 @@ export default function IssueTagsPreview({
   const searchQuery = useEventQuery({groupId});
   const organization = useOrganization();
   const theme = useTheme();
-  const isScreenSmall = useMedia(`(max-width: ${theme.breakpoints.sm})`);
+  const isScreenSmall = useMedia(`(max-width: ${theme.breakpoints.small})`);
 
   const {data: detailedProject, isPending: isHighlightPending} = useDetailedProject({
     orgSlug: organization.slug,
@@ -346,9 +346,9 @@ const TagsPreview = styled('div')`
   align-content: center;
   gap: 1px;
   column-gap: ${space(0.5)};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 
-  @media (max-width: ${p => p.theme.breakpoints.sm}) {
+  @media (max-width: ${p => p.theme.breakpoints.small}) {
     display: none;
   }
 `;
@@ -408,7 +408,7 @@ const TagPreviewGrid = styled(Link)`
   margin: 0 -${space(0.75)};
   border-radius: ${p => p.theme.borderRadius};
   color: ${p => p.theme.textColor};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 
   &:hover {
     background: ${p => p.theme.backgroundTertiary};
@@ -417,12 +417,12 @@ const TagPreviewGrid = styled(Link)`
 `;
 
 const LegendText = styled(TextOverflow)`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   white-space: nowrap;
 `;
 
 const LegendPercentage = styled('span')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;

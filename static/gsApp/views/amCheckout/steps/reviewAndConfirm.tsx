@@ -332,9 +332,7 @@ function ReviewAndConfirmBody({
       />
       {cardActionError && (
         <Alert.Container>
-          <Alert type="error" showIcon={false}>
-            {cardActionError}
-          </Alert>
+          <Alert type="error">{cardActionError}</Alert>
         </Alert.Container>
       )}
       <ReviewAndConfirmItems previewData={previewData} />
@@ -401,16 +399,16 @@ const StyledPanelBody = styled(PanelBody)`
 
 const Preview = styled('div')`
   color: ${p => p.theme.textColor};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 const Header = styled(TextBlock)`
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   font-weight: 600;
 `;
 
 const SubText = styled('div')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   color: ${p => p.theme.subText};
   font-weight: normal;
 `;
@@ -449,7 +447,7 @@ const PreviewItem = styled(BaseItem)`
 
 const PreviewTotal = styled(BaseItem)`
   padding-top: ${space(3)};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
 `;
 
 const StepFooter = styled(PanelFooter)`
@@ -474,7 +472,7 @@ const MigrateNowAlertContext = styled('div')`
 
 const MigrateNowButton = styled(Button)`
   padding: 6px ${space(1)};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   min-height: 0;
   height: min-content;
 `;

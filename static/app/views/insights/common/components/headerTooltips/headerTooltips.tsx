@@ -1,4 +1,4 @@
-import {ExternalLink} from 'sentry/components/core/link';
+import ExternalLink from 'sentry/components/links/externalLink';
 import {t} from 'sentry/locale';
 import {MODULE_PRODUCT_DOC_LINKS} from 'sentry/views/insights/settings';
 import {ModuleName} from 'sentry/views/insights/types';
@@ -20,7 +20,7 @@ export const SPAN_HEADER_TOOLTIPS: Record<string, React.ReactNode> = {
       {t('The total time spent on this span.')}
       <br />
       <ExternalLink
-        href={`https://docs.sentry.io/product/insights/overview/metrics/#time-spent`}
+        href={`${MODULE_PRODUCT_DOC_LINKS[ModuleName.DB]}#what-is-time-spent`}
       >
         {t('How is this calculated?')}
       </ExternalLink>

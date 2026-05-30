@@ -2,6 +2,7 @@ import type {EventTransaction} from 'sentry/types/event';
 import {useApiQuery, type UseApiQueryResult} from 'sentry/utils/queryClient';
 import type RequestError from 'sentry/utils/requestError/requestError';
 import useOrganization from 'sentry/utils/useOrganization';
+import {useSyncedLocalStorageState} from 'sentry/utils/useSyncedLocalStorageState';
 import {
   type TraceItemDetailsResponse,
   useTraceItemDetails,
@@ -12,12 +13,8 @@ import {
 } from 'sentry/views/explore/logs/types';
 import {TraceItemDataset} from 'sentry/views/explore/types';
 import {getRepresentativeTraceEvent} from 'sentry/views/performance/newTraceDetails/traceApi/utils';
-import {
-  isEAPError,
-  isTraceError,
-} from 'sentry/views/performance/newTraceDetails/traceGuards';
+import {TRACE_FORMAT_PREFERENCE_KEY} from 'sentry/views/performance/newTraceDetails/traceHeader/styles';
 import type {TraceTree} from 'sentry/views/performance/newTraceDetails/traceModels/traceTree';
-import {useIsEAPTraceEnabled} from 'sentry/views/performance/newTraceDetails/useIsEAPTraceEnabled';
 
 type Params = {
   logs: OurLogsResponseItem[] | undefined;
@@ -36,22 +33,20 @@ export function useTraceRootEvent({
 }: Params): TraceRootEventQueryResults {
   const rep = getRepresentativeTraceEvent(tree, logs);
   const organization = useOrganization();
+  const [storedTraceFormat] = useSyncedLocalStorageState(
+    TRACE_FORMAT_PREFERENCE_KEY,
+    'non-eap'
+  );
 
   // TODO: This is a bit of a mess, we won't need all of this once we switch to EAP only
   const treeIsLoading = tree.type === 'loading';
   const hasOnlyLogs = !!(tree.type === 'empty' && logs && logs.length > 0);
   const enabledBase =
     !treeIsLoading && (tree.type === 'trace' || hasOnlyLogs) && !!rep?.event && !!traceId;
-
-  const isRepEventError =
-    rep.event && OurLogKnownFieldKey.PROJECT_ID in rep.event
-      ? false
-      : isTraceError(rep.event) || isEAPError(rep.event);
-
-  const isEAPTraceEnabled = useIsEAPTraceEnabled();
-  const isEAPQueryEnabled =
-    !isRepEventError && // Errors are not supported in EAP yet
-    (isEAPTraceEnabled || (!treeIsLoading && hasOnlyLogs));
+  const isEAPEnabled =
+    (organization.features.includes('trace-spans-format') &&
+      storedTraceFormat === 'eap') ||
+    (!treeIsLoading && hasOnlyLogs);
 
   const legacyRootEvent = useApiQuery<EventTransaction>(
     [
@@ -65,7 +60,7 @@ export function useTraceRootEvent({
     {
       // 10 minutes
       staleTime: 1000 * 60 * 10,
-      enabled: enabledBase && !isEAPQueryEnabled,
+      enabled: enabledBase && !isEAPEnabled,
     }
   );
 
@@ -86,8 +81,8 @@ export function useTraceRootEvent({
     traceId,
     traceItemType: rep?.type === 'log' ? TraceItemDataset.LOGS : TraceItemDataset.SPANS,
     referrer: 'api.explore.log-item-details',
-    enabled: enabledBase && isEAPQueryEnabled,
+    enabled: enabledBase && isEAPEnabled,
   });
 
-  return isEAPQueryEnabled ? rootEvent : legacyRootEvent;
+  return isEAPEnabled ? rootEvent : legacyRootEvent;
 }

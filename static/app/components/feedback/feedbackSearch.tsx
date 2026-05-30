@@ -34,6 +34,9 @@ const EXCLUDED_TAGS: string[] = [
   'os',
   'user',
   FieldKey.PLATFORM,
+  // TODO(aliu): Include these new tags until all feedbacks in the last 14-30d have them - early to mid may 2025
+  'associated_event_id',
+  'has_linked_error',
 ];
 
 const NON_TAG_FIELDS: string[] = [
@@ -276,6 +279,7 @@ export default function FeedbackSearch() {
 
   return (
     <SearchQueryBuilder
+      searchOnChange={organization.features.includes('ui-search-on-change')}
       initialQuery={decodeScalar(locationQuery.query, '')}
       fieldDefinitionGetter={getFeedbackFieldDefinition}
       filterKeys={filterKeys}
@@ -284,6 +288,7 @@ export default function FeedbackSearch() {
       onSearch={onSearch}
       searchSource={'feedback-list'}
       placeholder={t('Search Feedback')}
+      showUnsubmittedIndicator
     />
   );
 }

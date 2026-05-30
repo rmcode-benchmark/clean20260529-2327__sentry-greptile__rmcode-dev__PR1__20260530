@@ -12,7 +12,6 @@ from sentry.api.utils import handle_query_errors, update_snuba_params_with_times
 from sentry.models.organization import Organization
 from sentry.models.project import Project
 from sentry.organizations.services.organization import RpcOrganization
-from sentry.search.eap.types import SearchResolverConfig
 from sentry.search.events.types import EventsResponse, SnubaParams
 from sentry.snuba import ourlogs
 from sentry.snuba.referrer import Referrer
@@ -55,7 +54,6 @@ class OrganizationTraceLogsEndpoint(OrganizationEventsV2EndpointBase):
         snuba_params: SnubaParams,
         trace_ids: list[str],
         orderby: list[str],
-        additional_query: str | None,
         offset: int,
         limit: int,
     ) -> EventsResponse:
@@ -75,22 +73,16 @@ class OrganizationTraceLogsEndpoint(OrganizationEventsV2EndpointBase):
                 raise ParseError(
                     f"{column.lstrip('-')} must be one of {','.join(selected_columns)}"
                 )
-        base_query = (
-            f"trace:{trace_ids[0]}" if len(trace_ids) == 1 else f"trace:[{','.join(trace_ids)}]"
-        )
-        if additional_query is not None:
-            query = f"{base_query} and {additional_query}"
-        else:
-            query = base_query
-        results = ourlogs.run_table_query(
-            snuba_params,
-            query,
-            selected_columns,
-            orderby,
-            offset,
-            limit,
-            Referrer.API_TRACE_VIEW_LOGS.value,
-            SearchResolverConfig(use_aggregate_conditions=False),
+        results = ourlogs.query(
+            selected_columns=selected_columns,
+            query=(
+                f"trace:{trace_ids[0]}" if len(trace_ids) == 1 else f"trace:[{','.join(trace_ids)}]"
+            ),
+            snuba_params=snuba_params,
+            orderby=orderby,
+            offset=offset,
+            limit=limit,
+            referrer=Referrer.API_TRACE_VIEW_LOGS.value,
         )
         return results
 
@@ -109,18 +101,15 @@ class OrganizationTraceLogsEndpoint(OrganizationEventsV2EndpointBase):
             raise ParseError("Need to pass at least one traceId")
 
         orderby = request.GET.getlist("orderby", ["-timestamp"])
-        additional_query = request.GET.get("query")
 
         update_snuba_params_with_timestamp(request, snuba_params)
 
         def data_fn(offset: int, limit: int) -> EventsResponse:
             with handle_query_errors():
-                return self.query_logs_data(
-                    snuba_params, trace_ids, orderby, additional_query, offset, limit
-                )
+                return self.query_logs_data(snuba_params, trace_ids, orderby, offset, limit)
 
         return self.paginate(
             request=request,
             paginator=GenericOffsetPaginator(data_fn=data_fn),
-            max_per_page=9999,
+            max_per_page=1000,
         )

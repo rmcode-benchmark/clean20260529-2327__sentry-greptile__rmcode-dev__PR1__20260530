@@ -4,7 +4,7 @@ import startCase from 'lodash/startCase';
 import {Alert} from 'sentry/components/core/alert';
 import {Tag} from 'sentry/components/core/badge/tag';
 import {LinkButton} from 'sentry/components/core/button/linkButton';
-import {Link} from 'sentry/components/core/link';
+import Link from 'sentry/components/links/link';
 import PanelItem from 'sentry/components/panels/panelItem';
 import {t} from 'sentry/locale';
 import {PluginIcon} from 'sentry/plugins/components/pluginIcon';
@@ -124,6 +124,7 @@ function IntegrationRow(props: Props) {
           <Alert.Container>
             <Alert
               type="warning"
+              showIcon
               trailingItems={
                 <ResolveNowButton
                   href={`${baseUrl}?tab=configurations&referrer=directory_resolve_now`}
@@ -186,13 +187,13 @@ const TagsContainer = styled('div')`
 `;
 
 const IntegrationName = styled(Link)`
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
 `;
 
 const IntegrationDetails = styled('div')`
   display: flex;
   align-items: center;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const StyledLink = styled(Link)`
@@ -221,7 +222,7 @@ const PublishStatus = styled(({status, ...props}: PublishStatusProps) => (
     content: '|';
     color: ${p => p.theme.subText};
     margin-right: ${space(0.75)};
-    font-weight: ${p => p.theme.fontWeight.normal};
+    font-weight: ${p => p.theme.fontWeightNormal};
   }
 `;
 

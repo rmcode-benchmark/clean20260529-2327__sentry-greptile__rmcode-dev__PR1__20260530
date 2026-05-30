@@ -3,7 +3,7 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any, DefaultDict
 
 from django.contrib.auth.models import AnonymousUser
-from django.db.models import Q, Subquery
+from django.db.models import Q
 
 from sentry.api.serializers import Serializer, serialize
 from sentry.incidents.endpoints.serializers.alert_rule import AlertRuleSerializerResponse
@@ -24,15 +24,13 @@ from sentry.users.services.user.model import RpcUser
 from sentry.users.services.user.service import user_service
 from sentry.workflow_engine.models import (
     Action,
+    ActionGroupStatus,
     AlertRuleDetector,
     DataCondition,
-    DataConditionGroup,
     DataConditionGroupAction,
     DataSourceDetector,
     Detector,
-    DetectorWorkflow,
 )
-from sentry.workflow_engine.models.workflow_action_group_status import WorkflowActionGroupStatus
 from sentry.workflow_engine.types import DetectorPriorityLevel
 
 
@@ -179,22 +177,20 @@ class WorkflowEngineDetectorSerializer(Serializer):
         for action_ids in detector_to_action_ids.values():
             all_action_ids.extend(action_ids)
 
-        wf_action_group_statuses = WorkflowActionGroupStatus.objects.filter(
-            action_id__in=all_action_ids
-        )
+        action_group_statuses = ActionGroupStatus.objects.filter(action_id__in=all_action_ids)
 
-        detector_to_group_ids = defaultdict(set)
-        for wf_action_group_status in wf_action_group_statuses:
+        detector_to_group_ids = defaultdict(list)
+        for action_group_status in action_group_statuses:
             for detector, action_ids in detector_to_action_ids.items():
-                if wf_action_group_status.action_id in action_ids:
-                    detector_to_group_ids[detector].add(wf_action_group_status.group_id)
+                if action_group_status.action_id in action_ids:
+                    detector_to_group_ids[detector].append(action_group_status.group_id)
 
         open_periods = None
-        group_ids = {
-            wf_action_group_status.group_id for wf_action_group_status in wf_action_group_statuses
-        }
+        group_ids = [action_group_status.group_id for action_group_status in action_group_statuses]
         if group_ids:
-            open_periods = GroupOpenPeriod.objects.filter(group__in=group_ids)
+            open_periods = GroupOpenPeriod.objects.filter(
+                group__in=[group_id for group_id in group_ids]
+            )
 
         for detector in detectors.values():
             # TODO: this serializer is half baked
@@ -211,7 +207,6 @@ class WorkflowEngineDetectorSerializer(Serializer):
         self, item_list: Sequence[Detector], user: User | RpcUser | AnonymousUser, **kwargs: Any
     ) -> defaultdict[Detector, dict[str, Any]]:
         detectors = {item.id: item for item in item_list}
-        detector_ids = [item.id for item in item_list]
         result: DefaultDict[Detector, dict[str, Any]] = defaultdict(dict)
 
         detector_workflow_condition_group_ids = [
@@ -223,20 +218,13 @@ class WorkflowEngineDetectorSerializer(Serializer):
             condition_group__in=detector_workflow_condition_group_ids,
             condition_result__in=[DetectorPriorityLevel.HIGH, DetectorPriorityLevel.MEDIUM],
         )
-        workflow_dcg_ids = DataConditionGroup.objects.filter(
-            workflowdataconditiongroup__workflow__in=Subquery(
-                DetectorWorkflow.objects.filter(detector__in=detector_ids).values_list(
-                    "workflow_id", flat=True
-                )
-            )
-        ).values_list("id", flat=True)
+
         action_filter_data_condition_groups = DataCondition.objects.filter(
             comparison__in=[
                 detector_trigger.condition_result
                 for detector_trigger in detector_trigger_data_conditions
             ],
-            condition_group__in=Subquery(workflow_dcg_ids),
-        )
+        ).exclude(condition_group__in=detector_workflow_condition_group_ids)
 
         dcgas = DataConditionGroupAction.objects.filter(
             condition_group__in=[

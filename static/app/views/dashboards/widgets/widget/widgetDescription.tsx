@@ -47,12 +47,12 @@ const TooltipContents = styled('div')`
 
 const TooltipTitle = styled('div')`
   font-weight: bold;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   text-align: left;
 `;
 
 const TooltipDescription = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   text-align: left;
 `;
 

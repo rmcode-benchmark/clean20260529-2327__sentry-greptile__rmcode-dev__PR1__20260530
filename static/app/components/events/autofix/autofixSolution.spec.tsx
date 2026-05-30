@@ -44,16 +44,6 @@ describe('AutofixSolution', () => {
       repos: [],
       codebases: {},
     });
-
-    MockApiClient.addMockResponse({
-      url: '/organizations/org-slug/issues/123/',
-      method: 'GET',
-      body: {
-        project: {
-          slug: 'project-slug',
-        },
-      },
-    });
   });
 
   it('enables Code It Up button when all repos are readable', () => {

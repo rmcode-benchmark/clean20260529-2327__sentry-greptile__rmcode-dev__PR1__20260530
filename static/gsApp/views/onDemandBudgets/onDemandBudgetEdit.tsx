@@ -2,7 +2,6 @@ import {Component, Fragment} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 
-import {Alert} from 'sentry/components/core/alert';
 import {Tag} from 'sentry/components/core/badge/tag';
 import {Input} from 'sentry/components/core/input';
 import {Radio} from 'sentry/components/core/radio';
@@ -118,10 +117,7 @@ class OnDemandBudgetEdit extends Component<Props> {
     ) {
       return (
         <InputFields>
-          {getOnDemandCategories({
-            plan: activePlan,
-            budgetMode: displayBudgetMode,
-          }).map(category => {
+          {getOnDemandCategories(activePlan).map(category => {
             const categoryBudgetKey = `${category}Budget`;
             const displayName = getPlanCategoryName({plan: activePlan, category});
             return (
@@ -171,15 +167,6 @@ class OnDemandBudgetEdit extends Component<Props> {
             organization={organization}
             subscription={subscription}
           />
-          {organization.features.includes('seer-billing') && (
-            <Alert.Container>
-              <Alert type="warning">
-                {t(
-                  "Additional Seer usage is only available through a shared on-demand budget. To ensure you'll have access to additional Seer usage, set up a shared on-demand budget instead."
-                )}
-              </Alert>
-            </Alert.Container>
-          )}
         </InputFields>
       );
     }
@@ -201,10 +188,7 @@ class OnDemandBudgetEdit extends Component<Props> {
     const selectedBudgetMode = onDemandBudget.budgetMode;
     const oxfordCategories = listDisplayNames({
       plan: activePlan,
-      categories: getOnDemandCategories({
-        plan: activePlan,
-        budgetMode: selectedBudgetMode,
-      }),
+      categories: getOnDemandCategories(activePlan),
     });
 
     if (subscription.planDetails.budgetTerm === 'pay-as-you-go') {
@@ -335,7 +319,7 @@ const BudgetContainer = styled('div')`
 
 const InputFields = styled('div')`
   color: ${p => p.theme.gray400};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   margin-bottom: 1px;
 `;
 
@@ -346,7 +330,7 @@ const StyledRadio = styled(Radio)`
 const BudgetDetails = styled('div')`
   display: inline-grid;
   gap: ${space(0.75)};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   color: ${p => p.theme.textColor};
 `;
 
@@ -358,7 +342,7 @@ const Title = styled('div')`
 `;
 
 const Description = styled(TextBlock)`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   color: ${p => p.theme.subText};
   margin: 0;
 `;
@@ -370,7 +354,7 @@ const Currency = styled('div')`
     content: '$';
     color: ${p => p.theme.subText};
     font-weight: bold;
-    font-size: ${p => p.theme.fontSize.md};
+    font-size: ${p => p.theme.fontSizeMedium};
   }
 `;
 
@@ -386,7 +370,7 @@ const OnDemandType = styled('div')`
 `;
 
 const MediumTitle = styled('div')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 const InputDiv = styled('div')`

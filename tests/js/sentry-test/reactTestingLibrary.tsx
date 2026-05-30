@@ -197,16 +197,12 @@ function createRoutesFromConfig(
     throw useRouteError();
   }
 
-  const emptyRoute = {
-    path: '*',
-    element: <div>No routes match, check that your location matches your route</div>,
-    errorElement: <ErrorBoundary />,
-  };
+  const fallbackRoute = {path: '*', element: children, errorElement: <ErrorBoundary />};
 
   if (config?.route) {
     return [
       {path: config.route, element: children, errorElement: <ErrorBoundary />},
-      emptyRoute,
+      fallbackRoute,
     ];
   }
 
@@ -217,7 +213,7 @@ function createRoutesFromConfig(
         element: children,
         errorElement: <ErrorBoundary />,
       })),
-      emptyRoute,
+      fallbackRoute,
     ];
   }
 

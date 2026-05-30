@@ -2,12 +2,12 @@ import {Fragment, useMemo} from 'react';
 import styled from '@emotion/styled';
 
 import {Alert} from 'sentry/components/core/alert';
-import {ExternalLink} from 'sentry/components/core/link';
 import {EventContexts} from 'sentry/components/events/contexts';
 import {EventAttachments} from 'sentry/components/events/eventAttachments';
 import {EventEvidence} from 'sentry/components/events/eventEvidence';
 import {EventViewHierarchy} from 'sentry/components/events/eventViewHierarchy';
 import {EventRRWebIntegration} from 'sentry/components/events/rrwebIntegration';
+import ExternalLink from 'sentry/components/links/externalLink';
 import LoadingError from 'sentry/components/loadingError';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import {t, tct} from 'sentry/locale';
@@ -17,8 +17,11 @@ import type {Organization} from 'sentry/types/organization';
 import {MutableSearch} from 'sentry/utils/tokenizeSearch';
 import {useLocation} from 'sentry/utils/useLocation';
 import useProjects from 'sentry/utils/useProjects';
-import {useSpans} from 'sentry/views/insights/common/queries/useDiscover';
-import type {SpanQueryFilters, SpanResponse} from 'sentry/views/insights/types';
+import {useSpanMetrics} from 'sentry/views/insights/common/queries/useDiscover';
+import type {
+  SpanMetricsQueryFilters,
+  SpanMetricsResponse,
+} from 'sentry/views/insights/types';
 import {InterimSection} from 'sentry/views/issueDetails/streamline/interimSection';
 import {Referrer} from 'sentry/views/performance/newTraceDetails/referrers';
 import {traceAnalytics} from 'sentry/views/performance/newTraceDetails/traceAnalytics';
@@ -27,8 +30,6 @@ import {getCustomInstrumentationLink} from 'sentry/views/performance/newTraceDet
 import {IssueList} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/issues/issues';
 import {AIInputSection} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/span/eapSections/aiInput';
 import {AIOutputSection} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/span/eapSections/aiOutput';
-import {MCPInputSection} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/span/eapSections/mcpInput';
-import {MCPOutputSection} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/span/eapSections/mcpOutput';
 import {TraceDrawerComponents} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/styles';
 import type {TraceTreeNodeDetailsProps} from 'sentry/views/performance/newTraceDetails/traceDrawer/tabs/traceTreeNodeDetails';
 import type {TraceTree} from 'sentry/views/performance/newTraceDetails/traceModels/traceTree';
@@ -50,7 +51,6 @@ type TransactionNodeDetailHeaderProps = {
   node: TraceTreeNode<TraceTree.Transaction>;
   onTabScrollToNode: (node: TraceTreeNode<any>) => void;
   organization: Organization;
-  hideNodeActions?: boolean;
 };
 
 function TransactionNodeDetailHeader({
@@ -58,7 +58,6 @@ function TransactionNodeDetailHeader({
   organization,
   onTabScrollToNode,
   event,
-  hideNodeActions,
 }: TransactionNodeDetailHeaderProps) {
   return (
     <TraceDrawerComponents.HeaderContainer>
@@ -73,14 +72,12 @@ function TransactionNodeDetailHeader({
           />
         </TraceDrawerComponents.LegacyTitleText>
       </TraceDrawerComponents.Title>
-      {!hideNodeActions && (
-        <TraceDrawerComponents.NodeActions
-          node={node}
-          organization={organization}
-          onTabScrollToNode={onTabScrollToNode}
-          eventSize={event?.size}
-        />
-      )}
+      <TraceDrawerComponents.NodeActions
+        node={node}
+        organization={organization}
+        onTabScrollToNode={onTabScrollToNode}
+        eventSize={event?.size}
+      />
     </TraceDrawerComponents.HeaderContainer>
   );
 }
@@ -91,7 +88,6 @@ export function TransactionNodeDetails({
   onTabScrollToNode,
   onParentClick,
   replay,
-  hideNodeActions,
 }: TraceTreeNodeDetailsProps<TraceTreeNode<TraceTree.Transaction>>) {
   const {projects} = useProjects();
   const issues = useMemo(() => {
@@ -102,15 +98,14 @@ export function TransactionNodeDetails({
     isError,
     isPending,
   } = useTransaction({
-    event_id: node.value.event_id,
-    project_slug: node.value.project_slug,
+    node,
     organization,
   });
-  const {data: cacheMetrics} = useSpans(
+  const {data: cacheMetrics} = useSpanMetrics(
     {
       search: MutableSearch.fromQueryObject({
         transaction: node.value.transaction,
-      } satisfies SpanQueryFilters),
+      } satisfies SpanMetricsQueryFilters),
       fields: ['avg(cache.item_size)', 'cache_miss_rate()'],
     },
     Referrer.TRACE_DRAWER_TRANSACTION_CACHE_METRICS
@@ -133,12 +128,11 @@ export function TransactionNodeDetails({
         organization={organization}
         event={event}
         onTabScrollToNode={onTabScrollToNode}
-        hideNodeActions={hideNodeActions}
       />
       <TraceDrawerComponents.BodyContainer>
         {node.canFetch ? null : (
           <Alert.Container>
-            <StyledAlert type="info">
+            <StyledAlert type="info" showIcon>
               {tct(
                 'This transaction does not have any child spans. You can add more child spans via [customInstrumentationLink:custom instrumentation].',
                 {
@@ -163,13 +157,10 @@ export function TransactionNodeDetails({
           node={node}
           project={project}
           organization={organization}
-          hideNodeActions={hideNodeActions}
         />
 
         <AIInputSection node={node} event={event} />
         <AIOutputSection node={node} event={event} />
-        <MCPInputSection node={node} event={event} />
-        <MCPOutputSection node={node} event={event} />
 
         <TransactionSpecificSections
           event={event}
@@ -229,7 +220,9 @@ export function TransactionNodeDetails({
 }
 
 type TransactionSpecificSectionsProps = {
-  cacheMetrics: Array<Pick<SpanResponse, 'avg(cache.item_size)' | 'cache_miss_rate()'>>;
+  cacheMetrics: Array<
+    Pick<SpanMetricsResponse, 'avg(cache.item_size)' | 'cache_miss_rate()'>
+  >;
   event: EventTransaction;
   node: TraceTreeNode<TraceTree.Transaction>;
   onParentClick: (node: TraceTreeNode<TraceTree.NodeValue>) => void;

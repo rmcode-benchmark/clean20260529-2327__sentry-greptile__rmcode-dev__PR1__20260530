@@ -4,7 +4,7 @@ import type {Location} from 'history';
 
 import {CodeSnippet} from 'sentry/components/codeSnippet';
 import {CopyToClipboardButton} from 'sentry/components/copyToClipboardButton';
-import {Link} from 'sentry/components/core/link';
+import Link from 'sentry/components/links/link';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import LinkHint from 'sentry/components/structuredEventData/linkHint';
 import {IconGraph} from 'sentry/icons/iconGraph';
@@ -15,6 +15,7 @@ import type {Project} from 'sentry/types/project';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {SQLishFormatter} from 'sentry/utils/sqlish/SQLishFormatter';
 import {useLocalStorageState} from 'sentry/utils/useLocalStorageState';
+import {getHighlightedSpanAttributes} from 'sentry/views/insights/agentMonitoring/utils/highlightedSpanAttributes';
 import ResourceSize from 'sentry/views/insights/browser/resources/components/resourceSize';
 import {
   DisabledImages,
@@ -32,9 +33,8 @@ import {
   isValidJson,
   prettyPrintJsonString,
 } from 'sentry/views/insights/database/utils/jsonUtils';
-import {ModuleName, SpanFields} from 'sentry/views/insights/types';
+import {ModuleName, SpanIndexedField} from 'sentry/views/insights/types';
 import {traceAnalytics} from 'sentry/views/performance/newTraceDetails/traceAnalytics';
-import {getHighlightedSpanAttributes} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/highlightedAttributes';
 import SpanSummaryLink from 'sentry/views/performance/newTraceDetails/traceDrawer/details/span/components/spanSummaryLink';
 import {TraceDrawerComponents} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/styles';
 import {
@@ -53,13 +53,11 @@ export function SpanDescription({
   organization,
   location,
   project,
-  hideNodeActions,
 }: {
   location: Location;
   node: TraceTreeNode<TraceTree.Span>;
   organization: Organization;
   project: Project | undefined;
-  hideNodeActions?: boolean;
 }) {
   const {data: event} = useEventDetails({
     eventId: node.event?.eventID,
@@ -121,7 +119,7 @@ export function SpanDescription({
                 organization,
                 location,
                 node.event?.projectID,
-                SpanFields.SPAN_DESCRIPTION,
+                SpanIndexedField.SPAN_DESCRIPTION,
                 span.description!,
                 TraceDrawerActionKind.INCLUDE
               )
@@ -137,7 +135,7 @@ export function SpanDescription({
           if (hasExploreEnabled) {
             traceAnalytics.trackExploreSearch(
               organization,
-              SpanFields.SPAN_DESCRIPTION,
+              SpanIndexedField.SPAN_DESCRIPTION,
               span.description!,
               TraceDrawerActionKind.INCLUDE,
               'drawer'
@@ -221,11 +219,11 @@ export function SpanDescription({
       avgDuration={averageSpanDuration ? averageSpanDuration / 1000 : undefined}
       headerContent={value}
       bodyContent={actions}
-      hideNodeActions={hideNodeActions}
       highlightedAttributes={getHighlightedSpanAttributes({
         organization,
         attributes: span.data,
         op: span.op,
+        description: span.description,
       })}
     />
   );
@@ -377,7 +375,7 @@ const StyledCodeSnippet = styled(CodeSnippet)`
 const DescriptionWrapper = styled('div')`
   display: flex;
   align-items: baseline;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   width: 100%;
   justify-content: space-between;
   flex-direction: row;

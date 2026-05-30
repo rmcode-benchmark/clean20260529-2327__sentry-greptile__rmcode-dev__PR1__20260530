@@ -1,4 +1,4 @@
-import {useCallback, useMemo} from 'react';
+import {useCallback} from 'react';
 
 import {
   addErrorMessage,
@@ -6,12 +6,12 @@ import {
   addSuccessMessage,
 } from 'sentry/actionCreators/indicator';
 import {openConfirmModal} from 'sentry/components/confirm';
+import type useListItemCheckboxState from 'sentry/components/feedback/list/useListItemCheckboxState';
 import {useDeleteFeedback} from 'sentry/components/feedback/useDeleteFeedback';
 import useMutateFeedback from 'sentry/components/feedback/useMutateFeedback';
 import {t, tct} from 'sentry/locale';
 import {GroupStatus} from 'sentry/types/group';
 import {trackAnalytics} from 'sentry/utils/analytics';
-import type {useListItemCheckboxContext} from 'sentry/utils/list/useListItemCheckboxState';
 import {decodeList} from 'sentry/utils/queryString';
 import useLocationQuery from 'sentry/utils/url/useLocationQuery';
 import useOrganization from 'sentry/utils/useOrganization';
@@ -30,7 +30,7 @@ const statusToText: Record<string, string> = {
 
 interface Props
   extends Pick<
-    ReturnType<typeof useListItemCheckboxContext>,
+    ReturnType<typeof useListItemCheckboxState>,
     'deselectAll' | 'selectedIds'
   > {}
 
@@ -46,26 +46,9 @@ export default function useBulkEditFeedbacks({deselectAll, selectedIds}: Props) 
     organization,
     projectIds: queryView.project,
   });
-  // TODO: should only be true if you're a member of some of the projects of the
-  // selected feedbacks... which is not currently available
-  const enableMarkAsRead = true;
+  const deleteFeedback = useDeleteFeedback(selectedIds, queryView.project);
 
-  const onDelete = useDeleteFeedback(selectedIds, queryView.project);
-  const hasDelete = selectedIds !== 'all';
-  const enableDelete = organization.access.includes('event:admin');
-
-  const mutationOptions = useMemo(
-    () => ({
-      onError: () => {
-        addErrorMessage(t('An error occurred while updating the feedbacks'));
-      },
-      onSuccess: () => {
-        addSuccessMessage(t('Updated feedbacks'));
-        deselectAll();
-      },
-    }),
-    [deselectAll]
-  );
+  const onDelete = deleteFeedback;
 
   const onToggleResolved = useCallback(
     ({newMailbox, moveToInbox}: {newMailbox: GroupStatus; moveToInbox?: boolean}) => {
@@ -80,7 +63,15 @@ export default function useBulkEditFeedbacks({deselectAll, selectedIds}: Props) 
             });
           }
           addLoadingMessage(t('Updating feedbacks...'));
-          resolve(newMailbox, mutationOptions);
+          resolve(newMailbox, {
+            onError: () => {
+              addErrorMessage(t('An error occurred while updating the feedbacks.'));
+            },
+            onSuccess: () => {
+              addSuccessMessage(t('Updated feedbacks'));
+              deselectAll();
+            },
+          });
         },
         message: moveToInbox
           ? t('Are you sure you want to move these feedbacks to the inbox?')
@@ -90,7 +81,7 @@ export default function useBulkEditFeedbacks({deselectAll, selectedIds}: Props) 
         confirmText: moveToInbox ? t('Move to Inbox') : statusToButtonLabel[newMailbox],
       });
     },
-    [selectedIds, resolve, mutationOptions, organization]
+    [deselectAll, resolve, selectedIds, organization]
   );
 
   const onMarkAsRead = useCallback(
@@ -99,12 +90,20 @@ export default function useBulkEditFeedbacks({deselectAll, selectedIds}: Props) 
         bypass: Array.isArray(selectedIds) && selectedIds.length === 1,
         onConfirm: () => {
           addLoadingMessage(t('Updating feedbacks...'));
-          markAsRead(true, mutationOptions);
+          markAsRead(true, {
+            onError: () => {
+              addErrorMessage(t('An error occurred while updating the feedbacks.'));
+            },
+            onSuccess: () => {
+              addSuccessMessage(t('Updated feedbacks'));
+              deselectAll();
+            },
+          });
         },
         message: t('Are you sure you want to mark these feedbacks as read?'),
         confirmText: 'Mark read',
       }),
-    [markAsRead, mutationOptions, selectedIds]
+    [deselectAll, markAsRead, selectedIds]
   );
 
   const onMarkUnread = useCallback(
@@ -115,7 +114,7 @@ export default function useBulkEditFeedbacks({deselectAll, selectedIds}: Props) 
           addLoadingMessage(t('Updating feedbacks...'));
           markAsRead(false, {
             onError: () => {
-              addErrorMessage(t('An error occurred while updating the feedbacks'));
+              addErrorMessage(t('An error occurred while updating the feedbacks.'));
             },
             onSuccess: () => {
               addSuccessMessage(t('Updated feedbacks'));
@@ -130,11 +129,8 @@ export default function useBulkEditFeedbacks({deselectAll, selectedIds}: Props) 
   );
 
   return {
-    hasDelete,
-    enableDelete,
     onDelete,
     onToggleResolved,
-    enableMarkAsRead,
     onMarkAsRead,
     onMarkUnread,
   };

@@ -15,9 +15,7 @@ describe('connect onboarding docs', function () {
     // Renders main headings
     expect(screen.getByRole('heading', {name: 'Install'})).toBeInTheDocument();
     expect(screen.getByRole('heading', {name: 'Configure SDK'})).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', {name: /Upload Source Maps/i})
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Upload Source Maps'})).toBeInTheDocument();
 
     // Includes import statement
     const allMatches = screen.getAllByText(

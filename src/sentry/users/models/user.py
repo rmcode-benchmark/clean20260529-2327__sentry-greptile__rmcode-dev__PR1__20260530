@@ -105,10 +105,6 @@ class User(Model, AbstractBaseUser):
     # display name
     name = models.CharField(_("name"), max_length=200, blank=True, db_column="first_name")
     email = models.EmailField(_("email address"), blank=True, max_length=200)
-    # temporary field that prevents creating new users with the same email address as an existing user on the DB level
-    email_unique = models.EmailField(
-        _("unique email address"), null=True, max_length=200, unique=True
-    )
     is_staff = models.BooleanField(
         _("staff status"),
         default=False,
@@ -182,6 +178,7 @@ class User(Model, AbstractBaseUser):
         newsletter_consent_prompt: bool
 
         bitfield_default = 0
+        bitfield_null = True
 
     session_nonce = models.CharField(max_length=12, null=True)
 

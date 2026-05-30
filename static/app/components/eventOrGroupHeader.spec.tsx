@@ -267,7 +267,6 @@ describe('EventOrGroupHeader', function () {
           },
           actor: UserFixture(),
           isTombstone: true,
-          dateAdded: '2025-06-25T00:00:00Z',
         }}
         {...router}
       />,

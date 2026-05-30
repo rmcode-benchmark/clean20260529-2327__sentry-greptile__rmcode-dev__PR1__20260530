@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-import pytest
 import responses
 from django.utils import timezone
 
@@ -10,11 +9,8 @@ from sentry.integrations.source_code_management.commit_context import (
     PullRequestFile,
 )
 from sentry.integrations.source_code_management.tasks import open_pr_comment_workflow
-from sentry.integrations.types import EventLifecycleOutcome
 from sentry.models.group import Group
 from sentry.models.pullrequest import CommentType, PullRequestComment
-from sentry.shared_integrations.exceptions import ApiError
-from sentry.testutils.asserts import assert_slo_metric
 from sentry.testutils.helpers.datetime import before_now
 from sentry.testutils.skips import requires_snuba
 from sentry.utils import json
@@ -268,6 +264,9 @@ index 0000001..0000002 100644
         pr_files = self.open_pr_comment_workflow.safe_for_comment(repo=self.repo, pr=self.pr)
 
         assert pr_files == []
+        self.mock_integration_metrics.incr.assert_called_with(
+            "gitlab.open_pr_comment.api_error", tags={"type": "missing_pr", "code": 404}
+        )
 
     @responses.activate
     def test_error__unknown_api_error(self):
@@ -277,8 +276,12 @@ index 0000001..0000002 100644
             status=500,
         )
 
-        with pytest.raises(ApiError):
-            self.open_pr_comment_workflow.safe_for_comment(repo=self.repo, pr=self.pr)
+        pr_files = self.open_pr_comment_workflow.safe_for_comment(repo=self.repo, pr=self.pr)
+
+        assert pr_files == []
+        self.mock_integration_metrics.incr.assert_called_with(
+            "gitlab.open_pr_comment.api_error", tags={"type": "unknown_api_error", "code": 500}
+        )
 
 
 @patch(
@@ -408,8 +411,6 @@ class TestOpenPRCommentWorkflow(GitlabCommentTestCase):
         open_pr_comment_workflow(self.pr.id)
 
         data = json.loads(responses.calls[0].request.body)
-        raw_groups = [Group.objects.get(id=group["group_id"]) for group in self.groups]
-
         assert data == {
             "body": f"""\
 ## 🔍 Existing Issues For Review
@@ -419,19 +420,19 @@ Your merge request is modifying functions with the following pre-existing issues
 
 | Function | Unhandled Issue |
 | :------- | :----- |
-| **`function_3`** | [**{raw_groups[0].title}**](http://testserver/organizations/{raw_groups[0].project.organization.slug}/issues/{raw_groups[0].id}/?referrer=gitlab-open-pr-bot) {raw_groups[0].culprit} <br> `Event Count:` **4k** |
-| **`function_2`** | [**{raw_groups[1].title}**](http://testserver/organizations/{raw_groups[1].project.organization.slug}/issues/{raw_groups[1].id}/?referrer=gitlab-open-pr-bot) {raw_groups[1].culprit} <br> `Event Count:` **3k** |
-| **`function_1`** | [**{raw_groups[2].title}**](http://testserver/organizations/{raw_groups[2].project.organization.slug}/issues/{raw_groups[2].id}/?referrer=gitlab-open-pr-bot) {raw_groups[2].culprit} <br> `Event Count:` **2k** |
-| **`function_0`** | [**{raw_groups[3].title}**](http://testserver/organizations/{raw_groups[3].project.organization.slug}/issues/{raw_groups[3].id}/?referrer=gitlab-open-pr-bot) {raw_groups[3].culprit} <br> `Event Count:` **1k** |
+| **`function_3`** | [**Error**](http://testserver/organizations/baz/issues/{self.groups[0]['group_id']}/?referrer=gitlab-open-pr-bot) issue2 <br> `Event Count:` **4k** |
+| **`function_2`** | [**issue 2**](http://testserver/organizations/foobar/issues/{self.groups[1]['group_id']}/?referrer=gitlab-open-pr-bot) issue2 <br> `Event Count:` **3k** |
+| **`function_1`** | [**issue 1**](http://testserver/organizations/baz/issues/{self.groups[2]['group_id']}/?referrer=gitlab-open-pr-bot) issue1 <br> `Event Count:` **2k** |
+| **`function_0`** | [**Error**](http://testserver/organizations/baz/issues/{self.groups[3]['group_id']}/?referrer=gitlab-open-pr-bot) issue1 <br> `Event Count:` **1k** |
 <details>
 <summary><b>📄 File: bar.py (Click to Expand)</b></summary>
 
 | Function | Unhandled Issue |
 | :------- | :----- |
-| **`function_3`** | [**{raw_groups[0].title}**](http://testserver/organizations/{raw_groups[0].project.organization.slug}/issues/{raw_groups[0].id}/?referrer=gitlab-open-pr-bot) {raw_groups[0].culprit} <br> `Event Count:` **4k** |
-| **`function_2`** | [**{raw_groups[1].title}**](http://testserver/organizations/{raw_groups[1].project.organization.slug}/issues/{raw_groups[1].id}/?referrer=gitlab-open-pr-bot) {raw_groups[1].culprit} <br> `Event Count:` **3k** |
-| **`function_1`** | [**{raw_groups[2].title}**](http://testserver/organizations/{raw_groups[2].project.organization.slug}/issues/{raw_groups[2].id}/?referrer=gitlab-open-pr-bot) {raw_groups[2].culprit} <br> `Event Count:` **2k** |
-| **`function_0`** | [**{raw_groups[3].title}**](http://testserver/organizations/{raw_groups[3].project.organization.slug}/issues/{raw_groups[3].id}/?referrer=gitlab-open-pr-bot) {raw_groups[3].culprit} <br> `Event Count:` **1k** |
+| **`function_3`** | [**Error**](http://testserver/organizations/baz/issues/{self.groups[0]['group_id']}/?referrer=gitlab-open-pr-bot) issue2 <br> `Event Count:` **4k** |
+| **`function_2`** | [**issue 2**](http://testserver/organizations/foobar/issues/{self.groups[1]['group_id']}/?referrer=gitlab-open-pr-bot) issue2 <br> `Event Count:` **3k** |
+| **`function_1`** | [**issue 1**](http://testserver/organizations/baz/issues/{self.groups[2]['group_id']}/?referrer=gitlab-open-pr-bot) issue1 <br> `Event Count:` **2k** |
+| **`function_0`** | [**Error**](http://testserver/organizations/baz/issues/{self.groups[3]['group_id']}/?referrer=gitlab-open-pr-bot) issue1 <br> `Event Count:` **1k** |
 </details>"""
         }
 
@@ -572,25 +573,3 @@ Your merge request is modifying functions with the following pre-existing issues
         mock_task_metrics.incr.assert_called_with("gitlab.open_pr_comment.no_issues")
         assert mock_integration_metrics.mock_calls == []
         assert mock_analytics.mock_calls == []
-
-    @responses.activate
-    @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
-    def test_comment_workflow_api_error(
-        self,
-        mock_record_event,
-        mock_analytics,
-        mock_commit_context_metrics,
-        mock_task_metrics,
-        mock_integration_metrics,
-        mock_extract_functions_from_patch,
-        mock_get_top_5_issues_by_count_for_file,
-        mock_get_projects_and_filenames_from_source_file,
-        mock_get_pr_files_safe_for_comment,
-    ):
-        # two filenames, the second one has a toggle table
-        mock_get_pr_files_safe_for_comment.side_effect = ApiError("asdf")
-
-        with pytest.raises(ApiError):
-            open_pr_comment_workflow(self.pr.id)
-
-        assert_slo_metric(mock_record_event, EventLifecycleOutcome.FAILURE)

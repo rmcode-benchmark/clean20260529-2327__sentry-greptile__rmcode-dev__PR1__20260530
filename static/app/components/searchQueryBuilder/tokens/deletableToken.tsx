@@ -5,7 +5,7 @@ import {mergeProps} from '@react-aria/utils';
 import type {ListState} from '@react-stately/list';
 import type {Node} from '@react-types/shared';
 
-import InteractionStateLayer from 'sentry/components/core/interactionStateLayer';
+import InteractionStateLayer from 'sentry/components/interactionStateLayer';
 import {useSearchQueryBuilder} from 'sentry/components/searchQueryBuilder/context';
 import {useQueryBuilderGridItem} from 'sentry/components/searchQueryBuilder/hooks/useQueryBuilderGridItem';
 import {InvalidTokenTooltip} from 'sentry/components/searchQueryBuilder/tokens/invalidTokenTooltip';
@@ -19,7 +19,6 @@ import type {
 } from 'sentry/components/searchSyntax/parser';
 import {IconClose} from 'sentry/icons';
 import {t} from 'sentry/locale';
-import {isChonkTheme} from 'sentry/utils/theme/withChonk';
 
 type DeletableTokenProps = {
   children: React.ReactNode;
@@ -106,10 +105,7 @@ const FloatingCloseButton = styled('button')`
   &:hover {
     outline: none;
     border: none;
-    background: ${p =>
-      isChonkTheme(p.theme)
-        ? p.theme.button.default.background
-        : p.theme.button.default.backgroundActive};
+    background: ${p => p.theme.button.default.backgroundActive};
   }
 
   &:focus-visible {

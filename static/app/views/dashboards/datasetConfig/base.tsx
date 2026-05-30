@@ -25,7 +25,6 @@ import type {SamplingMode} from 'sentry/views/explore/hooks/useProgressiveQuery'
 import {ErrorsConfig} from './errors';
 import {ErrorsAndTransactionsConfig} from './errorsAndTransactions';
 import {IssuesConfig} from './issues';
-import {LogsConfig} from './logs';
 import {ReleasesConfig} from './releases';
 import {SpansConfig} from './spans';
 import {TransactionsConfig} from './transactions';
@@ -37,7 +36,6 @@ export type WidgetBuilderSearchBarProps = {
   pageFilters: PageFilters;
   widgetQuery: WidgetQuery;
   dataset?: DiscoverDatasets;
-  disabled?: boolean;
   portalTarget?: HTMLElement | null;
 };
 
@@ -134,7 +132,7 @@ export interface DatasetConfig<SeriesResponse, TableResponse> {
     meta: MetaType,
     widget?: Widget,
     organization?: Organization
-  ) => ReturnType<typeof getFieldRenderer>;
+  ) => ReturnType<typeof getFieldRenderer> | null;
   /**
    * Generate field header used for mapping column
    * names to more desirable values in tables.
@@ -238,11 +236,7 @@ export function getDatasetConfig<T extends WidgetType | undefined>(
       ? typeof ErrorsConfig
       : T extends WidgetType.TRANSACTIONS
         ? typeof TransactionsConfig
-        : T extends WidgetType.LOGS
-          ? typeof LogsConfig
-          : T extends WidgetType.SPANS
-            ? typeof SpansConfig
-            : typeof ErrorsAndTransactionsConfig;
+        : typeof ErrorsAndTransactionsConfig;
 
 export function getDatasetConfig(
   widgetType?: WidgetType
@@ -251,9 +245,7 @@ export function getDatasetConfig(
   | typeof ReleasesConfig
   | typeof ErrorsAndTransactionsConfig
   | typeof ErrorsConfig
-  | typeof TransactionsConfig
-  | typeof LogsConfig
-  | typeof SpansConfig {
+  | typeof TransactionsConfig {
   switch (widgetType) {
     case WidgetType.ISSUE:
       return IssuesConfig;
@@ -263,8 +255,6 @@ export function getDatasetConfig(
       return ErrorsConfig;
     case WidgetType.TRANSACTIONS:
       return TransactionsConfig;
-    case WidgetType.LOGS:
-      return LogsConfig;
     case WidgetType.SPANS:
       return SpansConfig;
     case WidgetType.DISCOVER:

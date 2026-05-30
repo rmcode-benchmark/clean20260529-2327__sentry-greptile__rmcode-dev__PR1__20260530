@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import zipfile
-from base64 import b64encode
 from io import BytesIO
 from os.path import join
 from typing import Any
-from unittest import mock
 from unittest.mock import patch
 
-import msgpack
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
@@ -29,10 +26,10 @@ from sentry.profiles.task import (
     _process_symbolicator_results_for_sample,
     _set_frames_platform,
     _symbolicate_profile,
+    encode_payload,
     process_profile_task,
 )
 from sentry.profiles.utils import Profile
-from sentry.signals import first_profile_received
 from sentry.testutils.cases import TransactionTestCase
 from sentry.testutils.factories import Factories, get_fixture_path
 from sentry.testutils.helpers import Feature, override_options
@@ -1059,8 +1056,7 @@ def test_track_latest_sdk_with_payload(
         "received": "2024-01-02T03:04:05",
         "payload": json.dumps(profile),
     }
-
-    payload = b64encode(msgpack.packb(kafka_payload)).decode("utf-8")
+    payload = encode_payload(kafka_payload)
 
     with Feature("organizations:profiling-sdks"):
         process_profile_task(payload=payload)
@@ -1132,44 +1128,3 @@ def test_deprecated_sdks(
         )
     else:
         _push_profile_to_vroom.assert_called()
-
-
-@patch("sentry.profiles.task._symbolicate_profile")
-@patch("sentry.profiles.task._deobfuscate_profile")
-@patch("sentry.profiles.task._push_profile_to_vroom")
-@django_db_all
-@pytest.mark.parametrize(
-    "profile",
-    ["sample_v1_profile", "sample_v2_profile"],
-)
-def test_process_profile_task_should_flip_project_flag(
-    _push_profile_to_vroom: mock.MagicMock,
-    _deobfuscate_profile: mock.MagicMock,
-    _symbolicate_profile: mock.MagicMock,
-    profile,
-    organization,
-    project,
-    request,
-):
-    with patch(
-        "sentry.receivers.onboarding.record_first_profile",
-    ) as mock_record_first_profile:
-        first_profile_received.connect(mock_record_first_profile, weak=False)
-    _push_profile_to_vroom.return_value = True
-    _deobfuscate_profile.return_value = True
-    _symbolicate_profile.return_value = True
-
-    profile = request.getfixturevalue(profile)
-    profile["organization_id"] = organization.id
-    profile["project_id"] = project.id
-
-    assert not project.flags.has_profiles
-    process_profile_task(profile=profile)
-
-    mock_record_first_profile.assert_called_once_with(
-        signal=first_profile_received,
-        sender=Project,
-        project=project,
-    )
-    project.refresh_from_db()
-    assert project.flags.has_profiles

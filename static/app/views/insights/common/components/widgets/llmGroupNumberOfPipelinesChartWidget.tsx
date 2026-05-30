@@ -5,8 +5,7 @@ import {MutableSearch} from 'sentry/utils/tokenizeSearch';
 import {useParams} from 'sentry/utils/useParams';
 import {InsightsLineChartWidget} from 'sentry/views/insights/common/components/insightsLineChartWidget';
 import type {LoadableChartWidgetProps} from 'sentry/views/insights/common/components/widgets/types';
-import {useSpanSeries} from 'sentry/views/insights/common/queries/useDiscoverSeries';
-import {Referrer} from 'sentry/views/insights/llmMonitoring/referrers';
+import {useSpanMetricsSeries} from 'sentry/views/insights/common/queries/useDiscoverSeries';
 
 export default function LlmGroupNumberOfPipelinesChartWidget(
   props: LoadableChartWidgetProps
@@ -15,16 +14,14 @@ export default function LlmGroupNumberOfPipelinesChartWidget(
   const theme = useTheme();
   const aggregate = 'count()';
 
-  const search = new MutableSearch(`span.category:"ai.pipeline" span.group:"${groupId}"`);
-  const referrer = Referrer.GROUP_NUMBER_OF_PIPELINES_CHART;
-
-  const {data, isPending, error} = useSpanSeries(
+  const query = `span.category:"ai.pipeline" span.group:"${groupId}"`;
+  const {data, isPending, error} = useSpanMetricsSeries(
     {
       yAxis: [aggregate],
-      search,
+      search: new MutableSearch(query),
       transformAliasToInputFormat: true,
     },
-    referrer,
+    'api.ai-pipelines.view',
     props.pageFilters
   );
 
@@ -32,7 +29,6 @@ export default function LlmGroupNumberOfPipelinesChartWidget(
   return (
     <InsightsLineChartWidget
       {...props}
-      queryInfo={{search, referrer}}
       id="llmGroupNumberOfPipelinesChartWidget"
       title={t('Number of AI pipelines')}
       series={[{...data[aggregate], color: colors[1]}]}

@@ -17,9 +17,6 @@ function Status({status}: Props) {
     case ImageStatus.TIMEOUT: {
       return <StyledTag type="error">{t('Error')}</StyledTag>;
     }
-    case ImageStatus.UNSUPPORTED: {
-      return <StyledTag type="error">{t('Unsupported')}</StyledTag>;
-    }
     case ImageStatus.MISSING: {
       return <StyledTag type="error">{t('Missing')}</StyledTag>;
     }

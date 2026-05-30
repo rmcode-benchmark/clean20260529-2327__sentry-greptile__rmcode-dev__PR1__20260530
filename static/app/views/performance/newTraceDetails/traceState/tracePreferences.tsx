@@ -14,12 +14,13 @@ type TracePreferencesAction =
   | {payload: number; type: 'set list width'}
   | {payload: boolean; type: 'minimize drawer'}
   | {payload: boolean; type: 'set missing instrumentation'}
-  | {payload: boolean; type: 'set autogrouping'};
+  | {payload: boolean; type: 'set autogrouping'}
+  | {payload: number; type: 'set trace grid height'};
 
 type TraceDrawerPreferences = {
   layoutOptions: TraceLayoutPreferences[];
   minimized: boolean;
-  sizes: Record<TraceLayoutPreferences, number>;
+  sizes: Record<TraceLayoutPreferences | 'trace grid height', number>;
 };
 
 export type TracePreferencesState = {
@@ -45,6 +46,7 @@ export const TRACE_DRAWER_DEFAULT_SIZES: TraceDrawerPreferences['sizes'] = {
   'drawer left': 0.4,
   'drawer right': 0.4,
   'drawer bottom': 0.5,
+  'trace grid height': 530,
 };
 
 export const DEFAULT_TRACE_VIEW_PREFERENCES: TracePreferencesState = {
@@ -199,6 +201,17 @@ export function tracePreferencesReducer(
         ...state,
         list: {
           width: clamp(action.payload, 0.1, 0.9),
+        },
+      };
+    case 'set trace grid height':
+      return {
+        ...state,
+        drawer: {
+          ...state.drawer,
+          sizes: {
+            ...state.drawer.sizes,
+            'trace grid height': action.payload,
+          },
         },
       };
     default:

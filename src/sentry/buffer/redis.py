@@ -369,11 +369,7 @@ class RedisBuffer(Buffer):
         return pipe.execute()[0]
 
     def push_to_sorted_set(self, key: str, value: list[int] | int) -> None:
-        now = time()
-        if isinstance(value, list):
-            value_dict = {v: now for v in value}
-        else:
-            value_dict = {value: now}
+        value_dict = {value: time()}
         self._execute_redis_operation(key, RedisOperation.SORTED_SET_ADD, value_dict)
 
     def get_sorted_set(self, key: str, min: float, max: float) -> list[tuple[int, datetime]]:

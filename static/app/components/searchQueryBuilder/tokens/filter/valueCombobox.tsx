@@ -138,17 +138,9 @@ function getSelectedValuesFromText(
   return parsed.items
     .filter(item => item.value?.value)
     .map(item => {
-      const value =
-        (escaped ? item.value?.text : unescapeTagValue(item.value?.value ?? '')) ?? '';
-
-      // Check if this value is selected by looking at the character after the value in
-      // the text. If there's a comma after the value, it means this value is selected.
-      // We need to check the text content to ensure that we account for any quotes the
-      // user may have added.
-      const valueText = item.value?.text ?? '';
-      const selected = text.charAt(text.indexOf(valueText) + valueText.length) === ',';
-
-      return {value, selected};
+      return (
+        (escaped ? item.value?.text : unescapeTagValue(item.value?.value ?? '')) ?? ''
+      );
     });
 }
 
@@ -325,7 +317,7 @@ function useFilterSuggestions({
 }: {
   ctrlKeyPressed: boolean;
   filterValue: string;
-  selectedValues: Array<{selected: boolean; value: string}>;
+  selectedValues: string[];
   token: TokenResult<Token.FILTER>;
 }) {
   const keyName = getKeyName(token.key);
@@ -362,18 +354,11 @@ function useFilterSuggestions({
     [filterValue, key, keyName]
   );
 
-  const baseQueryKey = useMemo(
-    () => ['search-query-builder-tag-values', queryParams],
-    [queryParams]
-  );
-  const queryKey = useDebouncedValue(baseQueryKey);
-  const isDebouncing = baseQueryKey !== queryKey;
-
   // TODO(malwilley): Display error states
   const {data, isFetching} = useQuery<string[]>({
-    // disable exhaustive deps because we want to debounce the query key above
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey,
+    queryKey: useDebouncedValue(
+      useMemo(() => ['search-query-builder-tag-values', queryParams], [queryParams])
+    ),
     queryFn: () => getTagValues(...queryParams),
     placeholderData: keepPreviousData,
     enabled: shouldFetchValues,
@@ -436,7 +421,7 @@ function useFilterSuggestions({
     const itemsWithoutSection = suggestionGroups
       .filter(group => group.sectionText === '')
       .flatMap(group => group.suggestions)
-      .filter(suggestion => !selectedValues.some(v => v.value === suggestion.value));
+      .filter(suggestion => !selectedValues.includes(suggestion.value));
     const sections = suggestionGroups.filter(group => group.sectionText !== '');
 
     return [
@@ -446,13 +431,13 @@ function useFilterSuggestions({
           ...selectedValues.map(value => {
             const matchingSuggestion = suggestionGroups
               .flatMap(group => group.suggestions)
-              .find(suggestion => suggestion.value === value.value);
+              .find(suggestion => suggestion.value === value);
 
             if (matchingSuggestion) {
-              return createItem(matchingSuggestion, value.selected);
+              return createItem(matchingSuggestion, true);
             }
 
-            return createItem({value: value.value}, value.selected);
+            return createItem({value}, true);
           }),
           ...itemsWithoutSection.map(suggestion => createItem(suggestion)),
         ]),
@@ -461,7 +446,7 @@ function useFilterSuggestions({
         sectionText: group.sectionText,
         items: getItemsWithKeys(
           group.suggestions
-            .filter(suggestion => !selectedValues.some(v => v.value === suggestion.value))
+            .filter(suggestion => !selectedValues.includes(suggestion.value))
             .map(suggestion => createItem(suggestion))
         ),
       })),
@@ -476,7 +461,7 @@ function useFilterSuggestions({
   return {
     items,
     suggestionSectionItems,
-    isFetching: isFetching || isDebouncing,
+    isFetching,
   };
 }
 
@@ -562,7 +547,7 @@ export function SearchQueryBuilderValueCombobox({
     filterKeys,
     fieldDefinition
   );
-  const canUseWildcard = disallowWildcard ? false : keySupportsWildcard(fieldDefinition);
+  const canUseWildard = disallowWildcard ? false : keySupportsWildcard(fieldDefinition);
   const [inputValue, setInputValue] = useState(() =>
     getInitialInputValue(token, canSelectMultipleValues)
   );
@@ -663,12 +648,12 @@ export function SearchQueryBuilderValueCombobox({
       }
 
       if (canSelectMultipleValues) {
-        if (selectedValuesUnescaped.map(v => v.value).includes(value)) {
+        if (selectedValuesUnescaped.includes(value)) {
           const newValue = prepareInputValueForSaving(
             getFilterValueType(token, fieldDefinition),
             selectedValuesUnescaped
-              .filter(v => (v.selected ? v.value !== value : true))
-              .map(v => escapeTagValue(v.value))
+              .filter(v => v !== value)
+              .map(escapeTagValue)
               .join(',')
           );
 
@@ -845,11 +830,10 @@ export function SearchQueryBuilderValueCombobox({
           return (
             <ValueListBox
               {...props}
-              wrapperRef={topLevelWrapperRef}
               isMultiSelect={canSelectMultipleValues}
               items={items}
               isLoading={isFetching}
-              canUseWildcard={canUseWildcard}
+              canUseWildcard={canUseWildard}
             />
           );
         };
@@ -887,11 +871,10 @@ export function SearchQueryBuilderValueCombobox({
       };
     }, [
       showDatePicker,
-      topLevelWrapperRef,
       canSelectMultipleValues,
       items,
       isFetching,
-      canUseWildcard,
+      canUseWildard,
       inputValue,
       token,
       analyticsData,
@@ -904,9 +887,7 @@ export function SearchQueryBuilderValueCombobox({
       ? prettifyTagKey(token.value.text)
       : canSelectMultipleValues
         ? ''
-        : formatFilterValue({
-            token: token.value,
-          });
+        : formatFilterValue(token.value);
 
   return (
     <ValueEditing ref={ref} data-test-id="filter-value-editing">

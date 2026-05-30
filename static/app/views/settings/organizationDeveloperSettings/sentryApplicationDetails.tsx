@@ -10,11 +10,12 @@ import {
   addSentryAppToken,
   removeSentryAppToken,
 } from 'sentry/actionCreators/sentryAppTokens';
+import type {Model} from 'sentry/components/avatarChooser';
 import AvatarChooser from 'sentry/components/avatarChooser';
 import Confirm from 'sentry/components/confirm';
 import {Alert} from 'sentry/components/core/alert';
+import {SentryAppAvatar} from 'sentry/components/core/avatar/sentryAppAvatar';
 import {Button} from 'sentry/components/core/button';
-import {ExternalLink} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import EmptyMessage from 'sentry/components/emptyMessage';
 import Form from 'sentry/components/forms/form';
@@ -22,12 +23,12 @@ import FormField from 'sentry/components/forms/formField';
 import JsonForm from 'sentry/components/forms/jsonForm';
 import type {FieldValue} from 'sentry/components/forms/model';
 import FormModel from 'sentry/components/forms/model';
+import ExternalLink from 'sentry/components/links/externalLink';
 import LoadingError from 'sentry/components/loadingError';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import Panel from 'sentry/components/panels/panel';
 import PanelBody from 'sentry/components/panels/panelBody';
 import PanelHeader from 'sentry/components/panels/panelHeader';
-import {PanelTable} from 'sentry/components/panels/panelTable';
 import TextCopyInput from 'sentry/components/textCopyInput';
 import {SENTRY_APP_PERMISSIONS} from 'sentry/constants';
 import {
@@ -37,8 +38,11 @@ import {
 import {IconAdd} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
-import type {Avatar, Scope} from 'sentry/types/core';
-import type {SentryApp, SentryAppAvatar} from 'sentry/types/integrations';
+import type {Scope} from 'sentry/types/core';
+import type {
+  SentryApp,
+  SentryAppAvatar as SentryAppAvatarType,
+} from 'sentry/types/integrations';
 import type {RouteComponentProps} from 'sentry/types/legacyReactRouter';
 import type {InternalAppApiToken, NewInternalAppApiToken} from 'sentry/types/user';
 import getDynamicText from 'sentry/utils/getDynamicText';
@@ -52,7 +56,7 @@ import normalizeUrl from 'sentry/utils/url/normalizeUrl';
 import useApi from 'sentry/utils/useApi';
 import useOrganization from 'sentry/utils/useOrganization';
 import ApiTokenRow from 'sentry/views/settings/account/apiTokenRow';
-import {displayNewToken} from 'sentry/views/settings/components/newTokenHandler';
+import NewTokenHandler from 'sentry/views/settings/components/newTokenHandler';
 import SettingsPageHeader from 'sentry/views/settings/components/settingsPageHeader';
 import PermissionsObserver from 'sentry/views/settings/organizationDeveloperSettings/permissionsObserver';
 
@@ -60,13 +64,15 @@ type Resource = 'Project' | 'Team' | 'Release' | 'Event' | 'Organization' | 'Mem
 
 const AVATAR_STYLES = {
   color: {
-    label: t('Default logo'),
-    description: t('The default icon for integrations'),
+    size: 50,
+    title: t('Default Logo'),
+    previewText: t('The default icon for integrations'),
     help: t('Image must be between 256px by 256px and 1024px by 1024px.'),
   },
   simple: {
-    label: t('Default small icon'),
-    description: tct('This is a silhouette icon used only for [uiDocs:UI Components]', {
+    size: 20,
+    title: t('Default Icon'),
+    previewText: tct('This is a silhouette icon used only for [uiDocs:UI Components]', {
       uiDocs: (
         <ExternalLink href="https://docs.sentry.io/product/integrations/integration-platform/ui-components/" />
       ),
@@ -262,14 +268,6 @@ export default function SentryApplicationDetails(props: Props) {
     const token = await addSentryAppToken(api, app);
     const updatedNewTokens = newTokens.concat(token);
     setNewTokens(updatedNewTokens);
-    displayNewToken(token.token, () => handleFinishNewToken(token));
-  };
-
-  const handleFinishNewToken = (newToken: NewInternalAppApiToken) => {
-    const updatedNewTokens = newTokens.filter(token => token.id !== newToken.id);
-    const updatedTokens = tokens.concat(newToken as InternalAppApiToken);
-    setApiQueryData(queryClient, SENTRY_APP_API_TOKENS_QUERY_KEY, updatedTokens);
-    setNewTokens(updatedNewTokens);
   };
 
   const onRemoveToken = async (token: InternalAppApiToken) => {
@@ -279,6 +277,13 @@ export default function SentryApplicationDetails(props: Props) {
     const updatedTokens = tokens.filter(tok => tok.id !== token.id);
     await removeSentryAppToken(api, app, token.id);
     setApiQueryData(queryClient, SENTRY_APP_API_TOKENS_QUERY_KEY, updatedTokens);
+  };
+
+  const handleFinishNewToken = (newToken: NewInternalAppApiToken) => {
+    const updatedNewTokens = newTokens.filter(token => token.id !== newToken.id);
+    const updatedTokens = tokens.concat(newToken as InternalAppApiToken);
+    setApiQueryData(queryClient, SENTRY_APP_API_TOKENS_QUERY_KEY, updatedTokens);
+    setNewTokens(updatedNewTokens);
   };
 
   const renderTokens = () => {
@@ -298,6 +303,16 @@ export default function SentryApplicationDetails(props: Props) {
         onRemove={onRemoveToken}
       />
     ));
+    tokensToDisplay.push(
+      ...newTokens.map(newToken => (
+        <NewTokenHandler
+          data-test-id="new-api-token"
+          key={newToken.id}
+          token={getDynamicText({value: newToken.token, fixed: 'ORG_AUTH_TOKEN'})}
+          handleGoBack={() => handleFinishNewToken(newToken)}
+        />
+      ))
+    );
 
     return tokensToDisplay;
   };
@@ -317,7 +332,7 @@ export default function SentryApplicationDetails(props: Props) {
           <Header>{t('Your new Client Secret')}</Header>
           <Body>
             <Alert.Container>
-              <Alert type="info">
+              <Alert type="info" showIcon>
                 {t('This will be the only time your client secret is visible!')}
               </Alert>
             </Alert.Container>
@@ -337,14 +352,47 @@ export default function SentryApplicationDetails(props: Props) {
     }
   };
 
-  const addAvatar = ({avatar}: {avatar?: Avatar}) => {
+  const addAvatar = ({avatar}: Model) => {
     if (app && avatar) {
       const avatars =
         app?.avatars?.filter(prevAvatar => prevAvatar.color !== avatar.color) || [];
 
-      avatars.push(avatar as SentryAppAvatar);
+      avatars.push(avatar as SentryAppAvatarType);
       setApiQueryData(queryClient, SENTRY_APP_QUERY_KEY, {...app, avatars});
     }
+  };
+
+  const getAvatarModel = (isColor: boolean): Model => {
+    const defaultModel: Model = {
+      avatar: {
+        avatarType: 'default',
+        avatarUuid: null,
+      },
+    };
+    if (!app) {
+      return defaultModel;
+    }
+    return {
+      avatar: app?.avatars?.find(({color}) => color === isColor) || defaultModel.avatar,
+    };
+  };
+
+  const getAvatarPreview = (isColor: boolean) => {
+    if (!app) {
+      return null;
+    }
+    const avatarStyle = isColor ? 'color' : 'simple';
+    return (
+      <AvatarPreview>
+        <StyledSentryAppPreviewAvatar
+          size={AVATAR_STYLES[avatarStyle].size}
+          sentryApp={app}
+          isDefault
+        />
+        <AvatarPreviewTitle>{AVATAR_STYLES[avatarStyle].title}</AvatarPreviewTitle>
+        <AvatarPreviewText>{AVATAR_STYLES[avatarStyle].previewText}</AvatarPreviewText>
+      </AvatarPreview>
+    );
   };
 
   const getAvatarChooser = (isColor: boolean) => {
@@ -352,20 +400,23 @@ export default function SentryApplicationDetails(props: Props) {
       return null;
     }
     const avatarStyle = isColor ? 'color' : 'simple';
-    const styleProps = AVATAR_STYLES[avatarStyle];
-
     return (
       <AvatarChooser
-        endpoint={`/sentry-apps/${app.slug}/avatar/`}
-        supportedTypes={['default', 'upload']}
         type={isColor ? 'sentryAppColor' : 'sentryAppSimple'}
-        model={app}
+        allowGravatar={false}
+        allowLetter={false}
+        endpoint={`/sentry-apps/${app.slug}/avatar/`}
+        model={getAvatarModel(isColor)}
         onSave={addAvatar}
         title={isColor ? t('Logo') : t('Small Icon')}
-        help={styleProps.help.concat(isInternal() ? '' : t(' Required for publishing.'))}
+        help={AVATAR_STYLES[avatarStyle].help.concat(
+          isInternal() ? '' : t(' Required for publishing.')
+        )}
+        savedDataUrl={undefined}
         defaultChoice={{
-          label: styleProps.label,
-          description: styleProps.description,
+          allowDefault: true,
+          choiceText: isColor ? t('Default logo') : t('Default small icon'),
+          preview: getAvatarPreview(isColor),
         }}
       />
     );
@@ -433,12 +484,10 @@ export default function SentryApplicationDetails(props: Props) {
           </Observer>
 
           {app && app.status === 'internal' && (
-            <PanelTable
-              headers={[
-                t('Token'),
-                t('Created On'),
-                t('Scopes'),
-                <AddTokenHeader key="token-add">
+            <Panel>
+              {hasTokenAccess() ? (
+                <PanelHeader hasButtons>
+                  {t('Tokens')}
                   <Button
                     size="xs"
                     icon={<IconAdd isCircled />}
@@ -447,13 +496,12 @@ export default function SentryApplicationDetails(props: Props) {
                   >
                     {t('New Token')}
                   </Button>
-                </AddTokenHeader>,
-              ]}
-              isEmpty={tokens.length === 0}
-              emptyMessage={t("You haven't created any authentication tokens yet.")}
-            >
-              {renderTokens()}
-            </PanelTable>
+                </PanelHeader>
+              ) : (
+                <PanelHeader>{t('Tokens')}</PanelHeader>
+              )}
+              <PanelBody>{renderTokens()}</PanelBody>
+            </Panel>
           )}
 
           {app && (
@@ -516,6 +564,30 @@ export default function SentryApplicationDetails(props: Props) {
   );
 }
 
+const AvatarPreview = styled('div')`
+  flex: 1;
+  display: grid;
+  grid: 25px 25px / 50px 1fr;
+`;
+
+const StyledSentryAppPreviewAvatar = styled(SentryAppAvatar)`
+  grid-area: 1 / 1 / 3 / 2;
+  justify-self: end;
+`;
+
+const AvatarPreviewTitle = styled('span')`
+  display: block;
+  grid-area: 1 / 2 / 2 / 3;
+  padding-left: ${space(2)};
+  font-weight: ${p => p.theme.fontWeightBold};
+`;
+
+const AvatarPreviewText = styled('span')`
+  display: block;
+  grid-area: 2 / 2 / 3 / 3;
+  padding-left: ${space(2)};
+`;
+
 const HiddenSecret = styled('span')`
   width: 100px;
   font-style: italic;
@@ -526,10 +598,4 @@ const ClientSecret = styled('div')`
   justify-content: right;
   align-items: center;
   margin-right: 0;
-`;
-
-const AddTokenHeader = styled('div')`
-  margin: -${space(1)} 0;
-  display: flex;
-  justify-content: flex-end;
 `;

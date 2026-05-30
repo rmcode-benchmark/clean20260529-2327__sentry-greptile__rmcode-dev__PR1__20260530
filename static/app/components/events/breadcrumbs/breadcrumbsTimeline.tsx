@@ -5,7 +5,6 @@ import moment from 'moment-timezone';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import {DateTime} from 'sentry/components/dateTime';
 import Duration from 'sentry/components/duration';
-import ErrorBoundary from 'sentry/components/errorBoundary';
 import BreadcrumbItemContent from 'sentry/components/events/breadcrumbs/breadcrumbItemContent';
 import type {EnhancedCrumb} from 'sentry/components/events/breadcrumbs/utils';
 import {Timeline} from 'sentry/components/timeline';
@@ -61,7 +60,7 @@ export default function BreadcrumbsTimeline({
     estimateSize: () => 35,
     // Must match rendered item margins.
     gap: 8,
-    overscan: 25,
+    overscan: 10,
   });
 
   if (!breadcrumbs.length) {
@@ -119,13 +118,11 @@ export default function BreadcrumbsTimeline({
         showLastLine={showLastLine}
       >
         <ContentWrapper>
-          <ErrorBoundary mini>
-            <BreadcrumbItemContent
-              breadcrumb={breadcrumb}
-              meta={meta}
-              fullyExpanded={fullyExpanded}
-            />
-          </ErrorBoundary>
+          <BreadcrumbItemContent
+            breadcrumb={breadcrumb}
+            meta={meta}
+            fullyExpanded={fullyExpanded}
+          />
         </ContentWrapper>
       </BreadcrumbItem>
     );
@@ -166,14 +163,14 @@ const TextBreak = styled('span')`
 const Subtitle = styled('p')`
   margin: 0;
   font-weight: normal;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   display: inline;
 `;
 
 const Timestamp = styled('div')`
   margin-right: ${space(1)};
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   min-width: 50px;
   text-align: right;
   span {

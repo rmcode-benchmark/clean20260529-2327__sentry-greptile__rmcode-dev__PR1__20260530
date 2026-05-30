@@ -21,8 +21,7 @@ from django.utils import timezone as django_timezone
 from sentry import buffer, roles, tsdb
 from sentry.constants import ObjectStatus
 from sentry.exceptions import HashDiscarded
-from sentry.feedback.lib.utils import FeedbackCreationSource
-from sentry.feedback.usecases.ingest.create_feedback import create_feedback_issue
+from sentry.feedback.usecases.create_feedback import FeedbackCreationSource, create_feedback_issue
 from sentry.incidents.logic import create_alert_rule, create_alert_rule_trigger, create_incident
 from sentry.incidents.models.alert_rule import AlertRuleThresholdType
 from sentry.incidents.models.incident import IncidentType
@@ -30,7 +29,6 @@ from sentry.ingest.consumer.processors import (
     process_attachment_chunk,
     process_individual_attachment,
 )
-from sentry.integrations.types import IntegrationProviderSlug
 from sentry.models.activity import Activity
 from sentry.models.broadcast import Broadcast
 from sentry.models.commit import Commit
@@ -486,7 +484,7 @@ def create_repository(organization: Organization) -> Repository:
         # upgrade to the new integration
         repo = Repository.objects.get(
             organization_id=organization.id,
-            provider=IntegrationProviderSlug.GITHUB.value,
+            provider="github",
             external_id="example/example",
             name="Example Repo",
         )
@@ -649,9 +647,12 @@ def generate_events(
             project_id=project.id,
             event_id=event1.event_id,
             name="example-logfile.txt",
-            type="text/plain",
-            sha1="abcde" * 8,
-            size=13043,
+            file_id=File.objects.get_or_create(
+                name="example-logfile.txt",
+                type="text/plain",
+                checksum="abcde" * 8,
+                size=13043,
+            )[0].id,
         )
 
         event2 = create_sample_event(

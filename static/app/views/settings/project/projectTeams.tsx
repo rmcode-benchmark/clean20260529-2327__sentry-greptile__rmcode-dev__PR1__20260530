@@ -7,17 +7,12 @@ import {
 import {hasEveryAccess} from 'sentry/components/acl/access';
 import LoadingError from 'sentry/components/loadingError';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
-import type {CursorHandler} from 'sentry/components/pagination';
-import Pagination from 'sentry/components/pagination';
 import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
 import {t, tct} from 'sentry/locale';
 import TeamStore from 'sentry/stores/teamStore';
 import type {Organization} from 'sentry/types/organization';
 import type {Project} from 'sentry/types/project';
-import {decodeScalar} from 'sentry/utils/queryString';
 import routeTitleGen from 'sentry/utils/routeTitle';
-import {useLocation} from 'sentry/utils/useLocation';
-import {useNavigate} from 'sentry/utils/useNavigate';
 import SettingsPageHeader from 'sentry/views/settings/components/settingsPageHeader';
 import TeamSelectForProject from 'sentry/views/settings/components/teamSelect/teamSelectForProject';
 import TextBlock from 'sentry/views/settings/components/text/textBlock';
@@ -29,38 +24,19 @@ type ProjectTeamsProps = {
 };
 
 function ProjectTeams({organization, project}: ProjectTeamsProps) {
-  const navigate = useNavigate();
-  const location = useLocation();
-
   const {
     data: projectTeams,
     isPending,
     isError,
-    getResponseHeader,
-  } = useFetchProjectTeams({
-    orgSlug: organization.slug,
-    projectSlug: project.slug,
-    cursor: decodeScalar(location.query.cursor),
-  });
-
+  } = useFetchProjectTeams({orgSlug: organization.slug, projectSlug: project.slug});
   const handleAddTeamToProject = useAddTeamToProject({
     orgSlug: organization.slug,
     projectSlug: project.slug,
-    cursor: decodeScalar(location.query.cursor),
   });
-
   const handleRemoveTeamFromProject = useRemoveTeamFromProject({
     orgSlug: organization.slug,
     projectSlug: project.slug,
-    cursor: decodeScalar(location.query.cursor),
   });
-
-  const handleCursor: CursorHandler = resultsCursor => {
-    navigate({
-      pathname: location.pathname,
-      query: {...location.query, cursor: resultsCursor},
-    });
-  };
 
   const canCreateTeam =
     organization.access.includes('org:write') &&
@@ -111,7 +87,6 @@ function ProjectTeams({organization, project}: ProjectTeamsProps) {
           onRemoveTeam={handleRemoveTeamFromProject}
           onCreateTeam={handleAddTeamToProject}
         />
-        <Pagination pageLinks={getResponseHeader?.('Link')} onCursor={handleCursor} />
       </div>
     </SentryDocumentTitle>
   );

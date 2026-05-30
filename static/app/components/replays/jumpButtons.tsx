@@ -2,6 +2,7 @@ import styled from '@emotion/styled';
 
 import {Button} from 'sentry/components/core/button';
 import {t} from 'sentry/locale';
+import toPixels from 'sentry/utils/number/toPixels';
 
 interface Props {
   jump: undefined | 'up' | 'down';
@@ -19,7 +20,7 @@ export default function JumpButtons({jump, onClick, tableHeaderHeight}: Props) {
         aria-label={t('Jump Up')}
         priority="primary"
         size="xs"
-        style={{top: `${tableHeaderHeight + offsetFromEdge}px`}}
+        style={{top: toPixels(tableHeaderHeight + offsetFromEdge)}}
       >
         {t('↑ Jump to current timestamp')}
       </JumpButton>
@@ -32,7 +33,7 @@ export default function JumpButtons({jump, onClick, tableHeaderHeight}: Props) {
         aria-label={t('Jump Down')}
         priority="primary"
         size="xs"
-        style={{bottom: `${offsetFromEdge}px`}}
+        style={{bottom: toPixels(offsetFromEdge)}}
       >
         {t('↓ Jump to current timestamp')}
       </JumpButton>

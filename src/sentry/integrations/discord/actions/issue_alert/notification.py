@@ -11,7 +11,6 @@ from sentry.integrations.messaging.metrics import (
     MessagingInteractionEvent,
     MessagingInteractionType,
 )
-from sentry.integrations.types import IntegrationProviderSlug
 from sentry.rules.actions import IntegrationEventAction
 from sentry.rules.base import CallbackFuture
 from sentry.shared_integrations.exceptions import ApiError
@@ -23,7 +22,7 @@ class DiscordNotifyServiceAction(IntegrationEventAction):
     id = "sentry.integrations.discord.notify_action.DiscordNotifyServiceAction"
     label = "Send a notification to the {server} Discord server in the channel with ID or URL: {channel_id} and show tags {tags} in the notification."
     prompt = "Send a Discord notification"
-    provider = IntegrationProviderSlug.DISCORD.value
+    provider = "discord"
     integration_key = "server"
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:

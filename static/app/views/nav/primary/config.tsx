@@ -34,7 +34,7 @@ export const PRIMARY_NAV_GROUP_CONFIG: PrimaryNavGroupConfig = {
   },
   [PrimaryNavGroup.CODECOV]: {
     basePaths: ['codecov'],
-    label: t('Prevent'),
+    label: t('Codecov'),
   },
   [PrimaryNavGroup.ADMIN]: {
     basePaths: ['manage'],

@@ -100,7 +100,7 @@ const ConsoleLog = styled('div')<{
   gap: ${space(0.75)};
   align-items: baseline;
   padding: ${space(0.5)} ${space(1)};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 
   background-color: ${p =>
     ['warning', 'error'].includes(String(p.level))
@@ -139,7 +139,7 @@ const ICONS = {
 };
 
 const MediumFontSize = styled('span')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 function ConsoleLevelIcon({level}: {level: string | undefined}) {

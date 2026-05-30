@@ -1,10 +1,10 @@
 import React, {Fragment} from 'react';
 
-import {ExternalLink, Link} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
-import Count from 'sentry/components/count';
 import {DateTime} from 'sentry/components/dateTime';
 import useStacktraceLink from 'sentry/components/events/interfaces/frame/useStacktraceLink';
+import ExternalLink from 'sentry/components/links/externalLink';
+import Link from 'sentry/components/links/link';
 import Version from 'sentry/components/version';
 import {tct} from 'sentry/locale';
 import {defined} from 'sentry/utils';
@@ -13,15 +13,13 @@ import {
   getFieldRenderer,
   type RenderFunctionBaggage,
 } from 'sentry/utils/discover/fieldRenderers';
-import {parseFunction} from 'sentry/utils/discover/fields';
-import {NumberContainer, VersionContainer} from 'sentry/utils/discover/styles';
+import {VersionContainer} from 'sentry/utils/discover/styles';
 import normalizeUrl from 'sentry/utils/url/normalizeUrl';
 import {useRelease} from 'sentry/utils/useRelease';
 import {QuickContextHoverWrapper} from 'sentry/views/discover/table/quickContext/quickContextWrapper';
 import {ContextType} from 'sentry/views/discover/table/quickContext/utils';
 import type {AttributesFieldRendererProps} from 'sentry/views/explore/components/traceItemAttributes/attributesTree';
 import {stripLogParamsFromLocation} from 'sentry/views/explore/contexts/logs/logsPageParams';
-import LogsTimestampTooltip from 'sentry/views/explore/logs/logsTimeTooltip';
 import {
   AlignedCellContent,
   ColoredLogCircle,
@@ -53,9 +51,8 @@ export interface RendererExtra extends RenderFunctionBaggage {
   attributes: Record<string, string | number | boolean>;
   highlightTerms: string[];
   logColors: ReturnType<typeof getLogColors>;
+  projectSlug: string;
   align?: 'left' | 'center' | 'right';
-  projectSlug?: string;
-  shouldRenderHoverElements?: boolean;
   useFullSeverityText?: boolean;
   wrapBody?: true;
 }
@@ -127,13 +124,7 @@ function TimestampRenderer(props: LogFieldRendererProps) {
 
   return (
     <LogDate align={props.extra.align}>
-      <LogsTimestampTooltip
-        timestamp={props.item.value as string | number}
-        attributes={props.extra.attributes}
-        shouldRender={props.extra.shouldRenderHoverElements}
-      >
-        <DateTime seconds milliseconds date={timestampToUse} />
-      </LogsTimestampTooltip>
+      <DateTime seconds date={timestampToUse} format="MMM D, h:mm:ss.SSS A" />
     </LogDate>
   );
 }
@@ -156,7 +147,7 @@ function CodePathRenderer(props: LogFieldRendererProps) {
 
   const {data: release} = useRelease({
     orgSlug: props.extra.organization.slug,
-    projectSlug: props.extra.projectSlug ?? '',
+    projectSlug: props.extra.projectSlug,
     releaseVersion: typeof releaseVersion === 'string' ? releaseVersion : '',
   });
   const {data: codeLink} = useStacktraceLink({
@@ -170,7 +161,7 @@ function CodePathRenderer(props: LogFieldRendererProps) {
       filename: typeof filename === 'string' ? filename : undefined,
     },
     orgSlug: props.extra.organization.slug,
-    projectSlug: props.extra.projectSlug ?? '',
+    projectSlug: props.extra.projectSlug,
   });
 
   if (codeLink?.sourceUrl) {
@@ -189,12 +180,7 @@ function FilteredTooltip({
   extra: RendererExtra;
   value: string | number | null;
 }) {
-  if (
-    !value ||
-    typeof value !== 'string' ||
-    !value.includes('[Filtered]') ||
-    !extra.projectSlug
-  ) {
+  if (!value || typeof value !== 'string' || !value.includes('[Filtered]')) {
     return <React.Fragment>{children}</React.Fragment>;
   }
   return (
@@ -299,20 +285,6 @@ export function LogFieldRenderer(props: LogFieldRendererProps) {
     props.item.fieldKey === OurLogKnownFieldKey.TRACE_ID
       ? adjustLogTraceID(props.item.value as string)
       : props.item.value;
-
-  if (parseFunction(adjustedFieldKey)) {
-    // in the aggregates table, render sum(blah)
-    return (
-      <NumberContainer>
-        {typeof adjustedValue === 'number' ? (
-          <Count value={adjustedValue} />
-        ) : (
-          adjustedValue
-        )}
-      </NumberContainer>
-    );
-  }
-
   if (!isLogRowItem(props.item) || !defined(adjustedValue) || !type) {
     // Rendering inside attribute tree.
     return <Fragment>{adjustedValue}</Fragment>;

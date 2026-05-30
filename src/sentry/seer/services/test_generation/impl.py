@@ -2,7 +2,6 @@ import orjson
 import requests
 from django.conf import settings
 
-from sentry.integrations.types import IntegrationProviderSlug
 from sentry.seer.services.test_generation.model import CreateUnitTestResponse
 from sentry.seer.services.test_generation.service import TestGenerationService
 
@@ -15,7 +14,7 @@ class RegionBackedTestGenerationService(TestGenerationService):
         body = orjson.dumps(
             {
                 "repo": {
-                    "provider": IntegrationProviderSlug.GITHUB.value,
+                    "provider": "github",
                     "owner": github_org,
                     "name": repo,
                     "external_id": external_id,

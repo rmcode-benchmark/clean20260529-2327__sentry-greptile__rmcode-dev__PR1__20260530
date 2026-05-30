@@ -14,11 +14,10 @@ import usePageFilters from 'sentry/utils/usePageFilters';
 import useProjectSdkNeedsUpdate from 'sentry/utils/useProjectSdkNeedsUpdate';
 import DeadRageSelectorCards from 'sentry/views/replays/deadRageClick/deadRageSelectorCards';
 import useAllMobileProj from 'sentry/views/replays/detail/useAllMobileProj';
-import BulkDeleteAlert from 'sentry/views/replays/list/bulkDeleteAlert';
 import ReplaysFilters from 'sentry/views/replays/list/filters';
 import ReplayOnboardingPanel from 'sentry/views/replays/list/replayOnboardingPanel';
+import ReplaysList from 'sentry/views/replays/list/replaysList';
 import ReplaysSearch from 'sentry/views/replays/list/search';
-import ReplayIndexTable from 'sentry/views/replays/table/replayIndexTable';
 
 export default function ListContent() {
   const organization = useOrganization();
@@ -40,15 +39,26 @@ export default function ListContent() {
     true
   );
 
-  const isLoading = hasSentReplays.fetching || rageClicksSdkVersion.isFetching;
-  const showDeadRageClickCards =
-    !rageClicksSdkVersion.needsUpdate && !allMobileProj && !isLoading;
+  const showDeadRageClickCards = !rageClicksSdkVersion.needsUpdate && !allMobileProj;
 
   useRouteAnalyticsParams({
     hasSessionReplay,
     hasSentReplays: hasSentReplays.hasSentOneReplay,
     hasRageClickMinSDK: !rageClicksSdkVersion.needsUpdate,
   });
+
+  // show loading
+  if (hasSentReplays.fetching || rageClicksSdkVersion.isFetching) {
+    return (
+      <Fragment>
+        <FiltersContainer>
+          <ReplaysFilters />
+          <ReplaysSearch />
+        </FiltersContainer>
+        <LoadingIndicator />
+      </Fragment>
+    );
+  }
 
   // show onboarding
   if (!hasSessionReplay || !hasSentReplays.hasSentOneReplay) {
@@ -65,9 +75,6 @@ export default function ListContent() {
 
   return (
     <Fragment>
-      {projects.length === 1 ? (
-        <BulkDeleteAlert projectId={String(projects[0] ?? '')} />
-      ) : null}
       <FiltersContainer>
         <ReplaysFilters />
         <SearchWrapper>
@@ -80,7 +87,7 @@ export default function ListContent() {
         </SearchWrapper>
       </FiltersContainer>
       {widgetIsOpen && showDeadRageClickCards ? <DeadRageSelectorCards /> : null}
-      {isLoading ? <LoadingIndicator /> : <ReplayIndexTable />}
+      <ReplaysList />
     </Fragment>
   );
 }

@@ -30,11 +30,6 @@ export function EnvironmentSelector({value, onChange}: EnvironmentSelectorProps)
 
     return [
       {
-        key: 'all-environments',
-        label: t('All Environments'),
-        options: [{value: '', label: t('All Environments')}],
-      },
-      {
         key: 'my-projects',
         label: t('Environments in My Projects'),
         options: setToOptions(userEnvs),
@@ -50,10 +45,11 @@ export function EnvironmentSelector({value, onChange}: EnvironmentSelectorProps)
   return (
     <CompactSelect<string>
       size="md"
+      triggerProps={{prefix: t('Environment')}}
       options={options}
       searchable
       disabled={!projectsLoaded}
-      sizeLimit={20}
+      sizeLimit={10}
       multiple={false}
       value={value}
       onChange={selected => onChange(selected.value)}

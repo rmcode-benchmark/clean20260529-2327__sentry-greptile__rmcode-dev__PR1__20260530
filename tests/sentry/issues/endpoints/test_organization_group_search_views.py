@@ -119,6 +119,7 @@ class OrganizationGroupSearchViewsGetTest(GroupSearchViewAPITestCase):
         # User 1 stars User 2's view
         self.star_view(self.user, self.other_view_2)
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_get_views_created_by_me(self) -> None:
         self.login_as(user=self.user)
@@ -143,6 +144,7 @@ class OrganizationGroupSearchViewsGetTest(GroupSearchViewAPITestCase):
         assert response.data[2]["createdBy"]["id"] == str(self.user.id)
         assert not response.data[2]["starred"]
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_get_views_created_by_others(self) -> None:
         self.login_as(user=self.user)
@@ -163,6 +165,7 @@ class OrganizationGroupSearchViewsGetTest(GroupSearchViewAPITestCase):
         assert response.data[1]["createdBy"]["id"] == str(self.user_2.id)
         assert not response.data[1]["starred"]
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_invalid_created_by_value(self) -> None:
         self.login_as(user=self.user)
@@ -172,6 +175,7 @@ class OrganizationGroupSearchViewsGetTest(GroupSearchViewAPITestCase):
         assert response.status_code == 400
         assert "createdBy" in response.data
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_invalid_sort_value(self) -> None:
         self.login_as(user=self.user)
@@ -181,6 +185,7 @@ class OrganizationGroupSearchViewsGetTest(GroupSearchViewAPITestCase):
         assert response.status_code == 400
         assert "sort" in response.data
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_query_filter_by_name(self) -> None:
         self.login_as(user=self.user)
@@ -198,6 +203,7 @@ class OrganizationGroupSearchViewsGetTest(GroupSearchViewAPITestCase):
         assert response.data[0]["id"] == str(self.other_view_2.id)
         assert response.data[0]["name"] == "Other View 2"
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_query_filter_by_query(self) -> None:
         self.login_as(user=self.user)
@@ -209,6 +215,7 @@ class OrganizationGroupSearchViewsGetTest(GroupSearchViewAPITestCase):
         assert response.data[1]["id"] == str(self.my_view_1.id)
         assert "assigned:me" in response.data[0]["query"]
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_query_filter_case_insensitive(self) -> None:
         self.login_as(user=self.user)
@@ -220,12 +227,19 @@ class OrganizationGroupSearchViewsGetTest(GroupSearchViewAPITestCase):
         assert "My View" in response.data[1]["name"]
         assert "My View" in response.data[2]["name"]
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_query_filter_no_matches(self) -> None:
         self.login_as(user=self.user)
         response = self.get_success_response(self.organization.slug, query="capybara")
 
         assert len(response.data) == 0
+
+    @with_feature({"organizations:issue-stream-custom-views": False})
+    def test_feature_flag_disabled(self) -> None:
+        self.login_as(user=self.user)
+        response = self.get_response(self.organization.slug, createdBy="me")
+        assert response.status_code == 404
 
 
 class OrganizationGroupSearchViewsPostTest(APITestCase):
@@ -241,7 +255,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
             kwargs={"organization_id_or_slug": self.organization.slug},
         )
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_create_basic_view(self) -> None:
         data = {
@@ -273,7 +287,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
             group_search_view=view,
         ).exists()
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_create_view_with_projects(self) -> None:
         """Test creating a view with specific projects"""
@@ -297,7 +311,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
             self.project2.id,
         }
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_create_view_all_projects(self) -> None:
         """Test creating a view for all projects"""
@@ -319,7 +333,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
         assert view.is_all_projects is True
         assert list(view.projects.all()) == []  # No projects should be associated
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_create_view_with_environments(self) -> None:
         """Test creating a view with specific environments"""
@@ -340,7 +354,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
         view = GroupSearchView.objects.get(id=response.data["id"])
         assert set(view.environments) == {"production", "staging"}
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_create_view_with_time_filters(self) -> None:
         """Test creating a view with custom time filters"""
@@ -361,7 +375,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
         view = GroupSearchView.objects.get(id=response.data["id"])
         assert view.time_filters == {"period": "90d"}
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_create_view_with_starred(self) -> None:
         data = {
@@ -383,7 +397,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
             group_search_view_id=view_id,
         ).exists()
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": False})
     def test_create_view_without_global_views(self) -> None:
         data = {
@@ -399,7 +413,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
 
         assert response.data["projects"] == [self.project1.id]
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": False})
     def test_invalid_multiple_projects_without_global_views(self) -> None:
         data = {
@@ -415,7 +429,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
 
         assert "You do not have the multi project stream feature enabled" in str(response.data)
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": False})
     def test_invalid_all_projects_without_global_views(self) -> None:
         data = {
@@ -431,7 +445,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
 
         assert "You do not have the multi project stream feature enabled" in str(response.data)
 
-    @with_feature({"organizations:issue-views": False})
+    @with_feature({"organizations:issue-stream-custom-views": False})
     def test_feature_flag_disabled(self) -> None:
         data = {
             "name": "Custom View",
@@ -445,7 +459,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
         response = self.get_response(self.organization.slug, **data)
         assert response.status_code == 404
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_invalid_sort_option(self) -> None:
         data = {
@@ -460,7 +474,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
         response = self.get_error_response(self.organization.slug, **data)
         assert "querySort" in response.data
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_invalid_time_filters(self) -> None:
         data = {
@@ -475,7 +489,7 @@ class OrganizationGroupSearchViewsPostTest(APITestCase):
         response = self.get_error_response(self.organization.slug, **data)
         assert "timeFilters" in response.data
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_nonexistent_project(self) -> None:
         data = {
@@ -621,6 +635,7 @@ class OrganizationGroupSearchViewsGetPageFiltersTest(APITestCase):
             kwargs={"organization_id_or_slug": self.organization.slug},
         )
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_basic_get_page_filters_with_global_filters(self) -> None:
         self.login_as(user=self.user)
@@ -638,6 +653,7 @@ class OrganizationGroupSearchViewsGetPageFiltersTest(APITestCase):
         assert response.data[2]["projects"] == [-1]
         assert response.data[2]["environments"] == ["development"]
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": False})
     def test_get_page_filters_without_global_filters(self) -> None:
         self.login_as(user=self.user)
@@ -655,6 +671,7 @@ class OrganizationGroupSearchViewsGetPageFiltersTest(APITestCase):
         assert response.data[2]["projects"] == [self.project3.id]
         assert response.data[2]["environments"] == ["development"]
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": False})
     def test_get_page_filters_without_global_filters_user_2(self) -> None:
         self.login_as(user=self.user_2)
@@ -664,6 +681,7 @@ class OrganizationGroupSearchViewsGetPageFiltersTest(APITestCase):
         assert response.data[0]["projects"] == [self.project2.id]
         assert response.data[0]["environments"] == []
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": False})
     def test_error_when_no_projects_found(self) -> None:
         self.login_as(user=self.user_4)
@@ -687,6 +705,7 @@ class OrganizationGroupSearchViewsGetSortTest(GroupSearchViewAPITestCase):
         )
 
     @freeze_time("2025-03-07T00:00:00Z")
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_sort_by_default_last_seen(self) -> None:
         self.login_as(user=self.user_1)
@@ -735,6 +754,7 @@ class OrganizationGroupSearchViewsGetSortTest(GroupSearchViewAPITestCase):
         assert response.data[3]["id"] == str(view_3.id), not response.data[3]["starred"]
         assert response.data[4]["id"] == str(view_2.id), not response.data[4]["starred"]
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_created_by_me_sort_by_name(self) -> None:
         self.login_as(user=self.user_1)
@@ -771,6 +791,7 @@ class OrganizationGroupSearchViewsGetSortTest(GroupSearchViewAPITestCase):
         assert response.status_code == 200
         assert len(response.data) == 0
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_created_by_others_sort_by_last_seen(self) -> None:
         self.login_as(user=self.user_1)
@@ -818,6 +839,7 @@ class OrganizationGroupSearchViewsGetSortTest(GroupSearchViewAPITestCase):
         assert response.status_code == 200
         assert len(response.data) == 0
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_created_by_others_sort_by_name(self) -> None:
         self.login_as(user=self.user_1)
@@ -862,6 +884,7 @@ class OrganizationGroupSearchViewsGetSortTest(GroupSearchViewAPITestCase):
         assert response.status_code == 200
         assert len(response.data) == 0
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_created_by_me_sort_by_popularity(self) -> None:
         self.login_as(user=self.user_1)
@@ -913,6 +936,7 @@ class OrganizationGroupSearchViewsGetSortTest(GroupSearchViewAPITestCase):
         # ============= Non-starred views =============
         # None
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_created_by_me_sort_by_created(self) -> None:
         self.login_as(user=self.user_1)
@@ -935,6 +959,7 @@ class OrganizationGroupSearchViewsGetSortTest(GroupSearchViewAPITestCase):
         assert response.data[1]["id"] == str(view_2.id)
         assert response.data[2]["id"] == str(view_1.id)
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_created_by_me_multiple_sort(self) -> None:
         self.login_as(user=self.user_1)

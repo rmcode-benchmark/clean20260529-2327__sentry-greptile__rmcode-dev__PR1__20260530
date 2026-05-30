@@ -9,7 +9,6 @@ import type {Member, Organization} from 'sentry/types/organization';
 import type {Project} from 'sentry/types/project';
 import EventView from 'sentry/utils/discover/eventView';
 import {uniqueId} from 'sentry/utils/guid';
-import {decodeScalar} from 'sentry/utils/queryString';
 import useRouteAnalyticsEventNames from 'sentry/utils/routeAnalytics/useRouteAnalyticsEventNames';
 import useRouteAnalyticsParams from 'sentry/utils/routeAnalytics/useRouteAnalyticsParams';
 import normalizeUrl from 'sentry/utils/url/normalizeUrl';
@@ -20,7 +19,6 @@ import {makeAlertsPathname} from 'sentry/views/alerts/pathnames';
 import IssueRuleEditor from 'sentry/views/alerts/rules/issue';
 import MetricRulesCreate from 'sentry/views/alerts/rules/metric/create';
 import MetricRuleDuplicate from 'sentry/views/alerts/rules/metric/duplicate';
-import type {EventTypes} from 'sentry/views/alerts/rules/metric/types';
 import {UptimeAlertForm} from 'sentry/views/alerts/rules/uptime/uptimeAlertForm';
 import {AlertRuleType} from 'sentry/views/alerts/types';
 import type {
@@ -53,16 +51,13 @@ function Create(props: Props) {
   const {
     aggregate,
     dataset,
+    eventTypes,
     createFromDuplicate,
     duplicateRuleId,
     createFromDiscover,
     query,
     createFromWizard,
   } = location?.query ?? {};
-  const eventTypes = location?.query?.eventTypes
-    ? (decodeScalar(location.query.eventTypes) as EventTypes)
-    : undefined;
-
   const alertType = params.alertType || AlertRuleType.METRIC;
 
   const sessionId = useRef(uniqueId());
@@ -127,11 +122,7 @@ function Create(props: Props) {
   let wizardAlertType: undefined | WizardAlertType;
   if (createFromWizard && alertType === AlertRuleType.METRIC) {
     wizardAlertType = wizardTemplate
-      ? getAlertTypeFromAggregateDataset({
-          ...wizardTemplate,
-          eventTypes: [wizardTemplate.eventTypes],
-          organization,
-        })
+      ? getAlertTypeFromAggregateDataset(wizardTemplate)
       : 'issues';
   }
 

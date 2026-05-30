@@ -182,14 +182,10 @@ const CHART_MAP = {
     ),
   overviewRequestsChartWidget: () =>
     import('sentry/views/insights/common/components/widgets/overviewRequestsChartWidget'),
-  overviewSlowNextjsSSRWidget: () =>
-    import('sentry/views/insights/common/components/widgets/overviewSlowNextjsSSRWidget'),
   overviewSlowQueriesChartWidget: () =>
     import(
       'sentry/views/insights/common/components/widgets/overviewSlowQueriesChartWidget'
     ),
-  mcpTrafficWidget: () =>
-    import('sentry/views/insights/common/components/widgets/mcpTrafficWidget'),
 } satisfies Record<string, () => Promise<{default: React.FC<LoadableChartWidgetProps>}>>;
 
 /**

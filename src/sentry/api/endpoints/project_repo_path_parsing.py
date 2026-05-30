@@ -1,5 +1,4 @@
 from pathlib import PurePath, PureWindowsPath
-from typing import Any
 from urllib.parse import urlparse
 
 from rest_framework import serializers, status
@@ -14,32 +13,30 @@ from sentry.integrations.base import IntegrationFeatures
 from sentry.integrations.manager import default_manager as integrations
 from sentry.integrations.services.integration import RpcIntegration, integration_service
 from sentry.integrations.source_code_management.repository import RepositoryIntegration
-from sentry.issues.auto_source_code_config.code_mapping import find_roots
-from sentry.issues.auto_source_code_config.frame_info import FrameInfo, create_frame_info
-from sentry.models.project import Project
+from sentry.issues.auto_source_code_config.code_mapping import FrameInfo, find_roots
 from sentry.models.repository import Repository
 
 
-class PathMappingSerializer(CamelSnakeSerializer[dict[str, str]]):
+class PathMappingSerializer(CamelSnakeSerializer):
     stack_path = serializers.CharField()
     source_url = serializers.URLField()
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.integration: RpcIntegration | None = None
-        self.repo: Repository | None = None
+        self.integration = None
+        self.repo = None
 
     @property
-    def providers(self) -> list[str]:
+    def providers(self):
         return [
             x.key for x in integrations.all() if x.has_feature(IntegrationFeatures.STACKTRACE_LINK)
         ]
 
     @property
-    def org_id(self) -> int:
+    def org_id(self):
         return self.context["organization_id"]
 
-    def validate_source_url(self, source_url: str) -> str:
+    def validate_source_url(self, source_url: str):
         # first check to see if we are even looking at the same file
         stack_path = self.initial_data["stack_path"]
 
@@ -51,7 +48,7 @@ class PathMappingSerializer(CamelSnakeSerializer[dict[str, str]]):
                 "Source code URL points to a different file than the stack trace"
             )
 
-        def integration_match(integration: RpcIntegration) -> bool:
+        def integration_match(integration: RpcIntegration):
             installation = integration.get_installation(self.org_id)
             # Check if the installation has the source_url_matches method
             if isinstance(installation, RepositoryIntegration):
@@ -59,7 +56,7 @@ class PathMappingSerializer(CamelSnakeSerializer[dict[str, str]]):
             # Fallback to a basic check if the method doesn't exist
             return False
 
-        def repo_match(repo: Repository) -> bool:
+        def repo_match(repo: Repository):
             return repo.url is not None and source_url.startswith(repo.url)
 
         # now find the matching integration
@@ -109,7 +106,7 @@ class ProjectRepoPathParsingEndpoint(ProjectEndpoint):
     depending on the source code URL
     """
 
-    def post(self, request: Request, project: Project) -> Response:
+    def post(self, request: Request, project) -> Response:
         serializer = PathMappingSerializer(
             context={"organization_id": project.organization_id},
             data=request.data,
@@ -127,12 +124,6 @@ class ProjectRepoPathParsingEndpoint(ProjectEndpoint):
         repo = serializer.repo
         integration = serializer.integration
         installation = integration.get_installation(project.organization_id)
-
-        if not isinstance(installation, RepositoryIntegration):
-            return self.respond(
-                {"detail": "Integration does not support repository operations"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         branch = installation.extract_branch_from_source_url(repo, source_url)
         source_path = installation.extract_source_path_from_source_url(repo, source_url)
@@ -156,4 +147,4 @@ def get_frame_info_from_request(request: Request) -> FrameInfo:
         "filename": request.data["stackPath"],
         "module": request.data.get("module"),
     }
-    return create_frame_info(frame, request.data.get("platform"))
+    return FrameInfo(frame, request.data.get("platform"))

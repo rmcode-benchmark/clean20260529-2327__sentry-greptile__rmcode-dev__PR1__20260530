@@ -3,20 +3,18 @@ import styled from '@emotion/styled';
 import {AlertBadge} from 'sentry/components/core/badge/alertBadge';
 import {IconCalendar} from 'sentry/icons';
 import {space} from 'sentry/styles/space';
-import {getFormat, getFormattedDate} from 'sentry/utils/dates';
+import {getFormattedDate, getTimeFormat} from 'sentry/utils/dates';
 import {IncidentStatus} from 'sentry/views/alerts/types';
 
 import type {SpikeDetails} from 'getsentry/views/spikeProtection/types';
 
 function SpikeProtectionTimeDetails({spike}: {spike: SpikeDetails}) {
   const {start, end} = spike;
-  const format = getFormat({timeOnly: true});
+  const timeFormat = getTimeFormat();
   const formattedTime = end
-    ? `${getFormattedDate(start, format)} - ${getFormattedDate(end, format)}`
-    : `${getFormattedDate(start, format)} - present`;
-  const [startDate, endDate] = [start, end].map(d =>
-    getFormattedDate(d, getFormat({dateOnly: true, year: true}))
-  );
+    ? `${getFormattedDate(start, timeFormat)} - ${getFormattedDate(end, timeFormat)}`
+    : `${getFormattedDate(start, timeFormat)} - present`;
+  const [startDate, endDate] = [start, end].map(d => getFormattedDate(d, 'MMM Do YYYY'));
   const dateFormat =
     startDate === endDate
       ? startDate

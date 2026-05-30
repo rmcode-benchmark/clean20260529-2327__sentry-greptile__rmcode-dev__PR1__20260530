@@ -17,6 +17,7 @@ or may not accept partial payloads.
 ## Feedback Index [/organizations/<organization_id_or_slug>/feedback/]
 
 - Parameters
+
   - field (optional, string)
   - environment (optional, string)
   - project (optional, string)
@@ -91,6 +92,7 @@ Retrieve a collection of feedback items.
 | user.username     | optional[string] | -                                                   |
 
 - Response 200
+
   - Headers
 
     ```
@@ -156,6 +158,7 @@ Retrieve a collection of feedback items.
 ## Feedback [/projects/<organization_id_or_slug>/<project_id_or_slug>/feedback/<feedback_id>/]
 
 - Model
+
   - Body
 
     ```json

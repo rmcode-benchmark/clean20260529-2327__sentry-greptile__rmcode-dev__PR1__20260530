@@ -7,7 +7,6 @@ import {
   SubscriptionFixture,
 } from 'getsentry-test/fixtures/subscription';
 import {
-  fireEvent,
   renderGlobalModal,
   screen,
   userEvent,
@@ -16,10 +15,10 @@ import {
 } from 'sentry-test/reactTestingLibrary';
 import selectEvent from 'sentry-test/selectEvent';
 
-import ModalStore from 'sentry/stores/modalStore';
 import {DataCategory} from 'sentry/types/core';
 
 import triggerProvisionSubscription from 'admin/components/provisionSubscriptionAction';
+import {RESERVED_BUDGET_QUOTA} from 'getsentry/constants';
 import {OnDemandBudgetMode, PlanTier} from 'getsentry/types';
 
 describe('provisionSubscriptionAction', function () {
@@ -29,51 +28,42 @@ describe('provisionSubscriptionAction', function () {
   const mockBillingConfig = BillingConfigFixture(PlanTier.ALL);
 
   function getSpinbutton(name: string) {
-    return screen.getByRole('spinbutton', {name, hidden: true});
+    return screen.getByRole('spinbutton', {name});
   }
 
   function getAllSpinbuttons(startsWith: string) {
-    return screen.getAllByRole('spinbutton', {
-      name: new RegExp(startsWith),
-      hidden: true,
-    });
+    return screen.getAllByRole('spinbutton', {name: new RegExp(startsWith)});
   }
 
   async function clickCheckbox(name: string | RegExp) {
-    await userEvent.click(await screen.findByRole('checkbox', {name, hidden: true}), {
+    await userEvent.click(await screen.findByRole('checkbox', {name}), {
       delay: null,
       skipHover: true,
-      pointerEventsCheck: 0,
     });
   }
 
-  function typeNum(field: HTMLElement, value: string, clearField: boolean) {
+  async function typeNum(field: HTMLElement, value: string, clearField: boolean) {
     if (clearField) {
-      // Instead of clearing, clicking and updating. Directly update the field to the value which is more performant.
-      fireEvent.change(field, {target: {value}});
-      return;
+      await userEvent.clear(field);
     }
-
-    // Append to existing value
-    const currentValue = (field as HTMLInputElement).value || '';
-    const newValue = currentValue + value;
-    fireEvent.change(field, {target: {value: newValue}});
+    await userEvent.click(field, {delay: null, skipHover: true});
+    await userEvent.paste(value, {delay: null, skipHover: true});
   }
 
-  function typeNumForMatchingFields(
+  async function typeNumForMatchingFields(
     startsWith: string,
     value: string,
     clearField = true
   ) {
     const matchingFields = getAllSpinbuttons(startsWith);
     for (const field of matchingFields) {
-      typeNum(field, value, clearField);
+      await typeNum(field, value, clearField);
     }
   }
 
-  function typeNumForField(name: string, value: string, clearField = true) {
+  async function typeNumForField(name: string, value: string, clearField = true) {
     const field = getSpinbutton(name);
-    typeNum(field, value, clearField);
+    await typeNum(field, value, clearField);
   }
 
   async function loadModal() {
@@ -84,7 +74,6 @@ describe('provisionSubscriptionAction', function () {
 
   beforeEach(function () {
     MockApiClient.clearMockResponses();
-    ModalStore.reset();
   });
 
   it('renders modal with form', async function () {
@@ -417,14 +406,9 @@ describe('provisionSubscriptionAction', function () {
 
     expect(within(container).queryByText(/accepted spans/i)).not.toBeInTheDocument();
     expect(within(container).queryByText(/stored spans/i)).not.toBeInTheDocument();
+    expect(within(container).queryByText(/reserved cost-per-/i)).not.toBeInTheDocument();
     expect(
-      within(container).queryByText(/reserved cost-per-event stored spans/i)
-    ).not.toBeInTheDocument();
-    expect(
-      within(container).queryByText(/reserved cost-per-event accepted spans/i)
-    ).not.toBeInTheDocument();
-    expect(
-      within(container).queryByText(/dynamic sampling arr/i)
+      within(container).queryByText(/reserved spans budget/i)
     ).not.toBeInTheDocument();
     expect(within(container).getByLabelText('Reserved Spans')).toBeInTheDocument();
     expect(within(container).getByLabelText('Soft Cap Type Spans')).toBeInTheDocument();
@@ -444,7 +428,9 @@ describe('provisionSubscriptionAction', function () {
     expect(
       within(container).getByLabelText('Price for Accepted Spans')
     ).toBeInTheDocument();
-    expect(within(container).queryByText('Dynamic Sampling ARR')).not.toBeInTheDocument();
+    expect(
+      within(container).queryByText('Reserved Spans Budget')
+    ).not.toBeInTheDocument();
     expect(within(container).getByLabelText('Reserved Stored Spans')).toBeInTheDocument();
     expect(
       within(container).getByLabelText('Soft Cap Type Stored Spans')
@@ -453,10 +439,10 @@ describe('provisionSubscriptionAction', function () {
       within(container).getByLabelText('Price for Stored Spans')
     ).toBeInTheDocument();
 
-    typeNumForField('Reserved Cost-Per-Event Accepted Spans', '1');
-    typeNumForField('Reserved Cost-Per-Event Stored Spans', '2');
+    await typeNumForField('Reserved Cost-Per-Event Accepted Spans', '1');
+    await typeNumForField('Reserved Cost-Per-Event Stored Spans', '2');
     expect(
-      within(container).getByLabelText('Price for Accepted Spans (Dynamic Sampling ARR)')
+      within(container).getByLabelText('Price for Accepted Spans (Reserved Spans Budget)')
     ).toBeInTheDocument();
     expect(within(container).getByLabelText('Price for Stored Spans')).toHaveValue(0);
     expect(within(container).getByLabelText('Price for Stored Spans')).toBeDisabled();
@@ -479,8 +465,8 @@ describe('provisionSubscriptionAction', function () {
     expect(screen.getByLabelText('Reserved Cost-Per-Event Accepted Spans')).toBeEnabled();
     expect(screen.getByLabelText('Reserved Cost-Per-Event Stored Spans')).toBeEnabled();
 
-    typeNumForField('Reserved Cost-Per-Event Accepted Spans', '1');
-    typeNumForField('Reserved Cost-Per-Event Stored Spans', '2');
+    await typeNumForField('Reserved Cost-Per-Event Accepted Spans', '1');
+    await typeNumForField('Reserved Cost-Per-Event Stored Spans', '2');
 
     expect(screen.getByLabelText('Reserved Accepted Spans')).toBeDisabled();
     expect(screen.getByLabelText('Reserved Accepted Spans')).toHaveValue(-2);
@@ -613,13 +599,11 @@ describe('provisionSubscriptionAction', function () {
       'True Forward'
     );
     await clickCheckbox('Apply Changes To Current Subscription');
-    typeNumForField('Reserved Transactions', '200000');
-    typeNumForField('Reserved Issue Fixes', '0');
-    typeNumForField('Reserved Issue Scans', '0');
-    typeNumForMatchingFields('Price for', '0', false);
-    typeNumForField('Price for Errors', '3000');
-    typeNumForField('Price for Transactions', '1000');
-    typeNumForField('Annual Contract Value', '4000');
+    await typeNumForField('Reserved Transactions', '200000');
+    await typeNumForMatchingFields('Price for', '0', false);
+    await typeNumForField('Price for Errors', '3000');
+    await typeNumForField('Price for Transactions', '1000');
+    await typeNumForField('Annual Contract Value', '4000');
 
     const updateMock = MockApiClient.addMockResponse({
       url: `/customers/${mockOrg.slug}/provision-subscription/`,
@@ -636,52 +620,43 @@ describe('provisionSubscriptionAction', function () {
         data: {
           billingInterval: 'annual',
           coterm: true,
-          customPrice: 400000,
+          customPrice: 4000_00,
           customPriceAttachments: 0,
-          customPriceErrors: 300000,
-          customPriceMonitorSeats: 0,
+          customPriceErrors: 3000_00,
           customPricePcss: 0,
-          customPriceReplays: 0,
-          customPriceSeerAutofix: 0,
-          customPriceSeerScanner: 0,
-          customPriceTransactions: 100000,
+          customPriceTransactions: 1000_00,
+          customPriceMonitorSeats: 0,
           customPriceUptime: 0,
+          customPriceReplays: 0,
           managed: true,
           onDemandInvoicedManual: 'DISABLE',
           plan: 'am1_business_ent',
           reservedAttachments: 1,
-          reservedBudgets: [],
           reservedErrors: 5000,
+          reservedTransactions: 200_000,
           reservedMonitorSeats: 1,
-          reservedReplays: 50,
-          reservedSeerAutofix: 0,
-          reservedSeerScanner: 0,
-          reservedTransactions: 200000,
           reservedUptime: 1,
+          reservedReplays: 50,
           retainOnDemandBudget: false,
-          softCapTypeAttachments: null,
-          softCapTypeErrors: 'ON_DEMAND',
-          softCapTypeMonitorSeats: null,
-          softCapTypeReplays: 'TRUE_FORWARD',
-          softCapTypeSeerAutofix: null,
-          softCapTypeSeerScanner: null,
-          softCapTypeTransactions: null,
-          softCapTypeUptime: null,
-          trueForward: {
-            attachments: false,
-            errors: false,
-            monitorSeats: false,
-            replays: true,
-            seerAutofix: false,
-            seerScanner: false,
-            transactions: false,
-            uptime: false,
-          },
           type: 'invoiced',
+          softCapTypeErrors: 'ON_DEMAND',
+          softCapTypeTransactions: null,
+          softCapTypeReplays: 'TRUE_FORWARD',
+          softCapTypeMonitorSeats: null,
+          softCapTypeUptime: null,
+          softCapTypeAttachments: null,
+          trueForward: {
+            errors: false,
+            transactions: false,
+            replays: true,
+            monitorSeats: false,
+            uptime: false,
+            attachments: false,
+          },
         },
       })
     );
-  }, 15_000);
+  });
 
   it('retains on-demand budget when toggled', async () => {
     const am2Sub = SubscriptionFixture({
@@ -725,11 +700,9 @@ describe('provisionSubscriptionAction', function () {
     await clickCheckbox('Retain On-Demand Budget');
     await clickCheckbox('Apply Changes To Current Subscription');
     await userEvent.type(await screen.findByLabelText('Start Date'), '2020-10-25');
-    typeNumForField('Reserved Issue Fixes', '0');
-    typeNumForField('Reserved Issue Scans', '0');
-    typeNumForMatchingFields('On-Demand Cost-Per-Event', '0.1');
-    typeNumForMatchingFields('Price for', '0', false);
-    typeNumForField('Annual Contract Value', '0');
+    await typeNumForMatchingFields('On-Demand Cost-Per-Event', '0.1');
+    await typeNumForMatchingFields('Price for', '0', false);
+    await typeNumForField('Annual Contract Value', '0');
 
     const updateMock = MockApiClient.addMockResponse({
       url: `/customers/${mockOrg.slug}/provision-subscription/`,
@@ -751,60 +724,49 @@ describe('provisionSubscriptionAction', function () {
             customPriceAttachments: 0,
             customPriceErrors: 0,
             customPriceMonitorSeats: 0,
+            customPriceUptime: 0,
             customPricePcss: 0,
+            customPriceReplays: 0,
+            customPriceTransactions: 0,
             customPriceProfileDuration: 0,
             customPriceProfileDurationUI: 0,
-            customPriceReplays: 0,
-            customPriceSeerAutofix: 0,
-            customPriceSeerScanner: 0,
-            customPriceTransactions: 0,
-            customPriceUptime: 0,
             managed: true,
             onDemandInvoicedManual: 'SHARED',
-            paygCpeAttachments: 10000000,
+            plan: 'am2_business_ent',
             paygCpeErrors: 10000000,
             paygCpeMonitorSeats: 10000000,
-            paygCpeProfileDuration: 10000000,
-            paygCpeProfileDurationUI: 10000000,
             paygCpeReplays: 10000000,
-            paygCpeSeerAutofix: 10000000,
-            paygCpeSeerScanner: 10000000,
             paygCpeTransactions: 10000000,
             paygCpeUptime: 10000000,
-            plan: 'am2_business_ent',
+            paygCpeProfileDuration: 10000000,
+            paygCpeProfileDurationUI: 10000000,
+            paygCpeAttachments: 10000000,
             reservedAttachments: 1,
-            reservedBudgets: [],
             reservedErrors: 5000,
             reservedMonitorSeats: 1,
+            reservedUptime: 1,
+            reservedReplays: 50,
+            reservedTransactions: 10000,
             reservedProfileDuration: 0,
             reservedProfileDurationUI: 0,
-            reservedReplays: 50,
-            reservedSeerAutofix: 0,
-            reservedSeerScanner: 0,
-            reservedTransactions: 10000,
-            reservedUptime: 1,
             retainOnDemandBudget: true,
             softCapTypeAttachments: null,
             softCapTypeErrors: null,
             softCapTypeMonitorSeats: null,
+            softCapTypeUptime: null,
+            softCapTypeReplays: null,
+            softCapTypeTransactions: null,
             softCapTypeProfileDuration: null,
             softCapTypeProfileDurationUI: null,
-            softCapTypeReplays: null,
-            softCapTypeSeerAutofix: null,
-            softCapTypeSeerScanner: null,
-            softCapTypeTransactions: null,
-            softCapTypeUptime: null,
             trueForward: {
               attachments: false,
               errors: false,
               monitorSeats: false,
+              uptime: false,
+              replays: false,
+              transactions: false,
               profileDuration: false,
               profileDurationUI: false,
-              replays: false,
-              seerAutofix: false,
-              seerScanner: false,
-              transactions: false,
-              uptime: false,
             },
             type: 'invoiced',
           },
@@ -872,11 +834,9 @@ describe('provisionSubscriptionAction', function () {
     await clickCheckbox('Managed Subscription');
     await clickCheckbox('Apply Changes To Current Subscription');
     await userEvent.type(await screen.findByLabelText('Start Date'), '2020-10-25');
-    typeNumForField('Reserved Issue Fixes', '0');
-    typeNumForField('Reserved Issue Scans', '0');
-    typeNumForMatchingFields('On-Demand Cost-Per-Event', '0.1');
-    typeNumForMatchingFields('Price for', '0', false);
-    typeNumForField('Annual Contract Value', '0');
+    await typeNumForMatchingFields('On-Demand Cost-Per-Event', '0.1');
+    await typeNumForMatchingFields('Price for', '0', false);
+    await typeNumForField('Annual Contract Value', '0');
 
     const updateMock = MockApiClient.addMockResponse({
       url: `/customers/${mockOrg.slug}/provision-subscription/`,
@@ -897,60 +857,49 @@ describe('provisionSubscriptionAction', function () {
           customPriceAttachments: 0,
           customPriceErrors: 0,
           customPriceMonitorSeats: 0,
+          customPriceUptime: 0,
           customPricePcss: 0,
+          customPriceReplays: 0,
+          customPriceTransactions: 0,
           customPriceProfileDuration: 0,
           customPriceProfileDurationUI: 0,
-          customPriceReplays: 0,
-          customPriceSeerAutofix: 0,
-          customPriceSeerScanner: 0,
-          customPriceTransactions: 0,
-          customPriceUptime: 0,
           managed: true,
           onDemandInvoicedManual: 'PER_CATEGORY',
-          paygCpeAttachments: 10000000,
+          plan: 'am2_business_ent',
           paygCpeErrors: 10000000,
           paygCpeMonitorSeats: 10000000,
-          paygCpeProfileDuration: 10000000,
-          paygCpeProfileDurationUI: 10000000,
           paygCpeReplays: 10000000,
-          paygCpeSeerAutofix: 10000000,
-          paygCpeSeerScanner: 10000000,
           paygCpeTransactions: 10000000,
           paygCpeUptime: 10000000,
-          plan: 'am2_business_ent',
+          paygCpeProfileDuration: 10000000,
+          paygCpeProfileDurationUI: 10000000,
+          paygCpeAttachments: 10000000,
           reservedAttachments: 1,
-          reservedBudgets: [],
           reservedErrors: 5000,
           reservedMonitorSeats: 1,
+          reservedUptime: 1,
+          reservedReplays: 50,
+          reservedTransactions: 10000,
           reservedProfileDuration: 0,
           reservedProfileDurationUI: 0,
-          reservedReplays: 50,
-          reservedSeerAutofix: 0,
-          reservedSeerScanner: 0,
-          reservedTransactions: 10000,
-          reservedUptime: 1,
           retainOnDemandBudget: false,
           softCapTypeAttachments: null,
           softCapTypeErrors: null,
           softCapTypeMonitorSeats: null,
+          softCapTypeUptime: null,
+          softCapTypeReplays: null,
+          softCapTypeTransactions: null,
           softCapTypeProfileDuration: null,
           softCapTypeProfileDurationUI: null,
-          softCapTypeReplays: null,
-          softCapTypeSeerAutofix: null,
-          softCapTypeSeerScanner: null,
-          softCapTypeTransactions: null,
-          softCapTypeUptime: null,
           trueForward: {
             attachments: false,
             errors: false,
             monitorSeats: false,
+            uptime: false,
+            replays: false,
+            transactions: false,
             profileDuration: false,
             profileDurationUI: false,
-            replays: false,
-            seerAutofix: false,
-            seerScanner: false,
-            transactions: false,
-            uptime: false,
           },
           type: 'invoiced',
         },
@@ -1002,13 +951,11 @@ describe('provisionSubscriptionAction', function () {
     );
 
     await clickCheckbox('Apply Changes To Current Subscription');
-    typeNumForField('Reserved Performance Units', '600000');
-    typeNumForField('Reserved Issue Fixes', '0');
-    typeNumForField('Reserved Issue Scans', '0');
-    typeNumForMatchingFields('Price for', '0', false);
-    typeNumForField('Price for Errors', '3000');
-    typeNumForField('Price for Uptime Monitors', '1000');
-    typeNumForField('Annual Contract Value', '4000');
+    await typeNumForField('Reserved Performance Units', '600000');
+    await typeNumForMatchingFields('Price for', '0', false);
+    await typeNumForField('Price for Errors', '3000');
+    await typeNumForField('Price for Uptime Monitors', '1000');
+    await typeNumForField('Annual Contract Value', '4000');
 
     const updateMock = MockApiClient.addMockResponse({
       url: `/customers/${mockOrg.slug}/provision-subscription/`,
@@ -1025,56 +972,47 @@ describe('provisionSubscriptionAction', function () {
         data: {
           billingInterval: 'annual',
           coterm: true,
-          customPrice: 400000,
+          customPrice: 4000_00,
           customPriceAttachments: 0,
-          customPriceErrors: 300000,
-          customPriceMonitorSeats: 0,
+          customPriceErrors: 3000_00,
           customPricePcss: 0,
+          customPriceReplays: 0,
+          customPriceMonitorSeats: 0,
+          customPriceUptime: 1000_00,
+          customPriceTransactions: 0,
           customPriceProfileDuration: 0,
           customPriceProfileDurationUI: 0,
-          customPriceReplays: 0,
-          customPriceSeerAutofix: 0,
-          customPriceSeerScanner: 0,
-          customPriceTransactions: 0,
-          customPriceUptime: 100000,
           managed: true,
           onDemandInvoicedManual: 'DISABLE',
           plan: 'am2_business_ent',
           reservedAttachments: 1,
-          reservedBudgets: [],
           reservedErrors: 5000,
+          reservedReplays: 50,
           reservedMonitorSeats: 1,
+          reservedUptime: 1,
+          reservedTransactions: 600_000,
           reservedProfileDuration: 0,
           reservedProfileDurationUI: 0,
-          reservedReplays: 50,
-          reservedSeerAutofix: 0,
-          reservedSeerScanner: 0,
-          reservedTransactions: 600000,
-          reservedUptime: 1,
           retainOnDemandBudget: false,
-          softCapTypeAttachments: null,
+          type: 'invoiced',
           softCapTypeErrors: 'TRUE_FORWARD',
+          softCapTypeTransactions: null,
+          softCapTypeReplays: 'ON_DEMAND',
           softCapTypeMonitorSeats: 'ON_DEMAND',
+          softCapTypeUptime: 'TRUE_FORWARD',
+          softCapTypeAttachments: null,
           softCapTypeProfileDuration: null,
           softCapTypeProfileDurationUI: null,
-          softCapTypeReplays: 'ON_DEMAND',
-          softCapTypeSeerAutofix: null,
-          softCapTypeSeerScanner: null,
-          softCapTypeTransactions: null,
-          softCapTypeUptime: 'TRUE_FORWARD',
           trueForward: {
-            attachments: false,
             errors: true,
+            transactions: false,
+            replays: false,
             monitorSeats: false,
+            uptime: true,
+            attachments: false,
             profileDuration: false,
             profileDurationUI: false,
-            replays: false,
-            seerAutofix: false,
-            seerScanner: false,
-            transactions: false,
-            uptime: true,
           },
-          type: 'invoiced',
         },
       })
     );
@@ -1127,14 +1065,12 @@ describe('provisionSubscriptionAction', function () {
     );
 
     await clickCheckbox('Apply Changes To Current Subscription');
-    typeNumForField('Reserved Errors', '500000');
-    typeNumForField('Reserved Attachments (in GB)', '10');
-    typeNumForField('Reserved Issue Fixes', '0');
-    typeNumForField('Reserved Issue Scans', '0');
-    typeNumForMatchingFields('Price for', '0', false);
-    typeNumForField('Price for Spans', '2000');
-    typeNumForField('Price for Replays', '4000');
-    typeNumForField('Annual Contract Value', '6000');
+    await typeNumForField('Reserved Errors', '500000');
+    await typeNumForField('Reserved Attachments (in GB)', '10');
+    await typeNumForMatchingFields('Price for', '0', false);
+    await typeNumForField('Price for Spans', '2000');
+    await typeNumForField('Price for Replays', '4000');
+    await typeNumForField('Annual Contract Value', '6000');
 
     const updateMock = MockApiClient.addMockResponse({
       url: `/customers/${mockOrg.slug}/provision-subscription/`,
@@ -1152,56 +1088,47 @@ describe('provisionSubscriptionAction', function () {
           data: {
             billingInterval: 'annual',
             coterm: true,
-            customPrice: 600000,
+            customPrice: 6000_00,
             customPriceAttachments: 0,
             customPriceErrors: 0,
-            customPriceMonitorSeats: 0,
             customPricePcss: 0,
+            customPriceReplays: 4000_00,
+            customPriceMonitorSeats: 0,
+            customPriceUptime: 0,
+            customPriceSpans: 2000_00,
             customPriceProfileDuration: 0,
             customPriceProfileDurationUI: 0,
-            customPriceReplays: 400000,
-            customPriceSeerAutofix: 0,
-            customPriceSeerScanner: 0,
-            customPriceSpans: 200000,
-            customPriceUptime: 0,
             managed: true,
             onDemandInvoicedManual: 'DISABLE',
             plan: 'am3_business_ent',
             reservedAttachments: 10,
-            reservedBudgets: [],
-            reservedErrors: 500000,
+            reservedErrors: 500_000,
+            reservedReplays: 50,
             reservedMonitorSeats: 1,
+            reservedUptime: 1,
+            reservedSpans: 10_000_000,
             reservedProfileDuration: 0,
             reservedProfileDurationUI: 0,
-            reservedReplays: 50,
-            reservedSeerAutofix: 0,
-            reservedSeerScanner: 0,
-            reservedSpans: 10000000,
-            reservedUptime: 1,
             retainOnDemandBudget: false,
-            softCapTypeAttachments: null,
+            type: 'invoiced',
             softCapTypeErrors: 'ON_DEMAND',
+            softCapTypeSpans: 'ON_DEMAND',
+            softCapTypeReplays: 'TRUE_FORWARD',
             softCapTypeMonitorSeats: null,
+            softCapTypeUptime: 'TRUE_FORWARD',
+            softCapTypeAttachments: null,
             softCapTypeProfileDuration: null,
             softCapTypeProfileDurationUI: null,
-            softCapTypeReplays: 'TRUE_FORWARD',
-            softCapTypeSeerAutofix: null,
-            softCapTypeSeerScanner: null,
-            softCapTypeSpans: 'ON_DEMAND',
-            softCapTypeUptime: 'TRUE_FORWARD',
             trueForward: {
-              attachments: false,
               errors: false,
+              spans: false,
+              replays: true,
               monitorSeats: false,
+              uptime: true,
+              attachments: false,
               profileDuration: false,
               profileDurationUI: false,
-              replays: true,
-              seerAutofix: false,
-              seerScanner: false,
-              spans: false,
-              uptime: true,
             },
-            type: 'invoiced',
           },
         })
       );
@@ -1245,17 +1172,14 @@ describe('provisionSubscriptionAction', function () {
     );
 
     await clickCheckbox('Apply Changes To Current Subscription');
-    typeNumForField('Reserved Replays', '75000');
-    typeNumForField('Reserved Uptime Monitors', '250');
-    typeNumForField('Reserved Cost-Per-Event Accepted Spans', '1');
-    typeNumForField('Reserved Cost-Per-Event Stored Spans', '2');
-    typeNumForField('Reserved Issue Fixes', '0');
-    typeNumForField('Reserved Issue Scans', '0');
-    typeNumForMatchingFields('Price for', '0', false);
-    typeNumForField('Price for Accepted Spans (Dynamic Sampling ARR)', '12000'); // custom price for stored spans is auto-filled to 0
-    typeNumForField('Dynamic Sampling Budget', '12000');
-    typeNumForField('Price for PCSS', '500');
-    typeNumForField('Annual Contract Value', '12500');
+    await typeNumForField('Reserved Replays', '75000');
+    await typeNumForField('Reserved Uptime Monitors', '250');
+    await typeNumForField('Reserved Cost-Per-Event Accepted Spans', '1');
+    await typeNumForField('Reserved Cost-Per-Event Stored Spans', '2');
+    await typeNumForMatchingFields('Price for', '0', false);
+    await typeNumForField('Price for Accepted Spans (Reserved Spans Budget)', '12000'); // custom price for stored spans is auto-filled to 0
+    await typeNumForField('Price for PCSS', '500');
+    await typeNumForField('Annual Contract Value', '12500');
 
     const updateMock = MockApiClient.addMockResponse({
       url: `/customers/${mockOrg.slug}/provision-subscription/`,
@@ -1272,294 +1196,59 @@ describe('provisionSubscriptionAction', function () {
         data: {
           billingInterval: 'annual',
           coterm: true,
-          customPrice: 1250000,
+          customPrice: 12500_00,
           customPriceAttachments: 0,
           customPriceErrors: 0,
+          customPricePcss: 500_00,
+          customPriceReplays: 0,
           customPriceMonitorSeats: 0,
-          customPricePcss: 50000,
+          customPriceUptime: 0,
+          customPriceSpans: 12000_00,
+          customPriceSpansIndexed: 0,
           customPriceProfileDuration: 0,
           customPriceProfileDurationUI: 0,
-          customPriceReplays: 0,
-          customPriceSeerAutofix: 0,
-          customPriceSeerScanner: 0,
-          customPriceSpans: 1200000,
-          customPriceSpansIndexed: 0,
-          customPriceUptime: 0,
           managed: true,
           onDemandInvoicedManual: 'DISABLE',
           plan: 'am3_business_ent_ds',
           reservedAttachments: 1,
-          reservedBudgets: [{budget: 1200000, categories: ['spans', 'spansIndexed']}],
-          reservedCpeSpans: 100000000,
-          reservedCpeSpansIndexed: 200000000,
-          reservedErrors: 50000,
+          reservedErrors: 50_000,
+          reservedReplays: 75_000,
           reservedMonitorSeats: 1,
+          reservedUptime: 250,
           reservedProfileDuration: 0,
           reservedProfileDurationUI: 0,
-          reservedReplays: 75000,
-          reservedSeerAutofix: 0,
-          reservedSeerScanner: 0,
-          reservedSpans: -2,
-          reservedSpansIndexed: -2,
-          reservedUptime: 250,
+          reservedSpans: RESERVED_BUDGET_QUOTA,
+          reservedSpansIndexed: RESERVED_BUDGET_QUOTA,
+          reservedCpeSpans: 100_000_000,
+          reservedCpeSpansIndexed: 200_000_000,
+          reservedBudgets: [
+            {
+              categories: ['spans', 'spansIndexed'],
+              budget: 12000_00,
+            },
+          ],
           retainOnDemandBudget: false,
-          softCapTypeAttachments: null,
+          type: 'invoiced',
           softCapTypeErrors: null,
-          softCapTypeMonitorSeats: null,
-          softCapTypeProfileDuration: null,
-          softCapTypeProfileDurationUI: null,
-          softCapTypeReplays: null,
-          softCapTypeSeerAutofix: null,
-          softCapTypeSeerScanner: null,
           softCapTypeSpans: 'TRUE_FORWARD',
           softCapTypeSpansIndexed: null,
+          softCapTypeReplays: null,
+          softCapTypeMonitorSeats: null,
           softCapTypeUptime: null,
+          softCapTypeAttachments: null,
+          softCapTypeProfileDuration: null,
+          softCapTypeProfileDurationUI: null,
           trueForward: {
-            attachments: false,
             errors: false,
-            monitorSeats: false,
-            profileDuration: false,
-            profileDurationUI: false,
-            replays: false,
-            seerAutofix: false,
-            seerScanner: false,
             spans: true,
             spansIndexed: false,
-            uptime: false,
-          },
-          type: 'invoiced',
-        },
-      })
-    );
-  }, 15_000);
-
-  it('calls api with correct seer reserved budget args', async () => {
-    const am3Sub = SubscriptionFixture({organization: mockOrg, plan: 'am3_f'});
-    triggerProvisionSubscription({
-      subscription: am3Sub,
-      orgId: am3Sub.slug,
-      onSuccess,
-      billingConfig: mockBillingConfig,
-    });
-
-    await loadModal();
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'Plan'}),
-      'Enterprise (Business) (am3)'
-    );
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'Billing Interval'}),
-      'Annual'
-    );
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'Billing Type'}),
-      'Invoiced'
-    );
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'On-Demand Max Spend Setting'}),
-      'Disable'
-    );
-
-    await clickCheckbox('Apply Changes To Current Subscription');
-    typeNumForField('Reserved Replays', '75000');
-    typeNumForField('Reserved Uptime Monitors', '250');
-    typeNumForField('Reserved Cost-Per-Event Issue Fixes', '1');
-    typeNumForField('Reserved Cost-Per-Event Issue Scans', '0.5');
-    typeNumForMatchingFields('Price for', '0', false);
-    typeNumForField('Price for Issue Fixes (Seer ARR)', '12000');
-    typeNumForField('Price for PCSS', '500');
-    typeNumForField('Annual Contract Value', '12500');
-    typeNumForField('Seer Budget', '24000');
-
-    const updateMock = MockApiClient.addMockResponse({
-      url: `/customers/${mockOrg.slug}/provision-subscription/`,
-      method: 'POST',
-      body: {},
-    });
-
-    await userEvent.click(await screen.findByRole('button', {name: 'Submit'}));
-
-    expect(updateMock).toHaveBeenCalledWith(
-      `/customers/${mockOrg.slug}/provision-subscription/`,
-      expect.objectContaining({
-        method: 'POST',
-        data: {
-          billingInterval: 'annual',
-          coterm: true,
-          customPrice: 1250000,
-          customPriceAttachments: 0,
-          customPriceErrors: 0,
-          customPriceMonitorSeats: 0,
-          customPricePcss: 50000,
-          customPriceProfileDuration: 0,
-          customPriceProfileDurationUI: 0,
-          customPriceReplays: 0,
-          customPriceSeerAutofix: 1200000,
-          customPriceSeerScanner: 0,
-          customPriceSpans: 0,
-          customPriceUptime: 0,
-          managed: true,
-          onDemandInvoicedManual: 'DISABLE',
-          plan: 'am3_business_ent',
-          reservedAttachments: 1,
-          reservedBudgets: [
-            {budget: 2400000, categories: ['seerAutofix', 'seerScanner']},
-          ],
-          reservedCpeSeerAutofix: 100000000,
-          reservedCpeSeerScanner: 50000000,
-          reservedErrors: 50000,
-          reservedMonitorSeats: 1,
-          reservedProfileDuration: 0,
-          reservedProfileDurationUI: 0,
-          reservedReplays: 75000,
-          reservedSeerAutofix: -2,
-          reservedSeerScanner: -2,
-          reservedSpans: 10000000,
-          reservedUptime: 250,
-          retainOnDemandBudget: false,
-          softCapTypeAttachments: null,
-          softCapTypeErrors: null,
-          softCapTypeMonitorSeats: null,
-          softCapTypeProfileDuration: null,
-          softCapTypeProfileDurationUI: null,
-          softCapTypeReplays: null,
-          softCapTypeSeerAutofix: null,
-          softCapTypeSeerScanner: null,
-          softCapTypeSpans: null,
-          softCapTypeUptime: null,
-          trueForward: {
-            attachments: false,
-            errors: false,
+            replays: false,
             monitorSeats: false,
+            uptime: false,
+            attachments: false,
             profileDuration: false,
             profileDurationUI: false,
-            replays: false,
-            seerAutofix: false,
-            seerScanner: false,
-            spans: false,
-            uptime: false,
           },
-          type: 'invoiced',
-        },
-      })
-    );
-  }, 15_000);
-
-  it('calls api with seer reserved budget args with 0 values', async () => {
-    const am3Sub = SubscriptionFixture({organization: mockOrg, plan: 'am3_f'});
-    triggerProvisionSubscription({
-      subscription: am3Sub,
-      orgId: am3Sub.slug,
-      onSuccess,
-      billingConfig: mockBillingConfig,
-    });
-
-    await loadModal();
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'Plan'}),
-      'Enterprise (Business) (am3)'
-    );
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'Billing Interval'}),
-      'Annual'
-    );
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'Billing Type'}),
-      'Invoiced'
-    );
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'On-Demand Max Spend Setting'}),
-      'Disable'
-    );
-
-    await clickCheckbox('Apply Changes To Current Subscription');
-    typeNumForField('Reserved Replays', '75000');
-    typeNumForField('Reserved Uptime Monitors', '250');
-    typeNumForField('Reserved Cost-Per-Event Issue Fixes', '0');
-    typeNumForField('Reserved Cost-Per-Event Issue Scans', '0');
-    typeNumForMatchingFields('Price for', '0', false);
-    typeNumForField('Price for Issue Fixes (Seer ARR)', '0');
-    typeNumForField('Price for PCSS', '500');
-    typeNumForField('Annual Contract Value', '500');
-    typeNumForField('Seer Budget', '24000');
-
-    const updateMock = MockApiClient.addMockResponse({
-      url: `/customers/${mockOrg.slug}/provision-subscription/`,
-      method: 'POST',
-      body: {},
-    });
-
-    await userEvent.click(await screen.findByRole('button', {name: 'Submit'}));
-
-    expect(updateMock).toHaveBeenCalledWith(
-      `/customers/${mockOrg.slug}/provision-subscription/`,
-      expect.objectContaining({
-        method: 'POST',
-        data: {
-          billingInterval: 'annual',
-          coterm: true,
-          customPrice: 50000,
-          customPriceAttachments: 0,
-          customPriceErrors: 0,
-          customPriceMonitorSeats: 0,
-          customPricePcss: 50000,
-          customPriceProfileDuration: 0,
-          customPriceProfileDurationUI: 0,
-          customPriceReplays: 0,
-          customPriceSeerAutofix: 0,
-          customPriceSeerScanner: 0,
-          customPriceSpans: 0,
-          customPriceUptime: 0,
-          managed: true,
-          onDemandInvoicedManual: 'DISABLE',
-          plan: 'am3_business_ent',
-          reservedAttachments: 1,
-          reservedBudgets: [
-            {budget: 2400000, categories: ['seerAutofix', 'seerScanner']},
-          ],
-          reservedCpeSeerAutofix: 0,
-          reservedCpeSeerScanner: 0,
-          reservedErrors: 50000,
-          reservedMonitorSeats: 1,
-          reservedProfileDuration: 0,
-          reservedProfileDurationUI: 0,
-          reservedReplays: 75000,
-          reservedSeerAutofix: -2,
-          reservedSeerScanner: -2,
-          reservedSpans: 10000000,
-          reservedUptime: 250,
-          retainOnDemandBudget: false,
-          softCapTypeAttachments: null,
-          softCapTypeErrors: null,
-          softCapTypeMonitorSeats: null,
-          softCapTypeProfileDuration: null,
-          softCapTypeProfileDurationUI: null,
-          softCapTypeReplays: null,
-          softCapTypeSeerAutofix: null,
-          softCapTypeSeerScanner: null,
-          softCapTypeSpans: null,
-          softCapTypeUptime: null,
-          trueForward: {
-            attachments: false,
-            errors: false,
-            monitorSeats: false,
-            profileDuration: false,
-            profileDurationUI: false,
-            replays: false,
-            seerAutofix: false,
-            seerScanner: false,
-            spans: false,
-            uptime: false,
-          },
-          type: 'invoiced',
         },
       })
     );
@@ -1597,14 +1286,12 @@ describe('provisionSubscriptionAction', function () {
     );
 
     await clickCheckbox('Apply Changes To Current Subscription');
-    typeNumForMatchingFields('Price for', '0', false);
-    typeNumForField('Annual Contract Value', '0');
-    typeNumForMatchingFields('On-Demand Cost-Per-Event', '0.0001', false);
-    typeNumForField('Reserved Issue Fixes', '0');
-    typeNumForField('Reserved Issue Scans', '0');
-    typeNumForField('On-Demand Cost-Per-Event Errors', '0.5');
-    typeNumForField('On-Demand Cost-Per-Event Performance Units', '0.0111');
-    typeNumForField('On-Demand Cost-Per-Event Replays', '1');
+    await typeNumForMatchingFields('Price for', '0', false);
+    await typeNumForField('Annual Contract Value', '0');
+    await typeNumForMatchingFields('On-Demand Cost-Per-Event', '0.0001', false);
+    await typeNumForField('On-Demand Cost-Per-Event Errors', '0.5');
+    await typeNumForField('On-Demand Cost-Per-Event Performance Units', '0.0111');
+    await typeNumForField('On-Demand Cost-Per-Event Replays', '1');
     const updateMock = MockApiClient.addMockResponse({
       url: `/customers/${mockOrg.slug}/provision-subscription/`,
       method: 'POST',
@@ -1624,63 +1311,52 @@ describe('provisionSubscriptionAction', function () {
             customPrice: 0,
             customPriceAttachments: 0,
             customPriceErrors: 0,
-            customPriceMonitorSeats: 0,
             customPricePcss: 0,
+            customPriceReplays: 0,
+            customPriceMonitorSeats: 0,
+            customPriceUptime: 0,
+            customPriceTransactions: 0,
             customPriceProfileDuration: 0,
             customPriceProfileDurationUI: 0,
-            customPriceReplays: 0,
-            customPriceSeerAutofix: 0,
-            customPriceSeerScanner: 0,
-            customPriceTransactions: 0,
-            customPriceUptime: 0,
             managed: true,
-            onDemandInvoicedManual: 'SHARED',
-            paygCpeAttachments: 10000,
             paygCpeErrors: 50000000,
-            paygCpeMonitorSeats: 10000,
+            paygCpeTransactions: 1110000,
+            paygCpeReplays: 100000000,
+            paygCpeAttachments: 10000,
             paygCpeProfileDuration: 10000,
             paygCpeProfileDurationUI: 10000,
-            paygCpeReplays: 100000000,
-            paygCpeSeerAutofix: 10000,
-            paygCpeSeerScanner: 10000,
-            paygCpeTransactions: 1110000,
+            paygCpeMonitorSeats: 10000,
             paygCpeUptime: 10000,
+            onDemandInvoicedManual: 'SHARED',
             plan: 'am2_business_ent',
             reservedAttachments: 1,
-            reservedBudgets: [],
             reservedErrors: 5000,
+            reservedReplays: 50,
             reservedMonitorSeats: 1,
+            reservedUptime: 1,
+            reservedTransactions: 10_000,
             reservedProfileDuration: 0,
             reservedProfileDurationUI: 0,
-            reservedReplays: 50,
-            reservedSeerAutofix: 0,
-            reservedSeerScanner: 0,
-            reservedTransactions: 10000,
-            reservedUptime: 1,
             retainOnDemandBudget: false,
-            softCapTypeAttachments: null,
+            type: 'invoiced',
             softCapTypeErrors: null,
+            softCapTypeTransactions: null,
+            softCapTypeReplays: null,
             softCapTypeMonitorSeats: null,
+            softCapTypeUptime: null,
+            softCapTypeAttachments: null,
             softCapTypeProfileDuration: null,
             softCapTypeProfileDurationUI: null,
-            softCapTypeReplays: null,
-            softCapTypeSeerAutofix: null,
-            softCapTypeSeerScanner: null,
-            softCapTypeTransactions: null,
-            softCapTypeUptime: null,
             trueForward: {
-              attachments: false,
               errors: false,
-              monitorSeats: false,
+              transactions: false,
               profileDuration: false,
               profileDurationUI: false,
               replays: false,
-              seerAutofix: false,
-              seerScanner: false,
-              transactions: false,
+              monitorSeats: false,
               uptime: false,
+              attachments: false,
             },
-            type: 'invoiced',
           },
         })
       );
@@ -1714,8 +1390,8 @@ describe('provisionSubscriptionAction', function () {
 
     await clickCheckbox('Managed Subscription');
     await clickCheckbox('Apply Changes To Current Subscription');
-    typeNumForField('Reserved Errors', '2000000');
-    typeNumForField('Annual Contract Value', '4550');
+    await typeNumForField('Reserved Errors', '2000000');
+    await typeNumForField('Annual Contract Value', '4550');
 
     const updateMock = MockApiClient.addMockResponse({
       url: `/customers/${mockOrg.slug}/provision-subscription/`,
@@ -1731,11 +1407,10 @@ describe('provisionSubscriptionAction', function () {
         method: 'POST',
         data: {
           billingInterval: 'annual',
-          coterm: true,
           customPrice: 455000,
+          coterm: true,
           managed: true,
           plan: 'mm2_a',
-          reservedBudgets: [],
           reservedErrors: 2000000,
           retainOnDemandBudget: false,
           type: 'invoiced',
@@ -1771,24 +1446,20 @@ describe('provisionSubscriptionAction', function () {
 
     await clickCheckbox('Managed Subscription');
     await userEvent.type(screen.getByLabelText('Start Date'), '2020-10-25');
-    typeNumForField('Reserved Errors', '2000000');
-    typeNumForField('Reserved Transactions', '1000000');
-    typeNumForField('Reserved Cron Monitors', '250');
-    typeNumForField('Reserved Uptime Monitors', '250');
-    typeNumForField('Reserved Replays', '500');
-    typeNumForField('Reserved Attachments (in GB)', '50');
-    typeNumForField('Reserved Issue Fixes', '0');
-    typeNumForField('Reserved Issue Scans', '0');
-    typeNumForField('Price for Errors', '3000');
-    typeNumForField('Price for Replays', '0');
-    typeNumForField('Price for Cron Monitors', '400');
-    typeNumForField('Price for Uptime Monitors', '0');
-    typeNumForField('Price for Transactions', '1000');
-    typeNumForField('Price for Attachments', '50');
-    typeNumForField('Price for Issue Fixes', '0');
-    typeNumForField('Price for Issue Scans', '0');
-    typeNumForField('Price for PCSS', '500');
-    typeNumForField('Annual Contract Value', '5050');
+    await typeNumForField('Reserved Errors', '2000000');
+    await typeNumForField('Reserved Transactions', '1000000');
+    await typeNumForField('Reserved Cron Monitors', '250');
+    await typeNumForField('Reserved Uptime Monitors', '250');
+    await typeNumForField('Reserved Replays', '500');
+    await typeNumForField('Reserved Attachments (in GB)', '50');
+    await typeNumForField('Price for Errors', '3000');
+    await typeNumForField('Price for Replays', '0');
+    await typeNumForField('Price for Cron Monitors', '400');
+    await typeNumForField('Price for Uptime Monitors', '0');
+    await typeNumForField('Price for Transactions', '1000');
+    await typeNumForField('Price for Attachments', '50');
+    await typeNumForField('Price for PCSS', '500');
+    await typeNumForField('Annual Contract Value', '5050');
 
     await userEvent.click(screen.getByRole('button', {name: 'Submit'}));
 
@@ -1824,24 +1495,20 @@ describe('provisionSubscriptionAction', function () {
 
     await clickCheckbox('Managed Subscription');
     await userEvent.type(await screen.findByLabelText('Start Date'), '2020-10-25');
-    typeNumForField('Reserved Errors', '2000000');
-    typeNumForField('Reserved Transactions', '1000000');
-    typeNumForField('Reserved Replays', '500');
-    typeNumForField('Reserved Cron Monitors', '250');
-    typeNumForField('Reserved Uptime Monitors', '250');
-    typeNumForField('Reserved Attachments (in GB)', '50');
-    typeNumForField('Reserved Issue Fixes', '0');
-    typeNumForField('Reserved Issue Scans', '0');
-    typeNumForField('Price for Errors', '3000');
-    typeNumForField('Price for Transactions', '1000');
-    typeNumForField('Price for Replays', '0');
-    typeNumForField('Price for Cron Monitors', '400');
-    typeNumForField('Price for Uptime Monitors', '0');
-    typeNumForField('Price for Attachments', '50');
-    typeNumForField('Price for Issue Fixes', '0');
-    typeNumForField('Price for Issue Scans', '0');
-    typeNumForField('Price for PCSS', '500');
-    typeNumForField('Annual Contract Value', '4950');
+    await typeNumForField('Reserved Errors', '2000000');
+    await typeNumForField('Reserved Transactions', '1000000');
+    await typeNumForField('Reserved Replays', '500');
+    await typeNumForField('Reserved Cron Monitors', '250');
+    await typeNumForField('Reserved Uptime Monitors', '250');
+    await typeNumForField('Reserved Attachments (in GB)', '50');
+    await typeNumForField('Price for Errors', '3000');
+    await typeNumForField('Price for Transactions', '1000');
+    await typeNumForField('Price for Replays', '0');
+    await typeNumForField('Price for Cron Monitors', '400');
+    await typeNumForField('Price for Uptime Monitors', '0');
+    await typeNumForField('Price for Attachments', '50');
+    await typeNumForField('Price for PCSS', '500');
+    await typeNumForField('Annual Contract Value', '4950');
 
     MockApiClient.clearMockResponses();
     const updateMock = MockApiClient.addMockResponse({
@@ -1866,91 +1533,38 @@ describe('provisionSubscriptionAction', function () {
           customPrice: 495000,
           customPriceAttachments: 5000,
           customPriceErrors: 300000,
-          customPriceMonitorSeats: 40000,
           customPricePcss: 50000,
-          customPriceReplays: 0,
-          customPriceSeerAutofix: 0,
-          customPriceSeerScanner: 0,
           customPriceTransactions: 100000,
+          customPriceReplays: 0,
+          customPriceMonitorSeats: 40000,
           customPriceUptime: 0,
           effectiveAt: '2020-10-25',
           managed: true,
           plan: 'am1_business_ent',
           reservedAttachments: 50,
-          reservedBudgets: [],
-          reservedErrors: 2000000,
-          reservedMonitorSeats: 250,
           reservedReplays: 500,
-          reservedSeerAutofix: 0,
-          reservedSeerScanner: 0,
+          reservedErrors: 2000000,
           reservedTransactions: 1000000,
+          reservedMonitorSeats: 250,
           reservedUptime: 250,
           retainOnDemandBudget: false,
-          softCapTypeAttachments: null,
-          softCapTypeErrors: null,
-          softCapTypeMonitorSeats: null,
-          softCapTypeReplays: null,
-          softCapTypeSeerAutofix: null,
-          softCapTypeSeerScanner: null,
-          softCapTypeTransactions: null,
-          softCapTypeUptime: null,
-          trueForward: {
-            attachments: false,
-            errors: false,
-            monitorSeats: false,
-            replays: false,
-            seerAutofix: false,
-            seerScanner: false,
-            transactions: false,
-            uptime: false,
-          },
           type: 'invoiced',
+          softCapTypeErrors: null,
+          softCapTypeTransactions: null,
+          softCapTypeReplays: null,
+          softCapTypeMonitorSeats: null,
+          softCapTypeUptime: null,
+          softCapTypeAttachments: null,
+          trueForward: {
+            errors: false,
+            transactions: false,
+            replays: false,
+            monitorSeats: false,
+            uptime: false,
+            attachments: false,
+          },
         },
       })
     );
   }, 15_000);
-
-  it('confirms byte field has (in GB) suffix', async function () {
-    triggerProvisionSubscription({
-      subscription: mockSub,
-      orgId: mockSub.slug,
-      onSuccess,
-      billingConfig: mockBillingConfig,
-    });
-
-    await loadModal();
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'Plan'}),
-      'Enterprise (Business) (am1)'
-    );
-
-    // Verify ATTACHMENTS has (in GB) suffix as expected
-    expect(
-      screen.getByRole('spinbutton', {name: 'Reserved Attachments (in GB)'})
-    ).toBeInTheDocument();
-  });
-
-  it('confirms non-byte categories do not have (in GB) suffix', async function () {
-    triggerProvisionSubscription({
-      subscription: mockSub,
-      orgId: mockSub.slug,
-      onSuccess,
-      billingConfig: mockBillingConfig,
-    });
-
-    await loadModal();
-
-    await selectEvent.select(
-      await screen.findByRole('textbox', {name: 'Plan'}),
-      'Enterprise (Business) (am1)'
-    );
-
-    // Non-byte categories should not have (in GB) suffix
-    expect(screen.getByRole('spinbutton', {name: 'Reserved Errors'})).toBeInTheDocument();
-
-    expect(
-      screen.getByRole('spinbutton', {name: 'Reserved Transactions'})
-    ).toBeInTheDocument();
-  });
 });

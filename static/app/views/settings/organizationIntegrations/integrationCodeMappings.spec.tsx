@@ -214,7 +214,7 @@ describe('IntegrationCodeMappings', function () {
     renderGlobalModal();
 
     await userEvent.click(screen.getByRole('button', {name: 'Add Code Mapping'}));
-    expect(screen.getByRole('textbox', {name: 'Branch'})).toHaveValue('main');
+    expect(screen.getByRole('textbox', {name: 'Branch'})).toHaveValue('master');
 
     await selectEvent.select(screen.getByText('Choose repo'), repos[1]!.name);
     await waitFor(() => {

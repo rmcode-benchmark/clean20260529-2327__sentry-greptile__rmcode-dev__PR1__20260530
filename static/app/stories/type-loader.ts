@@ -1,5 +1,5 @@
 import * as docgen from 'react-docgen-typescript';
-import type {LoaderContext} from '@rspack/core';
+import type {LoaderContext} from 'webpack';
 
 /**
  * Extracts documentation from the modules by running the TS compiler and serializing the types
@@ -42,9 +42,8 @@ function noopTypeLoader(this: LoaderContext<any>, _source: string) {
 }
 
 export default function typeLoader(this: LoaderContext<any>, _source: string) {
-  const STORYBOOK_TYPES = process.env.STORYBOOK_TYPES
-    ? process.env.STORYBOOK_TYPES === '1'
-    : process.env.NODE_ENV === 'production';
+  const STORYBOOK_TYPES =
+    Boolean(process.env.STORYBOOK_TYPES) || process.env.node_ENV === 'production';
 
   return STORYBOOK_TYPES
     ? prodTypeloader.call(this, _source)

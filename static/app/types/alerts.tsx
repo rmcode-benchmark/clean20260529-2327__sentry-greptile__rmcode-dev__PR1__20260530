@@ -207,12 +207,6 @@ export type IssueAlertRuleCondition = Omit<
   dynamic_form_fields?: IssueConfigField[];
 } & Record<string, number | string>;
 
-export interface TicketActionData {
-  [key: string]: any;
-  integration: string;
-  dynamic_form_fields?: IssueConfigField[];
-}
-
 interface SlackAction {
   channel: string | undefined;
   id: IssueAlertActionType.SLACK;

@@ -12,9 +12,8 @@ import {type ValidateWidgetResponse, WidgetType} from 'sentry/views/dashboards/t
 import {GroupBySelector} from 'sentry/views/dashboards/widgetBuilder/buildSteps/groupByStep/groupBySelector';
 import {SectionHeader} from 'sentry/views/dashboards/widgetBuilder/components/common/sectionHeader';
 import {useWidgetBuilderContext} from 'sentry/views/dashboards/widgetBuilder/contexts/widgetBuilderContext';
-import {useDisableTransactionWidget} from 'sentry/views/dashboards/widgetBuilder/hooks/useDisableTransactionWidget';
 import {BuilderStateAction} from 'sentry/views/dashboards/widgetBuilder/hooks/useWidgetBuilderState';
-import {useTraceItemTags} from 'sentry/views/explore/contexts/spanTagsContext';
+import {useSpanTags} from 'sentry/views/explore/contexts/spanTagsContext';
 
 interface WidgetBuilderGroupBySelectorProps {
   validatedWidgetResponse: UseApiQueryResult<ValidateWidgetResponse, RequestError>;
@@ -24,14 +23,13 @@ function WidgetBuilderGroupBySelector({
   validatedWidgetResponse,
 }: WidgetBuilderGroupBySelectorProps) {
   const {state, dispatch} = useWidgetBuilderContext();
-  const disableTransactionWidget = useDisableTransactionWidget();
 
   const organization = useOrganization();
 
   let tags: TagCollection = useTags();
-  const {tags: numericSpanTags} = useTraceItemTags('number');
-  const {tags: stringSpanTags} = useTraceItemTags('string');
-  if (state.dataset === WidgetType.SPANS || state.dataset === WidgetType.LOGS) {
+  const {tags: numericSpanTags} = useSpanTags('number');
+  const {tags: stringSpanTags} = useSpanTags('string');
+  if (state.dataset === WidgetType.SPANS) {
     tags = {...numericSpanTags, ...stringSpanTags};
   }
 
@@ -61,7 +59,6 @@ function WidgetBuilderGroupBySelector({
         validatedWidgetResponse={validatedWidgetResponse}
         style={{paddingRight: 0}}
         widgetType={state.dataset}
-        disable={disableTransactionWidget}
       />
     </Fragment>
   );

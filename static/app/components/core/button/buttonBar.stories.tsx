@@ -4,6 +4,7 @@ import {Button, type ButtonProps} from 'sentry/components/core/button';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
 import * as Storybook from 'sentry/stories';
 
+// eslint-disable-next-line import/no-webpack-loader-syntax
 import types from '!!type-loader!sentry/components/core/button/buttonBar';
 
 export default Storybook.story('ButtonBar', (story, APIReference) => {
@@ -45,7 +46,7 @@ export default Storybook.story('ButtonBar', (story, APIReference) => {
           is handled by the parent component, not the{' '}
           <Storybook.JSXNode name="ButtonBar" /> itself.
         </p>
-        <ButtonBar gap="none">
+        <ButtonBar>
           {['One', 'Two', 'Three'].map(id => (
             <Button key={id} {...makeProps(id)}>
               {id}
@@ -57,7 +58,7 @@ export default Storybook.story('ButtonBar', (story, APIReference) => {
           You can also pass the 'merged' prop to the{' '}
           <Storybook.JSXNode name="ButtonBar" /> to merge the buttons together.
         </p>
-        <ButtonBar merged gap="none">
+        <ButtonBar merged>
           {['One', 'Two', 'Three'].map(id => (
             <Button key={id} {...makeMergedProps(id)}>
               {id}
@@ -69,7 +70,7 @@ export default Storybook.story('ButtonBar', (story, APIReference) => {
           Managing the active state is optional, and you can also just use the buttonbar
           to manage the button layout.
         </p>
-        <ButtonBar merged gap="none">
+        <ButtonBar merged>
           {['One', 'Two', 'Three'].map(id => (
             <Button key={id}>{id}</Button>
           ))}
@@ -79,7 +80,7 @@ export default Storybook.story('ButtonBar', (story, APIReference) => {
           <Storybook.JSXNode name="ButtonBar" />s can have a single button in which case
           it looks like a button.
         </p>
-        <ButtonBar gap="none">
+        <ButtonBar>
           <Button>One Lonely Button</Button>
         </ButtonBar>
       </Fragment>

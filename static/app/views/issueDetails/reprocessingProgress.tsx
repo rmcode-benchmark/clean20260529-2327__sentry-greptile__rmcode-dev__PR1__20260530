@@ -45,14 +45,14 @@ const Wrapper = styled('div')`
   flex: 1;
   text-align: center;
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     margin: 40px;
   }
 `;
 
 const Content = styled('div')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   display: grid;
   gap: ${space(1.5)};
   justify-items: center;
@@ -75,6 +75,6 @@ const Header = styled('div')`
 
 const Title = styled('h3')`
   font-size: ${p => p.theme.headerFontSize};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
   margin-bottom: 0;
 `;

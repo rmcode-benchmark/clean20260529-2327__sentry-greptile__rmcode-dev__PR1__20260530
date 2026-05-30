@@ -20,21 +20,6 @@ class FunctionAndPathPattern:
     path_pattern: str
 
 
-@dataclass(frozen=True)
-class FunctionAndModulePattern:
-    """Pattern for matching function and module to ignore SDK crashes.
-
-    Use "*" as a wildcard to match any value.
-    Examples:
-    - FunctionAndModulePattern("specific.module", "invoke") - matches only "invoke" in "specific.module"
-    - FunctionAndModulePattern("*", "invoke") - matches "invoke" in any module
-    - FunctionAndModulePattern("specific.module", "*") - matches any function in "specific.module"
-    """
-
-    module_pattern: str
-    function_pattern: str
-
-
 @dataclass
 class SDKFrameConfig:
     function_patterns: set[str]
@@ -80,8 +65,8 @@ class SDKCrashDetectionConfig:
     system_library_path_patterns: set[str]
     """The configuration for detecting SDK frames."""
     sdk_frame_config: SDKFrameConfig
-    """The function and module patterns to ignore when detecting SDK crashes. For example, FunctionAndModulePattern("*", "**SentrySDK crash**") for any module with that function"""
-    sdk_crash_ignore_matchers: set[FunctionAndModulePattern]
+    """The functions to ignore when detecting SDK crashes. For example, `**SentrySDK crash**`"""
+    sdk_crash_ignore_functions_matchers: set[str]
 
 
 class SDKCrashDetectionOptions(TypedDict):
@@ -134,12 +119,7 @@ def build_sdk_crash_detection_configs() -> Sequence[SDKCrashDetectionConfig]:
             ),
             # [SentrySDK crash] is a testing function causing a crash.
             # Therefore, we don't want to mark it a as a SDK crash.
-            sdk_crash_ignore_matchers={
-                FunctionAndModulePattern(
-                    module_pattern="*",
-                    function_pattern="**SentrySDK crash**",
-                ),
-            },
+            sdk_crash_ignore_functions_matchers={"**SentrySDK crash**"},
         )
         configs.append(cocoa_config)
 
@@ -192,14 +172,7 @@ def build_sdk_crash_detection_configs() -> Sequence[SDKCrashDetectionConfig]:
                     fallback_path="sentry-react-native",
                 ),
             ),
-            sdk_crash_ignore_matchers={
-                # sentryWrapped rethrows the original error
-                # https://github.com/getsentry/sentry-javascript/blob/a67ebc4f56fd20259bffbe194e8e92e968589c12/packages/browser/src/helpers.ts#L107
-                FunctionAndModulePattern(
-                    module_pattern="*",
-                    function_pattern="sentryWrapped",
-                ),
-            },
+            sdk_crash_ignore_functions_matchers=set(),
         )
         configs.append(react_native_config)
 
@@ -279,12 +252,7 @@ def build_sdk_crash_detection_configs() -> Sequence[SDKCrashDetectionConfig]:
                 ],
                 path_replacer=KeepFieldPathReplacer(fields={"module", "filename", "package"}),
             ),
-            sdk_crash_ignore_matchers={
-                FunctionAndModulePattern(
-                    module_pattern="io.sentry.graphql.SentryInstrumentation",
-                    function_pattern="lambda$instrumentExecutionResult$0",
-                ),
-            },
+            sdk_crash_ignore_functions_matchers=set(),
         )
         configs.append(java_config)
 
@@ -340,7 +308,7 @@ def build_sdk_crash_detection_configs() -> Sequence[SDKCrashDetectionConfig]:
                     fallback_path="sentry",
                 ),
             ),
-            sdk_crash_ignore_matchers=set(),
+            sdk_crash_ignore_functions_matchers=set(),
         )
         configs.append(native_config)
 
@@ -387,31 +355,19 @@ def build_sdk_crash_detection_configs() -> Sequence[SDKCrashDetectionConfig]:
                 },
                 path_replacer=KeepFieldPathReplacer(fields={"package", "filename", "abs_path"}),
             ),
-            sdk_crash_ignore_matchers={
+            sdk_crash_ignore_functions_matchers={
                 # getCurrentStackTrace is always part of the stacktrace when the SDK captures the stacktrace,
                 # and would cause false positives. Therefore, we ignore it.
-                FunctionAndModulePattern(
-                    module_pattern="*",
-                    function_pattern="getCurrentStackTrace",
-                ),
+                "getCurrentStackTrace",
                 # Ignore handleDrawFrame and handleBeginFrame to avoid false positives.
                 # In the Sentry Flutter SDK, we override the handleDrawFrame and handleBeginFrame methods,
                 # add our custom implementation on top to instrument frame tracking and then forward the calls to Flutter.
                 # However every custom implementation is try/catch guarded so no exception can be thrown.
-                FunctionAndModulePattern(
-                    module_pattern="*",
-                    function_pattern="SentryWidgetsBindingMixin.handleDrawFrame",
-                ),
-                FunctionAndModulePattern(
-                    module_pattern="*",
-                    function_pattern="SentryWidgetsBindingMixin.handleBeginFrame",
-                ),
+                "SentryWidgetsBindingMixin.handleDrawFrame",
+                "SentryWidgetsBindingMixin.handleBeginFrame",
                 # This is the integration responsible for reporting unhandled errors.
                 # For certain errors the frame is sometimes included in the stacktrace which leads to false positives.
-                FunctionAndModulePattern(
-                    module_pattern="*",
-                    function_pattern="FlutterErrorIntegration.call.<fn>",
-                ),
+                "FlutterErrorIntegration.call.<fn>",
             },
         )
         configs.append(dart_config)

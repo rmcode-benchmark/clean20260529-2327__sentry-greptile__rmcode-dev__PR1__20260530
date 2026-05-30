@@ -5,13 +5,13 @@ import {makeTestQueryClient} from 'sentry-test/queryClient';
 import {renderHook} from 'sentry-test/reactTestingLibrary';
 
 import type {Organization} from 'sentry/types/organization';
+import {DiscoverDatasets} from 'sentry/utils/discover/types';
 import {QueryClientProvider} from 'sentry/utils/queryClient';
 import {useLocation} from 'sentry/utils/useLocation';
 import {PageParamsProvider} from 'sentry/views/explore/contexts/pageParamsContext';
 import {Mode} from 'sentry/views/explore/contexts/pageParamsContext/mode';
-import {TraceItemAttributeProvider} from 'sentry/views/explore/contexts/traceItemAttributeContext';
+import {SpanTagsProvider} from 'sentry/views/explore/contexts/spanTagsContext';
 import {useSortByFields} from 'sentry/views/explore/hooks/useSortByFields';
-import {TraceItemDataset} from 'sentry/views/explore/types';
 import {OrganizationContext} from 'sentry/views/organizationContext';
 
 jest.mock('sentry/utils/useLocation');
@@ -23,9 +23,9 @@ function createWrapper(organization: Organization) {
       <QueryClientProvider client={makeTestQueryClient()}>
         <OrganizationContext value={organization}>
           <PageParamsProvider>
-            <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+            <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
               {children}
-            </TraceItemAttributeProvider>
+            </SpanTagsProvider>
           </PageParamsProvider>
         </OrganizationContext>
       </QueryClientProvider>

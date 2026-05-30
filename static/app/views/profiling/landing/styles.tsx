@@ -27,7 +27,7 @@ export const HeaderTitleLegend = styled(_HeaderTitleLegend)`
 
 export const Subtitle = styled('div')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   display: inline-block;
 `;
 
@@ -67,6 +67,6 @@ export const AccordionItem = styled('li')`
   gap: ${space(1)};
   border-top: 1px solid ${p => p.theme.border};
   padding: ${space(0.5)} ${space(2)};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   min-height: 35px;
 `;

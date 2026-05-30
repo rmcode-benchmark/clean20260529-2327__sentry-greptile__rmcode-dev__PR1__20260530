@@ -13,13 +13,11 @@ import {
 // eslint-disable-next-line no-restricted-imports
 import {InsightsLineChartWidget} from 'sentry/views/insights/common/components/insightsLineChartWidget';
 import {useReleaseSelection} from 'sentry/views/insights/common/queries/useReleases';
-import {useTopNSpanSeries} from 'sentry/views/insights/common/queries/useTopNDiscoverSeries';
+import {useTopNSpanMetricsSeries} from 'sentry/views/insights/common/queries/useTopNDiscoverSeries';
 import {appendReleaseFilters} from 'sentry/views/insights/common/utils/releaseComparison';
 import {COLD_START_TYPE} from 'sentry/views/insights/mobile/appStarts/components/startTypeSelector';
-import {Referrer} from 'sentry/views/insights/mobile/appStarts/referrers';
 import useCrossPlatformProject from 'sentry/views/insights/mobile/common/queries/useCrossPlatformProject';
-import type {SpanProperty} from 'sentry/views/insights/types';
-import {SpanFields} from 'sentry/views/insights/types';
+import {SpanMetricsField} from 'sentry/views/insights/types';
 
 const COLD_START_CONDITIONS = [
   'span.op:app.start.cold',
@@ -70,7 +68,7 @@ function StartDurationWidget({additionalFilters}: Props) {
   const {isProjectCrossPlatform, selectedPlatform} = useCrossPlatformProject();
 
   const startType =
-    decodeScalar(location.query[SpanFields.APP_START_TYPE]) ?? COLD_START_TYPE;
+    decodeScalar(location.query[SpanMetricsField.APP_START_TYPE]) ?? COLD_START_TYPE;
 
   const query = new MutableSearch([
     ...(startType === COLD_START_TYPE ? COLD_START_CONDITIONS : WARM_START_CONDITIONS),
@@ -83,32 +81,26 @@ function StartDurationWidget({additionalFilters}: Props) {
 
   const queryString = appendReleaseFilters(query, primaryRelease, secondaryRelease);
   const search = new MutableSearch(queryString);
-  const referrer = Referrer.MOBILE_APP_STARTS_DURATION_CHART;
-  const groupBy = SpanFields.RELEASE;
-  const yAxis: SpanProperty = 'avg(span.duration)';
 
   const {
     data,
     isPending: isSeriesLoading,
     error: seriesError,
-  } = useTopNSpanSeries(
+  } = useTopNSpanMetricsSeries(
     {
-      yAxis: [yAxis],
-      fields: [groupBy, 'avg(span.duration)'],
+      yAxis: ['avg(span.duration)'],
+      fields: ['release', 'avg(span.duration)'],
       topN: 2,
       search,
       enabled: !isReleasesLoading,
     },
-    referrer
+    'api.starfish.mobile-startup-series'
   );
 
   // Only transform the data is we know there's at least one release
-  const sortedSeries = data
-    .sort((releaseA, _releaseB) => (releaseA.seriesName === primaryRelease ? -1 : 1))
-    .map(serie => ({
-      ...serie,
-      seriesName: `${yAxis} ${serie.seriesName}`,
-    }));
+  const sortedSeries = data.sort((releaseA, _releaseB) =>
+    releaseA.seriesName === primaryRelease ? -1 : 1
+  );
 
   return (
     <InsightsLineChartWidget
@@ -118,10 +110,10 @@ function StartDurationWidget({additionalFilters}: Props) {
       series={sortedSeries}
       isLoading={isSeriesLoading}
       error={seriesError}
-      queryInfo={{search, groupBy: [groupBy], referrer}}
+      search={search}
       showReleaseAs="none"
       showLegend="always"
-      height={220}
+      height={'100%'}
     />
   );
 }

@@ -4,11 +4,9 @@ import waitingForEventImg from 'sentry-images/spot/waiting-for-event.svg';
 
 import {Button} from 'sentry/components/core/button';
 import {GuidedSteps} from 'sentry/components/guidedSteps/guidedSteps';
-import LoadingIndicator from 'sentry/components/loadingIndicator';
 import {OnboardingCodeSnippet} from 'sentry/components/onboarding/gettingStartedDoc/onboardingCodeSnippet';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
-import {useApiQuery} from 'sentry/utils/queryClient';
 import {decodeInteger} from 'sentry/utils/queryString';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
@@ -16,20 +14,6 @@ import {useNavigate} from 'sentry/utils/useNavigate';
 export default function EmptyState() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const {data: ipAddresses, isPending} = useApiQuery<string>(
-    [
-      '/tempest-ips/',
-      {
-        headers: {
-          Accept: 'text/html, text/plain, */*',
-        },
-      },
-    ],
-    {
-      staleTime: Infinity,
-    }
-  );
 
   return (
     <div>
@@ -73,13 +57,20 @@ export default function EmptyState() {
                 {t(
                   'Allow list our Outbound IP addresses as they will be the once used for making the requests using the provided credentials'
                 )}
-                {isPending ? (
-                  <LoadingIndicator size={16} />
-                ) : (
-                  <CodeSnippetWrapper>
-                    <OnboardingCodeSnippet>{ipAddresses || ''}</OnboardingCodeSnippet>
-                  </CodeSnippetWrapper>
-                )}
+                <CodeSnippetWrapper>
+                  <OnboardingCodeSnippet>
+                    {`
+35.184.238.160/32
+104.155.159.182/32
+104.155.149.19/32
+130.211.230.102/32
+34.141.31.19/32
+34.141.4.162/32
+35.234.78.236/32
+213.164.1.114
+                    `}
+                  </OnboardingCodeSnippet>
+                </CodeSnippetWrapper>
               </DescriptionWrapper>
 
               <GuidedSteps.StepButtons />
@@ -93,11 +84,11 @@ export default function EmptyState() {
               <DescriptionWrapper>
                 <p>
                   {t(
-                    'You can toggle "Attach Dumps" in which case Sentry will add the prosperodumps as an attachment to the issues.'
+                    'You can toggle “Attach Dumps” in which case Sentry will add the prosperodumps as an attachment to the issues.'
                   )}
                   <br />
                   {t(
-                    'You can toggle "Attach Screenshots" in which case Sentry will add the crash screenshot, if available, as an attachment to the issues. These screenshots are not PII stripped.'
+                    'You can toggle “Attach Screenshots” in which case Sentry will add the crash screenshot, if available, as an attachment to the issues. These screenshots are not PII stripped.'
                   )}
                 </p>
                 <p>
@@ -145,7 +136,7 @@ export default function EmptyState() {
 
 const Title = styled('div')`
   font-size: 26px;
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
 `;
 
 const Description = styled('div')``;
@@ -156,8 +147,8 @@ const HeaderWrapper = styled('div')`
 `;
 
 const BodyTitle = styled('div')`
-  font-size: ${p => p.theme.fontSize.xl};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
+  font-weight: ${p => p.theme.fontWeightBold};
   margin-bottom: ${space(1)};
 `;
 
@@ -176,7 +167,7 @@ const Image = styled('img')`
   height: 120px;
   overflow: hidden;
 
-  @media (max-width: ${p => p.theme.breakpoints.sm}) {
+  @media (max-width: ${p => p.theme.breakpoints.small}) {
     display: none;
   }
 `;
@@ -200,5 +191,5 @@ const DescriptionWrapper = styled('div')`
 `;
 
 const BoldText = styled('span')`
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
 `;

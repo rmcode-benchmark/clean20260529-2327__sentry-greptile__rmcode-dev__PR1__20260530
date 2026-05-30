@@ -1,3 +1,4 @@
+import useOrganization from 'sentry/utils/useOrganization';
 import usePageFilters from 'sentry/utils/usePageFilters';
 import {useReleaseStats} from 'sentry/utils/useReleaseStats';
 import type {LoadableChartWidgetProps} from 'sentry/views/insights/common/components/widgets/types';
@@ -5,6 +6,7 @@ import type {LoadableChartWidgetProps} from 'sentry/views/insights/common/compon
 type Params = Pick<LoadableChartWidgetProps, 'showReleaseAs'>;
 
 export function useReleaseBubbleProps(params?: Params) {
+  const organization = useOrganization();
   const pageFilters = usePageFilters();
 
   const {releases: releasesWithDate} = useReleaseStats(pageFilters.selection);
@@ -14,5 +16,7 @@ export function useReleaseBubbleProps(params?: Params) {
       version,
     })) ?? [];
 
-  return {releases, showReleaseAs: params?.showReleaseAs ?? 'bubble'} as const;
+  return organization.features.includes('release-bubbles-ui')
+    ? ({releases, showReleaseAs: params?.showReleaseAs ?? 'bubble'} as const)
+    : {};
 }

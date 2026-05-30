@@ -112,7 +112,7 @@ export enum FilterType {
 }
 
 /**
- * The type of wildcard based off of positions of asterisks in the token value.
+ * The type of wildcard operator based off of positions of asterisks in the token value.
  * These can be used to determine the type of wildcard operator used in the token value,
  * and include the following:
  *
@@ -120,7 +120,7 @@ export enum FilterType {
  * - `trailing` (starts with): The value is suffixed with `*` e.g. `value*`
  * - `surrounded` (contains): The value is prefixed and suffixed with `*` e.g. `*value*`
  */
-export enum WildcardPositions {
+export enum WildcardOperators {
   /**
    * The value is leads with `*`, e.g. `*value`, i.e. the user is searching for values
    * that end with `<value>`.
@@ -730,13 +730,13 @@ export class TokenConverter {
     const valueSet = new Set(value);
     const onlyAsterisks = valueSet.size === 1 && valueSet.has('*');
 
-    let wildcard: WildcardPositions | false = false;
+    let wildcard: WildcardOperators | false = false;
     if (!onlyAsterisks && value.startsWith('*') && value.endsWith('*')) {
-      wildcard = WildcardPositions.SURROUNDED;
+      wildcard = WildcardOperators.SURROUNDED;
     } else if (!onlyAsterisks && value.endsWith('*')) {
-      wildcard = WildcardPositions.TRAILING;
+      wildcard = WildcardOperators.TRAILING;
     } else if (!onlyAsterisks && value.startsWith('*')) {
-      wildcard = WildcardPositions.LEADING;
+      wildcard = WildcardOperators.LEADING;
     }
 
     return {

@@ -1,6 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
 import styled from '@emotion/styled';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import format from 'date-fns/format';
 
 import {DatePicker} from 'sentry/components/calendar';
@@ -204,7 +203,7 @@ const UtcPickerLabel = styled('label')`
   align-items: center;
   justify-content: flex-end;
   margin: 0;
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-weight: ${p => p.theme.fontWeightNormal};
   user-select: none;
   cursor: pointer;
   gap: ${space(1)};

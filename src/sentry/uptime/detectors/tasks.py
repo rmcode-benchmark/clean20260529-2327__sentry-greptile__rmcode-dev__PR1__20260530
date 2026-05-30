@@ -32,7 +32,7 @@ from sentry.uptime.subscriptions.subscriptions import (
     get_auto_monitored_detectors_for_project,
     is_url_auto_monitored_for_project,
 )
-from sentry.uptime.types import UptimeMonitorMode
+from sentry.uptime.types import ProjectUptimeSubscriptionMode
 from sentry.utils import metrics
 from sentry.utils.hashlib import md5_text
 from sentry.utils.locking import UnableToAcquireLock
@@ -121,7 +121,6 @@ def process_detection_bucket(bucket: str):
     queue="uptime",
     taskworker_config=TaskworkerConfig(
         namespace=uptime_tasks,
-        processing_deadline_duration=20,
     ),
 )
 def process_organization_url_ranking(organization_id: int):
@@ -265,7 +264,7 @@ def monitor_url_for_project(project: Project, url: str) -> ProjectUptimeSubscrip
         url=url,
         interval_seconds=ONBOARDING_SUBSCRIPTION_INTERVAL_SECONDS,
         timeout_ms=ONBOARDING_SUBSCRIPTION_TIMEOUT_MS,
-        mode=UptimeMonitorMode.AUTO_DETECTED_ONBOARDING,
+        mode=ProjectUptimeSubscriptionMode.AUTO_DETECTED_ONBOARDING,
     )
 
 

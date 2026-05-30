@@ -40,7 +40,7 @@ from sentry.taskworker.config import TaskworkerConfig
 from sentry.taskworker.namespaces import attachments_tasks
 from sentry.utils import metrics, redis
 from sentry.utils.db import atomic_transaction
-from sentry.utils.sdk import bind_organization_context
+from sentry.utils.sdk import Scope, bind_organization_context
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +60,6 @@ class AssembleTask:
     DIF = "project.dsym"  # Debug file upload
     RELEASE_BUNDLE = "organization.artifacts"  # Release file upload
     ARTIFACT_BUNDLE = "organization.artifact_bundle"  # Artifact bundle upload
-    PREPROD_ARTIFACT = "organization.preprod_artifact_bundle"  # Preprod artifact upload
-    PREPROD_ARTIFACT_SIZE_ANALYSIS = (
-        "organization.preprod_artifact_size_analysis"  # Preprod artifact size analysis upload
-    )
-    PREPROD_ARTIFACT_INSTALLABLE_APP = (
-        "organization.preprod_artifact_installable_app"  # Preprod artifact installable app upload
-    )
 
 
 class AssembleResult(NamedTuple):
@@ -235,7 +228,7 @@ def delete_assemble_status(task, scope, checksum):
     silo_mode=SiloMode.REGION,
     taskworker_config=TaskworkerConfig(
         namespace=attachments_tasks,
-        processing_deadline_duration=60 * 3,
+        processing_deadline_duration=30,
     ),
 )
 def assemble_dif(project_id, name, checksum, chunks, debug_id=None, **kwargs):
@@ -246,7 +239,7 @@ def assemble_dif(project_id, name, checksum, chunks, debug_id=None, **kwargs):
     from sentry.models.debugfile import BadDif, create_dif_from_id, detect_dif_from_path
     from sentry.models.project import Project
 
-    sentry_sdk.get_isolation_scope().set_tag("project", project_id)
+    Scope.get_isolation_scope().set_tag("project", project_id)
 
     delete_file = False
 
@@ -515,19 +508,10 @@ class ArtifactBundlePostAssembler:
 
         # In case there is not ArtifactBundle with a specific bundle_id, we just create it and return.
         if existing_artifact_bundle is None:
-            file = self.assemble_result.bundle
-
-            metrics.distribution(
-                "storage.put.size",
-                file.size,
-                tags={"usecase": "artifact-bundles", "compression": "none"},
-                unit="byte",
-            )
-
             artifact_bundle = ArtifactBundle.objects.create(
                 organization_id=self.organization.id,
                 bundle_id=bundle_id,
-                file=file,
+                file=self.assemble_result.bundle,
                 artifact_count=self.archive.artifact_count,
                 # By default, a bundle is not indexed.
                 indexing_state=ArtifactBundleIndexingState.NOT_INDEXED.value,

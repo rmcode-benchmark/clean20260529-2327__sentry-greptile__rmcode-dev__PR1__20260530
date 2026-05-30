@@ -114,7 +114,6 @@ def all_projects_with_flags() -> Generator[tuple[int, int]]:
     max_retries=0,
     taskworker_config=TaskworkerConfig(
         namespace=performance_tasks,
-        processing_deadline_duration=30,
     ),
 )
 def run_detection() -> None:
@@ -331,7 +330,6 @@ class FunctionRegressionDetector(RegressionDetector):
     max_retries=0,
     taskworker_config=TaskworkerConfig(
         namespace=performance_tasks,
-        processing_deadline_duration=30,
     ),
 )
 def detect_transaction_trends(
@@ -431,7 +429,6 @@ def _detect_transaction_change_points(
     max_retries=0,
     taskworker_config=TaskworkerConfig(
         namespace=profiling_tasks,
-        processing_deadline_duration=30,
     ),
 )
 def detect_function_trends(project_ids: list[int], start: str, *args, **kwargs) -> None:

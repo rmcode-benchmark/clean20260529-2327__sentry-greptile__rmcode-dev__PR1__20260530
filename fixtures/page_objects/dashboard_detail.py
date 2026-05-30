@@ -1,6 +1,3 @@
-from sentry.models.dashboard import Dashboard
-from sentry.models.organization import Organization
-
 from .base import BasePage
 
 EDIT_WIDGET_BUTTON = '[data-test-id="widget-edit"]'
@@ -11,11 +8,11 @@ WIDGET_TITLE_FIELD = 'input[aria-label="Widget title"]'
 
 
 class DashboardDetailPage(BasePage):
-    def __init__(self, browser, client, *, organization: Organization, dashboard: Dashboard):
+    def __init__(self, browser, client, **kwargs):
         super().__init__(browser)
         self.client = client
-        self.organization = organization
-        self.dashboard = dashboard
+        self.organization = kwargs.get("organization", None)
+        self.dashboard = kwargs.get("dashboard", None)
 
     def wait_until_loaded(self):
         self.browser.wait_until_not('[data-test-id="events-request-loading"]')

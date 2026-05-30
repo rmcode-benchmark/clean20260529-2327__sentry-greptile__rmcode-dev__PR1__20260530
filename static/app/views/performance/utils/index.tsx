@@ -11,7 +11,9 @@ import type {
 } from 'sentry/types/organization';
 import type {Project} from 'sentry/types/project';
 import type {ReleaseProject} from 'sentry/types/release';
+import {trackAnalytics} from 'sentry/utils/analytics';
 import toArray from 'sentry/utils/array/toArray';
+import {browserHistory} from 'sentry/utils/browserHistory';
 import type {EventData} from 'sentry/utils/discover/eventView';
 import EventView from 'sentry/utils/discover/eventView';
 import {TRACING_FIELDS} from 'sentry/utils/discover/fields';
@@ -100,7 +102,9 @@ const FRONTEND_PLATFORMS: string[] = frontend.filter(
     // Next, Remix and Sveltekit have both, frontend and backend transactions.
     !['javascript-nextjs', 'javascript-remix', 'javascript-sveltekit'].includes(platform)
 );
-const BACKEND_PLATFORMS: string[] = backend.filter(platform => platform !== 'native');
+const BACKEND_PLATFORMS: string[] = backend.filter(
+  platform => platform !== 'native' && platform !== 'nintendo-switch'
+);
 const MOBILE_PLATFORMS: string[] = [...mobile];
 
 export function platformToPerformanceType(
@@ -205,6 +209,26 @@ function getPerformanceTrendsUrl(
 
 export function getTransactionSearchQuery(location: Location, query = '') {
   return decodeScalar(location.query.query, query).trim();
+}
+
+export function handleTrendsClick({
+  location,
+  organization,
+  projectPlatforms,
+}: {
+  location: Location;
+  organization: Organization;
+  projectPlatforms: string;
+}) {
+  trackAnalytics('performance_views.change_view', {
+    organization,
+    view_name: 'TRENDS',
+    project_platforms: projectPlatforms,
+  });
+
+  const target = trendsTargetRoute({location, organization});
+
+  browserHistory.push(normalizeUrl(target));
 }
 
 export function trendsTargetRoute({

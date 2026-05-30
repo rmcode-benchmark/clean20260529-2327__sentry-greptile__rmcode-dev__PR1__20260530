@@ -162,7 +162,7 @@ const Measurements = styled('div')`
 `;
 
 const Container = styled('div')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   margin-bottom: ${space(4)};
 `;
 
@@ -196,7 +196,7 @@ const FireIconContainer = styled('span')<{size: IconSize}>`
 `;
 
 const Value = styled('span')<{failedThreshold: boolean}>`
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   ${p => p.failedThreshold && `color: ${p.theme.errorText};`}
 `;
 

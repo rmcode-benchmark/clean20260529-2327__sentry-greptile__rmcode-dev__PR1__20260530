@@ -192,7 +192,7 @@ const PartnerPlanHeading = styled('div')`
   padding: ${space(3)} 0;
 
   p {
-    font-size: ${p => p.theme.fontSize.lg};
+    font-size: ${p => p.theme.fontSizeLarge};
     margin: 0;
   }
 
@@ -238,7 +238,7 @@ const ImageHeader = styled('div')`
   background-position: top;
   height: 200px;
 
-  @media (max-width: ${p => p.theme.breakpoints.md}) {
+  @media (max-width: ${p => p.theme.breakpoints.medium}) {
     margin: -${space(4)} -${space(4)} 0 -${space(4)};
   }
 `;
@@ -249,7 +249,7 @@ const Bullets = styled('div')`
   grid-auto-rows: max-content;
   gap: ${space(1)} ${space(1.5)};
   align-items: center;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   margin-bottom: ${space(1)};
 `;
 
@@ -260,7 +260,7 @@ const PathHeading = styled('h5')`
 
 const SubHeading = styled('div')`
   font-weight: bold;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   color: ${p => p.theme.subText};
   text-transform: uppercase;
 `;

@@ -15,7 +15,7 @@ function ProcessingIcon({status}: Props) {
     case ImageStatus.FETCHING_FAILED: {
       return (
         <Tooltip
-          skipWrapper
+          containerDisplayMode="inline-flex"
           title={t('The debug information file for this image could not be downloaded')}
         >
           <IconWarning color="warningText" size="xs" />
@@ -25,7 +25,7 @@ function ProcessingIcon({status}: Props) {
     case ImageStatus.MALFORMED: {
       return (
         <Tooltip
-          skipWrapper
+          containerDisplayMode="inline-flex"
           title={t('The debug information file for this image failed to process')}
         >
           <IconWarning color="warningText" size="xs" />
@@ -35,7 +35,7 @@ function ProcessingIcon({status}: Props) {
     case ImageStatus.MISSING: {
       return (
         <Tooltip
-          skipWrapper
+          containerDisplayMode="inline-flex"
           title={t('No debug information could be found in any of the specified sources')}
         >
           <IconWarning color="warningText" size="xs" />
@@ -45,7 +45,7 @@ function ProcessingIcon({status}: Props) {
     case ImageStatus.FOUND: {
       return (
         <Tooltip
-          skipWrapper
+          containerDisplayMode="inline-flex"
           title={t(
             'Debug information for this image was found and successfully processed'
           )}
@@ -57,7 +57,7 @@ function ProcessingIcon({status}: Props) {
     case ImageStatus.UNUSED: {
       return (
         <Tooltip
-          skipWrapper
+          containerDisplayMode="inline-flex"
           title={t('The image was not required for processing the stack trace')}
         >
           <IconInfo color="subText" size="xs" />
@@ -67,29 +67,14 @@ function ProcessingIcon({status}: Props) {
     case ImageStatus.OTHER: {
       return (
         <Tooltip
-          skipWrapper
+          containerDisplayMode="inline-flex"
           title={t('An internal error occurred while handling this image')}
         >
           <IconWarning color="warningText" size="xs" />
         </Tooltip>
       );
     }
-    case ImageStatus.UNSUPPORTED: {
-      // UNSUPPORTED status occurs in two scenarios:
-      // 1. Relay filters out debug images with completely unknown/unrecognized types during event normalization
-      // 2. Symbolicator finds a debug file but it's incompatible with the event type
-      //    (e.g., trying to symbolicate .NET events with Windows PDB files)
-      return (
-        <Tooltip
-          skipWrapper
-          title={t(
-            'The debug information file format is not supported or compatible with this event type'
-          )}
-        >
-          <IconWarning color="warningText" size="xs" />
-        </Tooltip>
-      );
-    }
+
     default: {
       Sentry.withScope(scope => {
         scope.setLevel('warning');

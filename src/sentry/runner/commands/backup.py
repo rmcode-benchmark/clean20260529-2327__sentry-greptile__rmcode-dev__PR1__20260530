@@ -203,7 +203,11 @@ def parse_filter_arg(filter_arg: str | None) -> set[str] | None:
     if filter_arg is None:
         return None
 
-    return {arg.strip() for arg in filter_arg.split(",") if not arg.isspace()}
+    filter_by = None
+    if filter_arg:
+        filter_by = {arg.strip() for arg in filter_arg.split(",") if not arg.isspace()}
+
+    return filter_by
 
 
 def get_decryptor_from_flags(
@@ -924,7 +928,7 @@ def export() -> None:
     type=str,
     required=False,
     help="An optional comma-separated list of users to include. "
-    "If this option is not set, all encountered users are exported.",
+    "If this option is not set, all encountered users are imported.",
 )
 @click.option(
     "--filter-usernames-file",

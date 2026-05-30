@@ -13,7 +13,6 @@ import {GroupStatus} from 'sentry/types/group';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import type {FeedbackIssue} from 'sentry/utils/feedback/types';
 import useOrganization from 'sentry/utils/useOrganization';
-import useProjectFromId from 'sentry/utils/useProjectFromId';
 
 interface Props {
   feedbackItem: FeedbackIssue;
@@ -43,11 +42,8 @@ export default function useFeedbackActions({feedbackItem}: Props) {
     organization,
     projectIds: feedbackItem.project ? [feedbackItem.project.id] : [],
   });
-  const project = useProjectFromId({project_id: feedbackItem.project?.id});
-  const enableMarkAsRead = project?.isMember;
-
   const onDelete = useDeleteFeedback([feedbackItem.id], projectId);
-  const enableDelete = organization.access.includes('event:admin');
+  const disableDelete = !organization.access.includes('event:admin');
 
   const isResolved = feedbackItem.status === GroupStatus.RESOLVED;
   const onResolveClick = useCallback(() => {
@@ -78,14 +74,13 @@ export default function useFeedbackActions({feedbackItem}: Props) {
   }, [hasSeen, markAsRead, mutationOptions]);
 
   return {
-    enableDelete,
+    disableDelete,
     onDelete,
     isResolved,
     onResolveClick,
     isSpam,
     onSpamClick,
     hasSeen,
-    enableMarkAsRead,
     onMarkAsReadClick,
   };
 }

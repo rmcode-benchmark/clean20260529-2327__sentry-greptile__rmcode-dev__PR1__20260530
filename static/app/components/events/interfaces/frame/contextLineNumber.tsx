@@ -48,7 +48,7 @@ const Wrapper = styled('div')`
   width: 58px;
   display: inline-block;
   color: ${p => p.theme.textColor};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   margin-right: ${space(1)};
 
   .line-number {

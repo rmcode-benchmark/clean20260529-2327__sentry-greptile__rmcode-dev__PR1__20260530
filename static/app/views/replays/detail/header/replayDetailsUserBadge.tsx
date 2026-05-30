@@ -24,16 +24,14 @@ export default function ReplayDetailsUserBadge({readerResult}: Props) {
           <Layout.Title>
             {replayRecord.user.display_name || t('Anonymous User')}
           </Layout.Title>
-          {replayRecord.started_at ? (
-            <TimeContainer>
-              <IconCalendar color="gray300" size="xs" />
-              <TimeSince
-                date={replayRecord.started_at}
-                isTooltipHoverable
-                unitStyle="regular"
-              />
-            </TimeContainer>
-          ) : null}
+          <TimeContainer>
+            <IconCalendar color="gray300" size="xs" />
+            <TimeSince
+              date={replayRecord.started_at}
+              isTooltipHoverable
+              unitStyle="regular"
+            />
+          </TimeContainer>
         </DisplayHeader>
       }
       user={{
@@ -69,7 +67,7 @@ const TimeContainer = styled('div')`
   gap: ${space(1)};
   align-items: center;
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   line-height: 1.4;
 `;
 

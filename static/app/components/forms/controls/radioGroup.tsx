@@ -31,7 +31,6 @@ interface BaseRadioGroupProps<C extends string> {
    * Switch the radio items to flow left to right, instead of vertically.
    */
   orientInline?: boolean;
-  tooltipIsHoverable?: boolean;
   tooltipPosition?: PopperProps<any>['placement'];
 }
 
@@ -60,7 +59,6 @@ function RadioGroup<C extends string>({
   onChange,
   orientInline,
   tooltipPosition,
-  tooltipIsHoverable,
   ...props
 }: RadioGroupProps<C>) {
   return (
@@ -86,7 +84,6 @@ function RadioGroup<C extends string>({
             disabled={!disabledChoiceReason}
             title={disabledChoiceReason}
             position={tooltipPosition}
-            isHoverable={tooltipIsHoverable}
           >
             <RadioLineItem index={index} aria-checked={value === id} disabled={disabled}>
               <Radio
@@ -126,12 +123,12 @@ export const RadioLineItem = styled('label', {shouldForwardProp})<{
   disabled?: boolean;
 }>`
   display: grid;
-  gap: 0 ${space(0.75)};
+  gap: 0.25em 0.5em;
   grid-template-columns: max-content auto;
   align-items: center;
   cursor: ${p => (p.disabled ? 'default' : 'pointer')};
   outline: none;
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-weight: ${p => p.theme.fontWeightNormal};
   margin: 0;
 `;
 

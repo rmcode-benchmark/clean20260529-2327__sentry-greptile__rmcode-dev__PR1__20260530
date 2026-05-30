@@ -5,7 +5,6 @@ import {Observer} from 'mobx-react';
 
 import {Alert} from 'sentry/components/core/alert';
 import {AlertLink} from 'sentry/components/core/alert/alertLink';
-import {ExternalLink} from 'sentry/components/core/link';
 import {FieldWrapper} from 'sentry/components/forms/fieldGroup/fieldWrapper';
 import NumberField from 'sentry/components/forms/fields/numberField';
 import SelectField from 'sentry/components/forms/fields/selectField';
@@ -15,6 +14,7 @@ import TextField from 'sentry/components/forms/fields/textField';
 import type {FormProps} from 'sentry/components/forms/form';
 import Form from 'sentry/components/forms/form';
 import FormModel from 'sentry/components/forms/model';
+import ExternalLink from 'sentry/components/links/externalLink';
 import List from 'sentry/components/list';
 import ListItem from 'sentry/components/list/listItem';
 import Panel from 'sentry/components/panels/panel';
@@ -257,16 +257,6 @@ function MonitorForm({
       submitLabel={submitLabel}
     >
       <StyledList symbol="colored-numeric">
-        {monitor?.isUpserting && (
-          <Alert.Container>
-            <Alert type="warning">
-              {t(
-                'This monitor is managed in code and updates automatically with each check-in. Changes made here may be overwritten!'
-              )}
-            </Alert>
-          </Alert.Container>
-        )}
-
         <StyledListItem>{t('Add a name and project')}</StyledListItem>
         <ListItemSubText>{t('The name will show up in notifications.')}</ListItemSubText>
         <InputGroup noPadding>
@@ -321,7 +311,7 @@ function MonitorForm({
         </ListItemSubText>
         <InputGroup noPadding>
           {monitor !== undefined && (
-            <Alert type="info" showIcon={false}>
+            <Alert type="info">
               {t(
                 'Any changes you make to the execution schedule will only be applied after the next expected check-in.'
               )}
@@ -571,13 +561,13 @@ const StyledList = styled(List)`
 `;
 
 const StyledListItem = styled(ListItem)`
-  font-size: ${p => p.theme.fontSize.xl};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
+  font-weight: ${p => p.theme.fontWeightBold};
   line-height: 1.3;
 `;
 
 const LabelText = styled(Text)`
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
   color: ${p => p.theme.subText};
 `;
 
@@ -607,8 +597,8 @@ const MultiColumnInput = styled('div')<{columns?: string}>`
 `;
 
 const CronstrueText = styled(LabelText)`
-  font-weight: ${p => p.theme.fontWeight.normal};
-  font-size: ${p => p.theme.fontSize.xs};
+  font-weight: ${p => p.theme.fontWeightNormal};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
   font-family: ${p => p.theme.text.familyMono};
   grid-column: auto / span 2;
 `;

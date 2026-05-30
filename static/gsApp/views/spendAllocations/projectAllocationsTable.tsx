@@ -133,7 +133,7 @@ const Table = styled('table')`
 
 const HeaderCell = styled('th')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   font-weight: 600;
   text-transform: uppercase;
   border-radius: ${p => p.theme.borderRadius} ${p => p.theme.borderRadius} 0 0;

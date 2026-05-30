@@ -364,7 +364,7 @@ const OverviewHeading = styled('div')`
   display: grid;
   grid-template-rows: repeat(2, auto);
   gap: ${space(1.5)};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   align-items: center;
   text-align: center;
   justify-items: center;
@@ -392,12 +392,12 @@ const BillingInterval = styled('div')`
 `;
 
 const OnDemandAdditionalCost = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const DetailItems = styled(PanelBody)`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
 `;
 
 const DetailItem = styled('div')`
@@ -411,7 +411,7 @@ const DetailItem = styled('div')`
 
 const DetailTitle = styled('div')<{noBottomMargin?: boolean}>`
   text-transform: uppercase;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   font-weight: 600;
   color: ${p => p.theme.subText};
   margin-top: ${space(0.25)};
@@ -460,21 +460,21 @@ const DiscountWrapper = styled('div')`
   display: flex;
   align-items: center;
   gap: ${space(0.5)};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
 `;
 
 const DurationText = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 const ProminantPlanName = styled('span')`
   font-weight: 500;
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   color: ${p => p.theme.gray500};
 `;
 
 const ChurnPromoText = styled('span')`
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   color: ${p => p.theme.subText};
   font-weight: bold;
 `;

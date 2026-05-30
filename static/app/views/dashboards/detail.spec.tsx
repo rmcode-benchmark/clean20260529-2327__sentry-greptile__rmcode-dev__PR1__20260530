@@ -2243,7 +2243,7 @@ describe('Dashboards > Detail', function () {
           router,
 
           organization: {
-            features: initialData.organization.features,
+            features: ['dashboards-favourite', ...initialData.organization.features],
           },
 
           deprecatedRouterMocks: true,
@@ -2277,7 +2277,7 @@ describe('Dashboards > Detail', function () {
           router,
 
           organization: {
-            features: initialData.organization.features,
+            features: ['dashboards-favourite', ...initialData.organization.features],
           },
 
           deprecatedRouterMocks: true,
@@ -2317,7 +2317,7 @@ describe('Dashboards > Detail', function () {
           router,
 
           organization: {
-            features: initialData.organization.features,
+            features: ['dashboards-favourite', ...initialData.organization.features],
           },
 
           deprecatedRouterMocks: true,

@@ -44,18 +44,13 @@ function addFingerprintInfo(data: VariantData, variant: EventGroupVariant) {
     ]);
   }
   if ('values' in variant) {
-    data.push([
-      t('Fingerprint values'),
-      <TextWithQuestionTooltip key="fingerprint-values">
-        {variant.values?.join(', ') || ''}
-      </TextWithQuestionTooltip>,
-    ]);
+    data.push([t('Fingerprint values'), variant.values]);
   }
   if ('client_values' in variant) {
     data.push([
       t('Client fingerprint values'),
       <TextWithQuestionTooltip key="type">
-        {variant.client_values?.join(', ') || ''}
+        {variant.client_values}
         {'matched_rule' in variant && ( // Only display override tooltip if overriding actually happened
           <QuestionTooltip
             size="xs"
@@ -105,19 +100,68 @@ function GroupingVariant({event, showGroupingConfig, variant}: GroupingVariantPr
     switch (variant.type) {
       case EventGroupVariantType.COMPONENT:
         component = variant.component;
-
+        data.push([
+          t('Type'),
+          <TextWithQuestionTooltip key="type">
+            {variant.type}
+            <QuestionTooltip
+              size="xs"
+              position="top"
+              title={t(
+                'Uses a complex grouping algorithm taking event data into account'
+              )}
+            />
+          </TextWithQuestionTooltip>,
+        ]);
         if (showGroupingConfig && variant.config?.id) {
           data.push([t('Grouping Config'), variant.config.id]);
         }
         break;
       case EventGroupVariantType.CUSTOM_FINGERPRINT:
+        data.push([
+          t('Type'),
+          <TextWithQuestionTooltip key="type">
+            {variant.type}
+            <QuestionTooltip
+              size="xs"
+              position="top"
+              title={t('Overrides the default grouping by a custom fingerprinting rule')}
+            />
+          </TextWithQuestionTooltip>,
+        ]);
         addFingerprintInfo(data, variant);
         break;
       case EventGroupVariantType.BUILT_IN_FINGERPRINT:
+        data.push([
+          t('Type'),
+          <TextWithQuestionTooltip key="type">
+            {variant.type}
+            <QuestionTooltip
+              size="xs"
+              position="top"
+              title={t(
+                'Overrides the default grouping by a Sentry defined fingerprinting rule'
+              )}
+            />
+          </TextWithQuestionTooltip>,
+        ]);
         addFingerprintInfo(data, variant);
         break;
       case EventGroupVariantType.SALTED_COMPONENT:
         component = variant.component;
+        data.push([
+          t('Type'),
+          <TextWithQuestionTooltip key="type">
+            {variant.type}
+            <QuestionTooltip
+              size="xs"
+              position="top"
+              title={t(
+                'Uses a complex grouping algorithm taking event data and a fingerprint into account'
+              )}
+            />
+          </TextWithQuestionTooltip>,
+        ]);
         addFingerprintInfo(data, variant);
         if (showGroupingConfig && variant.config?.id) {
           data.push([t('Grouping Config'), variant.config.id]);
@@ -129,6 +173,19 @@ function GroupingVariant({event, showGroupingConfig, variant}: GroupingVariantPr
             .find((c): c is EntrySpans => c.type === 'spans')
             ?.data?.map((span: RawSpanType) => [span.span_id, span.hash]) ?? []
         );
+        data.push([
+          t('Type'),
+          <TextWithQuestionTooltip key="type">
+            {variant.type}
+            <QuestionTooltip
+              size="xs"
+              position="top"
+              title={t(
+                'Uses the evidence from performance issue detection to generate a fingerprint.'
+              )}
+            />
+          </TextWithQuestionTooltip>,
+        ]);
 
         data.push(['Performance Issue Type', variant.key]);
         data.push(['Span Operation', variant.evidence.op]);
@@ -240,13 +297,13 @@ const Header = styled('div')`
   align-items: center;
   justify-content: space-between;
   margin-bottom: ${space(2)};
-  @media (max-width: ${p => p.theme.breakpoints.sm}) {
+  @media (max-width: ${p => p.theme.breakpoints.small}) {
     display: block;
   }
 `;
 
 const VariantTitle = styled('h5')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   margin: 0;
   display: flex;
   align-items: center;
@@ -274,7 +331,7 @@ const TextWithQuestionTooltip = styled('div')`
 `;
 
 const Hash = styled('span')`
-  @media (max-width: ${p => p.theme.breakpoints.sm}) {
+  @media (max-width: ${p => p.theme.breakpoints.small}) {
     ${p => p.theme.overflowEllipsis};
     width: 210px;
   }

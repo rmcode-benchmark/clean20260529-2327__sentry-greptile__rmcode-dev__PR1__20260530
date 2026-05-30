@@ -75,7 +75,6 @@ def get_member_totals(
         Team.objects.filter(
             id__in=[t.pk for t in team_list],
             organizationmember__invite_status=InviteStatus.APPROVED.value,
-            organizationmember__user_is_active=True,
         )
         .annotate(member_count=Count("organizationmemberteam"))
         .values("id", "member_count")
@@ -356,6 +355,7 @@ class OrganizationTeamSCIMSerializerResponse(OrganizationTeamSCIMSerializerRequi
 
 @dataclasses.dataclass
 class TeamMembership:
+    user_id: int
     user_email: str
     member_id: int
     team_ids: list[int]
@@ -368,15 +368,14 @@ def get_team_memberships(team_ids: list[int]) -> list[TeamMembership]:
             "organizationmember"
         )
     ):
-        membership = members.setdefault(
-            omt.organizationmember_id,
-            TeamMembership(
+        if omt.organizationmember_id not in members:
+            members[omt.organizationmember_id] = TeamMembership(
+                user_id=omt.organizationmember.user_id,
                 user_email=omt.organizationmember.get_email(),
                 member_id=omt.organizationmember_id,
                 team_ids=[],
-            ),
-        )
-        membership.team_ids.append(omt.team_id)
+            )
+        members[omt.organizationmember_id].team_ids.append(omt.team_id)
 
     return list(members.values())
 

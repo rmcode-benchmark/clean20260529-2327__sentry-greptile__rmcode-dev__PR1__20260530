@@ -121,7 +121,7 @@ const UpsellLabelWrap = styled('div')`
 `;
 
 const UpsellMessage = styled('p')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
   margin-bottom: 0;
 `;

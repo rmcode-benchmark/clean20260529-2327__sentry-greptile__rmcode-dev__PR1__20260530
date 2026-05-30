@@ -12,7 +12,7 @@ class NotificationSettingProvider(NotificationSettingBase):
     provider = models.CharField(max_length=32, null=False)
 
     class Meta:
-        app_label = "notifications"
+        app_label = "sentry"
         db_table = "sentry_notificationsettingprovider"
         unique_together = (
             (

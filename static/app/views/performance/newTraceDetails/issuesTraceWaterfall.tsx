@@ -11,10 +11,8 @@ import styled from '@emotion/styled';
 import * as Sentry from '@sentry/react';
 
 import {getProblemSpansForSpanTree} from 'sentry/components/events/interfaces/performance/utils';
-import {getRelativeDate} from 'sentry/components/timeSince';
 import type {Event} from 'sentry/types/event';
 import type {Project} from 'sentry/types/project';
-import {defined} from 'sentry/utils';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import useOrganization from 'sentry/utils/useOrganization';
 import useProjects from 'sentry/utils/useProjects';
@@ -52,7 +50,7 @@ import {useTraceTimelineChangeSync} from './useTraceTimelineChangeSync';
 const noopTraceSearch = () => {};
 
 interface IssuesTraceWaterfallProps
-  extends Omit<TraceWaterfallProps, 'tree' | 'traceWaterfallScrollHandlers' | 'meta'> {
+  extends Omit<TraceWaterfallProps, 'tree' | 'traceWaterfallScrollHandlers'> {
   event: Event;
   tree: IssuesTraceTree;
 }
@@ -132,19 +130,13 @@ export function IssuesTraceWaterfall(props: IssuesTraceWaterfallProps) {
   // that is when the trace tree data and any data that the trace depends on is loaded,
   // but the trace is not yet rendered in the view.
   const onTraceLoad = useCallback(() => {
-    const traceTimestamp = props.tree.root.children[0]?.space?.[0];
-    const traceAge = defined(traceTimestamp)
-      ? getRelativeDate(traceTimestamp, 'ago')
-      : 'unknown';
-
     if (!isLoadingSubscriptionDetails) {
       traceAnalytics.trackTraceShape(
         props.tree,
         projectsRef.current,
         props.organization,
         hasExceededPerformanceUsageLimit,
-        'issue_details',
-        traceAge
+        'issue_details'
       );
     }
 
@@ -212,7 +204,7 @@ export function IssuesTraceWaterfall(props: IssuesTraceWaterfallProps) {
     // This is because the error node as standalone is the most specific one, otherwise we look for the span that
     // the error may have been attributed to, otherwise we look at the transaction.
     const node =
-      nodes?.find(n => isTraceErrorNode(n) || isEAPErrorNode(n)) ||
+      nodes?.find(n => isTraceErrorNode(n)) ||
       nodes?.find(n => isSpanNode(n) || isNonTransactionEAPSpanNode(n)) ||
       nodes?.find(n => isTransactionNode(n) || isEAPTransactionNode(n));
 
@@ -349,6 +341,7 @@ export function IssuesTraceWaterfall(props: IssuesTraceWaterfallProps) {
         organization={organization}
       />
       <IssuesTraceGrid
+        minHeight={traceState.preferences.drawer.sizes['trace grid height']}
         layout={traceState.preferences.layout}
         rowCount={
           props.tree.type === 'trace' && onLoadScrollStatus === 'success'
@@ -359,6 +352,7 @@ export function IssuesTraceWaterfall(props: IssuesTraceWaterfallProps) {
         <IssuesTraceContainer ref={containerRef}>
           <IssuesPointerDisabled>
             <Trace
+              metaQueryResults={props.meta}
               trace={props.tree}
               rerender={rerender}
               trace_id={props.traceSlug}

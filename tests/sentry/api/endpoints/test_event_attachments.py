@@ -1,4 +1,7 @@
+from io import BytesIO
+
 from sentry.models.eventattachment import EventAttachment
+from sentry.models.files.file import File
 from sentry.testutils.cases import APITestCase
 from sentry.testutils.helpers.datetime import before_now
 from sentry.testutils.skips import requires_snuba
@@ -18,15 +21,14 @@ class EventAttachmentsTest(APITestCase):
             data={"fingerprint": ["group1"], "timestamp": min_ago}, project_id=self.project.id
         )
 
+        file1 = File.objects.create(name="hello.png", type="event.attachment")
+        file1.putfile(BytesIO(b"File contents here"))
         attachment1 = EventAttachment.objects.create(
             project_id=event1.project_id,
             event_id=event1.event_id,
             type="event.attachment",
-            name="hello.png",
-            content_type="image/png",
-            size=18,
-            sha1="d3f299af02d6abbe92dd8368bab781824a9702ed",
-            blob_path=":File contents here",
+            name=file1.name,
+            file_id=file1.id,
         )
 
         attachment2 = EventAttachment.objects.create(
@@ -37,6 +39,7 @@ class EventAttachmentsTest(APITestCase):
             content_type="image/png",
             size=1234,
             sha1="1234",
+            # NOTE: we are not actually attaching the `file_id` here
         )
 
         path = f"/api/0/projects/{event1.project.organization.slug}/{event1.project.slug}/events/{event1.event_id}/attachments/"
@@ -79,21 +82,26 @@ class EventAttachmentsTest(APITestCase):
             data={"fingerprint": ["group1"], "timestamp": min_ago}, project_id=self.project.id
         )
 
+        file = File.objects.create(name="screenshot.png", type="image/png")
         EventAttachment.objects.create(
             event_id=event1.event_id,
             project_id=event1.project_id,
-            name="screenshot.png",
-            content_type="image/png",
+            file_id=file.id,
+            name=file.name,
         )
+        file = File.objects.create(name="crash_screenshot.png")
         EventAttachment.objects.create(
             event_id=event1.event_id,
             project_id=event1.project_id,
-            name="crash_screenshot.png",
+            file_id=file.id,
+            name=file.name,
         )
+        file = File.objects.create(name="foo.png")
         EventAttachment.objects.create(
             event_id=event1.event_id,
             project_id=event1.project_id,
-            name="foo.png",
+            file_id=file.id,
+            name=file.name,
         )
 
         path = f"/api/0/projects/{event1.project.organization.slug}/{event1.project.slug}/events/{event1.event_id}/attachments/"

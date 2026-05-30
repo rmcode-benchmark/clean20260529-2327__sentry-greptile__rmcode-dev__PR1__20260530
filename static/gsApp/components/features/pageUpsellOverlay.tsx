@@ -66,11 +66,11 @@ function PageUpsellOverlay({
         <Fragment>
           <Header>{name}</Header>
           <Body>{description}</Body>
-          <Body css={theme => `font-size: ${theme.fontSize.md}`}>
+          <Body css={theme => `font-size: ${theme.fontSizeMedium}`}>
             {requiredPlanContents}
           </Body>
           <Body>
-            <StyledButtonBar>
+            <StyledButtonBar gap={1}>
               {subscription?.canSelfServe && (
                 <UpsellProvider
                   source={source}

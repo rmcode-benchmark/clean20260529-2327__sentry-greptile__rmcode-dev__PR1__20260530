@@ -29,16 +29,7 @@ export default function useLoadReplayReader({
 }: Props): ReplayReaderResult {
   const replayId = parseReplayId(replaySlug);
 
-  const {
-    attachments,
-    errors,
-    feedbackEvents,
-    replayRecord,
-    status,
-    isError,
-    isPending,
-    ...replayData
-  } = useReplayData({
+  const {attachments, errors, replayRecord, fetching, ...replayData} = useReplayData({
     orgSlug,
     replayId,
   });
@@ -64,39 +55,27 @@ export default function useLoadReplayReader({
     );
   }, [clipWindow, firstMatchingError]);
 
-  const replay = useMemo(() => {
-    return replayRecord?.is_archived
-      ? null
-      : ReplayReader.factory({
-          attachments,
-          clipWindow: memoizedClipWindow,
-          errors,
-          feedbackEvents,
-          fetching: isPending,
-          replayRecord,
-          eventTimestampMs,
-        });
-  }, [
-    attachments,
-    memoizedClipWindow,
-    errors,
-    feedbackEvents,
-    isPending,
-    replayRecord,
-    eventTimestampMs,
-  ]);
+  const replay = useMemo(
+    () =>
+      ReplayReader.factory({
+        attachments,
+        clipWindow: memoizedClipWindow,
+        errors,
+        fetching,
+        replayRecord,
+        eventTimestampMs,
+      }),
+    [attachments, memoizedClipWindow, errors, fetching, replayRecord, eventTimestampMs]
+  );
 
   return {
     ...replayData,
     attachments,
     errors,
-    feedbackEvents,
-    isError,
-    isPending,
+    fetching,
     replay,
     replayId,
     replayRecord,
-    status,
   };
 }
 

@@ -4,14 +4,12 @@ from django.db import IntegrityError
 
 from sentry import audit_log
 from sentry.integrations.models.integration_feature import IntegrationFeature, IntegrationTypes
-from sentry.integrations.types import EventLifecycleOutcome
 from sentry.models.apiapplication import ApiApplication
 from sentry.models.auditlogentry import AuditLogEntry
 from sentry.sentry_apps.logic import SentryAppCreator
 from sentry.sentry_apps.models.sentry_app import SentryApp
 from sentry.sentry_apps.models.sentry_app_component import SentryAppComponent
 from sentry.sentry_apps.models.sentry_app_installation import SentryAppInstallation
-from sentry.testutils.asserts import assert_count_of_metric, assert_success_metric
 from sentry.testutils.cases import TestCase
 from sentry.testutils.silo import control_silo_test
 from sentry.users.models.user import User
@@ -57,8 +55,7 @@ class TestCreator(TestCase):
 
         assert ApiApplication.objects.get(owner=proxy)
 
-    @patch("sentry.integrations.utils.metrics.EventLifecycle.record_event")
-    def test_creates_sentry_app(self, mock_record):
+    def test_creates_sentry_app(self):
         self.creator.run(user=self.user)
 
         proxy = User.objects.get(username__contains="nulldb")
@@ -73,17 +70,6 @@ class TestCreator(TestCase):
 
         assert sentry_app.creator_user == self.user
         assert sentry_app.creator_label == "foo@bar.com"
-
-        # SLO assertions
-        assert_success_metric(mock_record=mock_record)
-
-        # CREATE (success)
-        assert_count_of_metric(
-            mock_record=mock_record, outcome=EventLifecycleOutcome.STARTED, outcome_count=1
-        )
-        assert_count_of_metric(
-            mock_record=mock_record, outcome=EventLifecycleOutcome.SUCCESS, outcome_count=1
-        )
 
     def test_creator_label_no_email(self):
         self.user.email = ""

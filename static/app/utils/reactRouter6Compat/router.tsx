@@ -78,7 +78,7 @@ function Redirect({to, ...rest}: RedirectProps) {
   const params = useParams();
   const routes = useRoutes();
 
-  // Capture sentry span for this redirect. This will help us understand if we
+  // Capture sentry error for this redirect. This will help us understand if we
   // have redirects that are unused or used too much.
   useEffect(() => {
     const routePath = routes
@@ -86,16 +86,10 @@ function Redirect({to, ...rest}: RedirectProps) {
       .filter(path => path !== '')
       .join('/');
 
-    Sentry.startSpan(
-      {
-        name: 'Redirect route used',
-        op: 'navigation.redirect',
-        attributes: {routePath},
-      },
-      () => {
-        // End span automatically
-      }
-    );
+    Sentry.captureMessage('Redirect route used', {
+      level: 'info',
+      tags: {routePath},
+    });
   }, [routes]);
 
   return <Navigate to={replaceRouterParams(to, params)} {...rest} />;

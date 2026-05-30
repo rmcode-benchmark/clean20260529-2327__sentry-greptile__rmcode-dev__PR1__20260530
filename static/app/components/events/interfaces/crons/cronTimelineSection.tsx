@@ -73,7 +73,7 @@ export function CronTimelineSection({event, organization, project}: Props) {
     (new Date(event.dateReceived).valueOf() - start.valueOf()) / msPerPixel;
 
   const actions = (
-    <ButtonBar>
+    <ButtonBar gap={1}>
       <LinkButton
         size="xs"
         icon={<IconOpen />}
@@ -107,8 +107,6 @@ export function CronTimelineSection({event, organization, project}: Props) {
           additionalUi={
             !isPending && <CronServiceIncidents timeWindowConfig={timeWindowConfig} />
           }
-          cursorOverlayAnchor="top"
-          cursorOverlayAnchorOffset={10}
         />
         {monitorStats && !isPending ? (
           <Fragment>
@@ -172,7 +170,7 @@ const EventLineLabel = styled(Overlay, {
   width: max-content;
   padding: ${space(0.75)} ${space(1)};
   color: ${p => p.theme.textColor};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   position: absolute;
   bottom: ${space(1)};
   left: clamp(0px, ${p => p.left}px, calc(${p => p.timelineWidth}px - 50px));

@@ -1,14 +1,15 @@
 import {Fragment} from 'react';
 
 import Confirm from 'sentry/components/confirm';
+import {Flex} from 'sentry/components/container/flex';
 import {Tag} from 'sentry/components/core/badge/tag';
 import {Button} from 'sentry/components/core/button';
-import {Flex} from 'sentry/components/core/layout';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import TimeSince from 'sentry/components/timeSince';
 import {IconSubtract} from 'sentry/icons';
 import {t} from 'sentry/locale';
+import {space} from 'sentry/styles/space';
 
 import {MessageType, type TempestCredentials} from './types';
 
@@ -23,7 +24,7 @@ export function CredentialRow({
 }) {
   return (
     <Fragment>
-      <Flex align="center" gap="md">
+      <Flex align="center" gap={space(1)}>
         {credential.clientId}
       </Flex>
 

@@ -18,26 +18,11 @@ describe('apple-ios onboarding docs', function () {
     expect(screen.getByRole('heading', {name: 'Verify'})).toBeInTheDocument();
   });
 
-  it('renders swift onboarding docs correctly', async function () {
-    renderWithOnboardingLayout(docs, {
-      selectedProducts: [ProductSolution.ERROR_MONITORING],
-      selectedOptions: {
-        installationMode: InstallationMode.MANUAL_SWIFT,
-      },
-    });
-
-    expect(
-      await screen.findAllByText(
-        textWithMarkupMatcher(/throw MyCustomError\.myFirstIssue/)
-      )
-    ).toHaveLength(1);
-  });
-
   it('renders performance onboarding docs correctly', async function () {
     renderWithOnboardingLayout(docs, {
       selectedProducts: [ProductSolution.PERFORMANCE_MONITORING],
       selectedOptions: {
-        installationMode: InstallationMode.MANUAL_SWIFT,
+        installationMode: InstallationMode.MANUAL,
       },
     });
 
@@ -49,7 +34,7 @@ describe('apple-ios onboarding docs', function () {
   it('renders transaction profiling', async function () {
     renderWithOnboardingLayout(docs, {
       selectedOptions: {
-        installationMode: InstallationMode.MANUAL_SWIFT,
+        installationMode: InstallationMode.MANUAL,
       },
     });
 
@@ -76,7 +61,7 @@ describe('apple-ios onboarding docs', function () {
       docs,
       {
         selectedOptions: {
-          installationMode: InstallationMode.MANUAL_SWIFT,
+          installationMode: InstallationMode.MANUAL,
         },
       },
       {
@@ -101,18 +86,5 @@ describe('apple-ios onboarding docs', function () {
     );
     expect(lifecycleElements).toHaveLength(2);
     lifecycleElements.forEach(element => expect(element).toBeInTheDocument());
-  });
-
-  it('renders manual objective-c docs correctly', async function () {
-    renderWithOnboardingLayout(docs, {
-      selectedProducts: [ProductSolution.ERROR_MONITORING],
-      selectedOptions: {
-        installationMode: InstallationMode.MANUAL_OBJECTIVE_C,
-      },
-    });
-
-    expect(
-      await screen.findAllByText(textWithMarkupMatcher(/@import Sentry;/))
-    ).toHaveLength(1);
   });
 });

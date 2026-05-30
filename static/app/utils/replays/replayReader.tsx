@@ -5,7 +5,6 @@ import {type Duration, duration} from 'moment-timezone';
 
 import {defined} from 'sentry/utils';
 import {domId} from 'sentry/utils/domId';
-import type {FeedbackEvent} from 'sentry/utils/feedback/types';
 import localStorageWrapper from 'sentry/utils/localStorage';
 import clamp from 'sentry/utils/number/clamp';
 import type {Extraction} from 'sentry/utils/replays/extractDomNodes';
@@ -54,7 +53,7 @@ import {
   isWebVitalFrame,
   NodeType,
 } from 'sentry/utils/replays/types';
-import type {HydratedReplayRecord, ReplayError} from 'sentry/views/replays/types';
+import type {ReplayError, ReplayRecord} from 'sentry/views/replays/types';
 
 interface ReplayReaderParams {
   /**
@@ -81,22 +80,17 @@ interface ReplayReaderParams {
   /**
    * The root Replay event, created at the start of the browser session.
    */
-  replayRecord: HydratedReplayRecord | undefined;
+  replayRecord: ReplayRecord | undefined;
 
   /**
    * If provided, the replay will be clipped to this window.
    */
   clipWindow?: ClipWindow;
-
   /**
    * Relates to the setting of the clip window. If the event timestamp is before the replay started,
    * the clip window will be set to the start of the replay.
    */
   eventTimestampMs?: number;
-  /**
-   * Feedbacks in this replay
-   */
-  feedbackEvents?: FeedbackEvent[];
 }
 
 type RequiredNotNull<T> = {
@@ -165,7 +159,6 @@ export default class ReplayReader {
   static factory({
     attachments,
     errors,
-    feedbackEvents,
     replayRecord,
     clipWindow,
     fetching,
@@ -179,7 +172,6 @@ export default class ReplayReader {
       return new ReplayReader({
         attachments,
         errors,
-        feedbackEvents,
         replayRecord,
         fetching,
         clipWindow,
@@ -195,7 +187,6 @@ export default class ReplayReader {
       return new ReplayReader({
         attachments: [],
         errors: [],
-        feedbackEvents,
         fetching,
         replayRecord,
         clipWindow,
@@ -207,7 +198,6 @@ export default class ReplayReader {
   private constructor({
     attachments,
     errors,
-    feedbackEvents,
     fetching,
     replayRecord,
     clipWindow,
@@ -258,11 +248,7 @@ export default class ReplayReader {
     this._replayRecord = replayRecord;
     // Errors don't need to be sorted here, they will be merged with breadcrumbs
     // and spans in the getter and then sorted together.
-    const {errorFrames, feedbackFrames} = hydrateErrors(
-      replayRecord,
-      errors,
-      feedbackEvents
-    );
+    const {errorFrames, feedbackFrames} = hydrateErrors(replayRecord, errors);
     this._errors = errorFrames.sort(sortFrames);
     // RRWeb Events are not sorted here, they are fetched in sorted order.
     this._sortedRRWebEvents = rrwebFrames;
@@ -318,7 +304,7 @@ export default class ReplayReader {
   private _errors: ErrorFrame[] = [];
   private _fetching = true;
   private _optionFrame: undefined | OptionFrame;
-  private _replayRecord: HydratedReplayRecord;
+  private _replayRecord: ReplayRecord;
   private _sortedBreadcrumbFrames: BreadcrumbFrame[] = [];
   private _sortedRRWebEvents: RecordingFrame[] = [];
   private _sortedSpanFrames: SpanFrame[] = [];

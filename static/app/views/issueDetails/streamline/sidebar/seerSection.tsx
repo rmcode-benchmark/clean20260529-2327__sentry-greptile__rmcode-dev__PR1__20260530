@@ -2,17 +2,19 @@ import {useState} from 'react';
 import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 
+import {FeatureBadge} from 'sentry/components/core/badge/featureBadge';
 import {Button} from 'sentry/components/core/button';
 import {GroupSummary} from 'sentry/components/group/groupSummary';
 import {GroupSummaryWithAutofix} from 'sentry/components/group/groupSummaryWithAutofix';
 import Placeholder from 'sentry/components/placeholder';
-import {IconSeer} from 'sentry/icons';
-import {t} from 'sentry/locale';
+import {IconMegaphone} from 'sentry/icons';
+import {t, tct} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {Event} from 'sentry/types/event';
 import type {Group} from 'sentry/types/group';
 import type {Project} from 'sentry/types/project';
 import {getConfigForIssueType} from 'sentry/utils/issueTypeConfig';
+import {useFeedbackForm} from 'sentry/utils/useFeedbackForm';
 import {SectionKey} from 'sentry/views/issueDetails/streamline/context';
 import {SidebarFoldSection} from 'sentry/views/issueDetails/streamline/foldSection';
 import {useAiConfig} from 'sentry/views/issueDetails/streamline/hooks/useAiConfig';
@@ -20,6 +22,31 @@ import Resources from 'sentry/views/issueDetails/streamline/sidebar/resources';
 import {useHasStreamlinedUI} from 'sentry/views/issueDetails/utils';
 
 import {SeerSectionCtaButton} from './seerSectionCtaButton';
+
+function SeerFeedbackButton({hidden}: {hidden: boolean}) {
+  const openFeedbackForm = useFeedbackForm();
+  if (hidden) {
+    return null;
+  }
+  const title = t('Give feedback on Seer');
+  return (
+    <Button
+      title={title}
+      aria-label={title}
+      icon={<IconMegaphone />}
+      size="xs"
+      onClick={() =>
+        openFeedbackForm?.({
+          messagePlaceholder: t('How can we make Issue Summary better for you?'),
+          tags: {
+            ['feedback.source']: 'issue_details_ai_autofix',
+            ['feedback.owner']: 'ml-ai',
+          },
+        })
+      }
+    />
+  );
+}
 
 function SeerSectionContent({
   group,
@@ -87,13 +114,13 @@ export default function SeerSection({
   }
 
   const showCtaButton =
-    aiConfig.orgNeedsGenAiAcknowledgement ||
+    aiConfig.needsGenAiAcknowledgement ||
     aiConfig.hasAutofix ||
     (aiConfig.hasSummary && aiConfig.hasResources);
 
   const onlyHasResources =
     issueTypeDoesntHaveSeer ||
-    (!aiConfig.orgNeedsGenAiAcknowledgement &&
+    (!aiConfig.needsGenAiAcknowledgement &&
       !aiConfig.hasSummary &&
       !aiConfig.hasAutofix &&
       aiConfig.hasResources);
@@ -103,7 +130,26 @@ export default function SeerSection({
   ) : (
     <HeaderContainer>
       {t('Seer')}
-      <IconSeer />
+      <FeatureBadge
+        type="beta"
+        tooltipProps={{
+          title: tct(
+            'This feature is in beta. Try it out and let us know your feedback at [email:autofix@sentry.io].',
+            {
+              email: (
+                <a
+                  href="mailto:autofix@sentry.io"
+                  onClick={clickEvent => {
+                    // Prevent header from collapsing
+                    clickEvent.stopPropagation();
+                  }}
+                />
+              ),
+            }
+          ),
+          isHoverable: true,
+        }}
+      />
     </HeaderContainer>
   );
 
@@ -111,6 +157,7 @@ export default function SeerSection({
     <SidebarFoldSection
       title={titleComponent}
       sectionKey={SectionKey.SEER}
+      actions={<SeerFeedbackButton hidden={!aiConfig.hasSummary} />}
       preventCollapse={!hasStreamlinedUI}
     >
       <SeerSectionContainer>
@@ -188,7 +235,7 @@ const ExpandButton = styled(Button)`
   position: absolute;
   bottom: -${space(1)};
   right: 0;
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
   color: ${p => p.theme.subText};
   border: none;
   box-shadow: none;
@@ -199,7 +246,7 @@ const ExpandButton = styled(Button)`
 `;
 
 const HeaderContainer = styled('div')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   display: flex;
   align-items: center;
   gap: ${space(0.5)};

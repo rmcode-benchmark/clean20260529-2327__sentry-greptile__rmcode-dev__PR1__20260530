@@ -21,7 +21,7 @@ class UserSerializerTest(TestCase):
         assert result["has2fa"] is False
 
         Authenticator.objects.create(
-            type=available_authenticators(ignore_backup=True)[0].type, user=user, config={}
+            type=available_authenticators(ignore_backup=True)[0].type, user=user
         )
 
         result = serialize(user)
@@ -63,7 +63,7 @@ class DetailedUserSerializerTest(TestCase):
             auth_provider=auth_provider, ident=user.email, user=user
         )
         auth = Authenticator.objects.create(
-            type=available_authenticators(ignore_backup=True)[0].type, user=user, config={}
+            type=available_authenticators(ignore_backup=True)[0].type, user=user
         )
 
         result = serialize(user, user, DetailedUserSerializer())
@@ -113,7 +113,7 @@ class DetailedSelfUserSerializerTest(TestCase):
             auth_provider=auth_provider, ident=self.user.email, user=self.user
         )
         self.auth = Authenticator.objects.create(
-            type=available_authenticators(ignore_backup=True)[0].type, user=self.user, config={}
+            type=available_authenticators(ignore_backup=True)[0].type, user=self.user
         )
 
     def test_simple(self):

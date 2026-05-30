@@ -1,16 +1,15 @@
 from django.urls import reverse
-from rest_framework.exceptions import ErrorDetail
 
 from sentry.explore.models import (
     ExploreSavedQuery,
     ExploreSavedQueryLastVisited,
     ExploreSavedQueryStarred,
 )
-from sentry.testutils.cases import APITestCase
+from sentry.testutils.cases import APITestCase, SnubaTestCase
 from sentry.testutils.helpers.datetime import before_now
 
 
-class ExploreSavedQueriesTest(APITestCase):
+class ExploreSavedQueriesTest(APITestCase, SnubaTestCase):
     features = {
         "organizations:visibility-explore-view": True,
     }
@@ -117,10 +116,7 @@ class ExploreSavedQueriesTest(APITestCase):
 
     def test_get_all_paginated(self):
         for i in range(0, 10):
-            query = {
-                "range": "24h",
-                "query": [{"fields": ["span.op"], "mode": "samples"}],
-            }
+            query = {"range": "24h", "query": [{"fields": ["span.op"], "mode": "samples"}]}
             model = ExploreSavedQuery.objects.create(
                 organization=self.org,
                 created_by_id=self.user.id,
@@ -268,8 +264,8 @@ class ExploreSavedQueriesTest(APITestCase):
 
     def test_get_expired_query(self):
         query = {
-            "start": str(before_now(days=90)),
-            "end": str(before_now(days=61)),
+            "start": before_now(days=90),
+            "end": before_now(days=61),
         }
         ExploreSavedQuery.objects.create(
             organization=self.org,
@@ -279,10 +275,7 @@ class ExploreSavedQueriesTest(APITestCase):
             date_added=before_now(days=90),
             date_updated=before_now(minutes=10),
         )
-        with (
-            self.options({"system.event-retention-days": 60}),
-            self.feature(self.features),
-        ):
+        with self.options({"system.event-retention-days": 60}), self.feature(self.features):
             response = self.client.get(self.url, {"query": "name:My expired query"})
 
         assert response.status_code == 200, response.content
@@ -633,12 +626,7 @@ class ExploreSavedQueriesTest(APITestCase):
                     "name": "New query",
                     "projects": [-1],
                     "range": "24h",
-                    "query": [
-                        {
-                            "fields": ["span.op", "count(span.duration)"],
-                            "mode": "samples",
-                        }
-                    ],
+                    "query": [{"fields": ["span.op", "count(span.duration)"], "mode": "samples"}],
                 },
             )
         assert response.status_code == 201, response.content
@@ -740,12 +728,7 @@ class ExploreSavedQueriesTest(APITestCase):
                     "name": "without team query",
                     "projects": [],
                     "range": "24h",
-                    "query": [
-                        {
-                            "fields": ["span.op", "count(span.duration)"],
-                            "mode": "samples",
-                        }
-                    ],
+                    "query": [{"fields": ["span.op", "count(span.duration)"], "mode": "samples"}],
                 },
             )
 
@@ -762,12 +745,7 @@ class ExploreSavedQueriesTest(APITestCase):
                     "name": "with team query",
                     "projects": [],
                     "range": "24h",
-                    "query": [
-                        {
-                            "fields": ["span.op", "count(span.duration)"],
-                            "mode": "samples",
-                        }
-                    ],
+                    "query": [{"fields": ["span.op", "count(span.duration)"], "mode": "samples"}],
                 },
             )
 
@@ -886,193 +864,3 @@ class ExploreSavedQueriesTest(APITestCase):
         assert response.data["query"][0]["visualize"] == [
             {"yAxes": ["count(span.duration)"]},
         ]
-
-    def test_save_aggregate_field_and_orderby(self):
-        with self.feature(self.features):
-            response = self.client.post(
-                self.url,
-                {
-                    "name": "Query",
-                    "projects": [-1],
-                    "range": "24h",
-                    "query": [
-                        {
-                            "fields": ["span.op", "count(span.duration)"],
-                            "mode": "samples",
-                            "aggregateField": [
-                                {
-                                    "groupBy": "span.op",
-                                },
-                                {
-                                    "yAxes": ["count(span.duration)"],
-                                },
-                                {
-                                    "yAxes": ["avg(span.duration)"],
-                                    "chartType": 0,
-                                },
-                            ],
-                            "aggregateOrderby": "-avg(span.duration)",
-                        }
-                    ],
-                    "interval": "1m",
-                },
-            )
-        assert response.status_code == 201, response.content
-        assert len(response.data["query"]) == 1
-        assert "visualize" not in response.data["query"][0]
-        assert "groupby" not in response.data["query"][0]
-        assert response.data["query"][0]["aggregateField"] == [
-            {
-                "groupBy": "span.op",
-            },
-            {
-                "yAxes": ["count(span.duration)"],
-            },
-            {
-                "yAxes": ["avg(span.duration)"],
-                "chartType": 0,
-            },
-        ]
-        assert response.data["query"][0]["aggregateOrderby"] == "-avg(span.duration)"
-
-    def test_save_invalid_ambiguous_aggregate_field(self):
-        with self.feature(self.features):
-            response = self.client.post(
-                self.url,
-                {
-                    "name": "Query",
-                    "projects": [-1],
-                    "range": "24h",
-                    "query": [
-                        {
-                            "fields": ["span.op", "count(span.duration)"],
-                            "mode": "samples",
-                            "aggregateField": [
-                                {
-                                    "groupBy": "span.op",
-                                    "yAxes": ["count(span.duration)"],
-                                    "chartType": 0,
-                                },
-                            ],
-                        }
-                    ],
-                    "interval": "1m",
-                },
-            )
-        assert response.status_code == 400, response.content
-        assert response.data == {
-            "detail": ErrorDetail(
-                "Ambiguous aggregate field. Must specify groupBy or yAxes, not both.",
-                code="parse_error",
-            ),
-        }
-
-    def test_save_invalid_aggregate_field(self):
-        with self.feature(self.features):
-            response = self.client.post(
-                self.url,
-                {
-                    "name": "Query",
-                    "projects": [-1],
-                    "range": "24h",
-                    "query": [
-                        {
-                            "fields": ["span.op", "count(span.duration)"],
-                            "mode": "samples",
-                            "aggregateField": [{}],
-                        }
-                    ],
-                    "interval": "1m",
-                },
-            )
-        assert response.status_code == 400, response.content
-        assert response.data == {
-            "query": {
-                "aggregateField": {
-                    "yAxes": [
-                        ErrorDetail(
-                            "This field is required.",
-                            code="required",
-                        ),
-                    ],
-                    "groupBy": [
-                        ErrorDetail(
-                            "This field is required.",
-                            code="required",
-                        ),
-                    ],
-                },
-            },
-        }
-
-    def test_save_invalid_aggregate_field_bad_y_axes(self):
-        with self.feature(self.features):
-            response = self.client.post(
-                self.url,
-                {
-                    "name": "Query",
-                    "projects": [-1],
-                    "range": "24h",
-                    "query": [
-                        {
-                            "fields": ["span.op", "count(span.duration)"],
-                            "mode": "samples",
-                            "aggregateField": [
-                                {
-                                    "yAxes": "foobar",
-                                },
-                            ],
-                        }
-                    ],
-                    "interval": "1m",
-                },
-            )
-        assert response.status_code == 400, response.content
-        assert response.data == {
-            "query": {
-                "aggregateField": {
-                    "yAxes": [
-                        ErrorDetail(
-                            'Expected a list of items but got type "str".',
-                            code="not_a_list",
-                        ),
-                    ],
-                },
-            },
-        }
-
-    def test_save_invalid_aggregate_field_bad_group_by(self):
-        with self.feature(self.features):
-            response = self.client.post(
-                self.url,
-                {
-                    "name": "Query",
-                    "projects": [-1],
-                    "range": "24h",
-                    "query": [
-                        {
-                            "fields": ["span.op", "count(span.duration)"],
-                            "mode": "samples",
-                            "aggregateField": [
-                                {
-                                    "groupBy": [123],
-                                },
-                            ],
-                        }
-                    ],
-                    "interval": "1m",
-                },
-            )
-        assert response.status_code == 400, response.content
-        assert response.data == {
-            "query": {
-                "aggregateField": {
-                    "groupBy": [
-                        ErrorDetail(
-                            "Not a valid string.",
-                            code="invalid",
-                        ),
-                    ],
-                },
-            },
-        }

@@ -56,7 +56,6 @@ describe('GroupActions', function () {
 
   beforeEach(function () {
     ConfigStore.init();
-    ModalStore.init();
   });
   afterEach(function () {
     MockApiClient.clearMockResponses();

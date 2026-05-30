@@ -1,7 +1,8 @@
 import upperFirst from 'lodash/upperFirst';
 
 import {DATA_CATEGORY_INFO} from 'sentry/constants';
-import {DataCategory, DataCategoryExact} from 'sentry/types/core';
+import type {DataCategoryExact} from 'sentry/types/core';
+import {DataCategory} from 'sentry/types/core';
 import type {Organization} from 'sentry/types/organization';
 import oxfordizeArray from 'sentry/utils/oxfordizeArray';
 import {toTitleCase} from 'sentry/utils/string/toTitleCase';
@@ -68,13 +69,11 @@ export function getPlanCategoryName({
 }: CategoryNameProps) {
   const displayNames = plan?.categoryDisplayNames?.[category];
   const categoryName =
-    category === DataCategory.LOG_BYTE
-      ? 'log bytes'
-      : category === DataCategory.SPANS && hadCustomDynamicSampling
-        ? 'accepted spans'
-        : displayNames
-          ? displayNames.plural
-          : category;
+    category === DataCategory.SPANS && hadCustomDynamicSampling
+      ? 'accepted spans'
+      : displayNames
+        ? displayNames.plural
+        : category;
   return title
     ? toTitleCase(categoryName, {allowInnerUpperCase: true})
     : capitalize
@@ -121,19 +120,6 @@ export function getReservedBudgetCategoryFromCategories(
         categories.every(category => budgetInfo.dataCategories.includes(category))
     ) ?? null
   );
-}
-
-/**
- * Whether a category is part of a reserved budget.
- * This will also return true for categories that can
- * only be bought as part of a reserved budget (ie. Seer
- * categories without having bought Seer).
- */
-export function isPartOfReservedBudget(
-  category: DataCategory,
-  reservedBudgets: ReservedBudget[]
-): boolean {
-  return reservedBudgets.some(budget => budget.dataCategories.includes(category));
 }
 
 /**
@@ -276,10 +262,6 @@ export function isContinuousProfiling(category: DataCategory | string) {
     category === DataCategory.PROFILE_DURATION ||
     category === DataCategory.PROFILE_DURATION_UI
   );
-}
-
-export function isByteCategory(category: DataCategory | string) {
-  return category === DataCategory.ATTACHMENTS || category === DataCategory.LOG_BYTE;
 }
 
 export function getChunkCategoryFromDuration(category: DataCategory) {

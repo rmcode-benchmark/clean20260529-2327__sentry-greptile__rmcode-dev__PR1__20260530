@@ -173,10 +173,7 @@ function PageFiltersContainer({
     // Do not pass router to these actionCreators, as we do not want to update
     // routes since these state changes are happening due to a change of routes
     if (!noProjectChange) {
-      updateProjects(newState.project || [], null, {
-        environments: newEnvironments,
-        storageNamespace,
-      });
+      updateProjects(newState.project || [], null, {environments: newEnvironments});
     }
 
     // When the project stays the same, it's still possible that the

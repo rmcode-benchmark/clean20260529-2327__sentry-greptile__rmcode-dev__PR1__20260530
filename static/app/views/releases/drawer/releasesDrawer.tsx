@@ -1,7 +1,6 @@
 import {useEffect} from 'react';
 import {logger} from '@sentry/core';
 
-import AnalyticsArea from 'sentry/components/analyticsArea';
 import type {ChartId} from 'sentry/components/charts/chartWidgetLoader';
 import {
   EventDrawerBody,
@@ -29,7 +28,6 @@ export function ReleasesDrawer() {
     rdChart,
     rdEnd,
     rdEnv,
-    rdEvent,
     rdSource,
     rdStart,
     rdProject,
@@ -82,27 +80,17 @@ export function ReleasesDrawer() {
 
   if (rdRelease) {
     return (
-      <AnalyticsArea name="releases-drawer-details">
-        <ReleasesDrawerDetails
-          release={rdRelease}
-          projectId={rdReleaseProjectId}
-          start={start}
-          end={end}
-        />
-      </AnalyticsArea>
+      <ReleasesDrawerDetails
+        release={rdRelease}
+        projectId={rdReleaseProjectId}
+        start={start}
+        end={end}
+      />
     );
   }
 
   if (start && end) {
-    return (
-      <AnalyticsArea name="releases-drawer-list">
-        <ReleasesDrawerList
-          chart={rdChart as ChartId}
-          pageFilters={pageFilters}
-          eventId={rdEvent}
-        />
-      </AnalyticsArea>
-    );
+    return <ReleasesDrawerList chart={rdChart as ChartId} pageFilters={pageFilters} />;
   }
 
   return (

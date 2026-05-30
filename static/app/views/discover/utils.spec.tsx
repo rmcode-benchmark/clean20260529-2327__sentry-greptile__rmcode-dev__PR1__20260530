@@ -7,7 +7,7 @@ import {RouterFixture} from 'sentry-fixture/routerFixture';
 import {initializeOrg} from 'sentry-test/initializeOrg';
 
 import {openAddToDashboardModal} from 'sentry/actionCreators/modal';
-import {COL_WIDTH_UNDEFINED} from 'sentry/components/tables/gridEditable';
+import {COL_WIDTH_UNDEFINED} from 'sentry/components/gridEditable';
 import type {InjectedRouter} from 'sentry/types/legacyReactRouter';
 import type {Organization} from 'sentry/types/organization';
 import type {EventViewOptions} from 'sentry/utils/discover/eventView';
@@ -1036,7 +1036,7 @@ describe('handleAddQueryToDashboard', function () {
   let router: InjectedRouter;
   let mockedOpenAddToDashboardModal: jest.Mock;
   beforeEach(() => {
-    organization = OrganizationFixture();
+    organization = OrganizationFixture({});
     location = LocationFixture();
     router = RouterFixture();
     mockedOpenAddToDashboardModal = jest.mocked(openAddToDashboardModal);
@@ -1198,7 +1198,9 @@ describe('handleAddQueryToDashboard', function () {
             limit: undefined,
             widgetType: WidgetType.TRANSACTIONS,
           },
-          source: DashboardWidgetSource.DISCOVERV2,
+          widgetAsQueryParams: expect.objectContaining({
+            source: DashboardWidgetSource.DISCOVERV2,
+          }),
         })
       );
     });
@@ -1238,7 +1240,9 @@ describe('handleAddQueryToDashboard', function () {
             limit: 5,
             widgetType: WidgetType.TRANSACTIONS,
           },
-          source: DashboardWidgetSource.DISCOVERV2,
+          widgetAsQueryParams: expect.objectContaining({
+            source: DashboardWidgetSource.DISCOVERV2,
+          }),
         })
       );
     });
@@ -1277,7 +1281,9 @@ describe('handleAddQueryToDashboard', function () {
             limit: undefined,
             widgetType: WidgetType.TRANSACTIONS,
           },
-          source: DashboardWidgetSource.DISCOVERV2,
+          widgetAsQueryParams: expect.objectContaining({
+            source: DashboardWidgetSource.DISCOVERV2,
+          }),
         })
       );
     });

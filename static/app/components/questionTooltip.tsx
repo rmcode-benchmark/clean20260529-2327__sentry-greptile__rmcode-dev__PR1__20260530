@@ -40,7 +40,7 @@ function QuestionTooltip({
 }: QuestionProps) {
   return (
     <QuestionIconContainer size={size} className={className}>
-      <Tooltip skipWrapper title={title} {...tooltipProps}>
+      <Tooltip title={title} {...tooltipProps}>
         {icon === 'info' ? (
           <IconInfo size={size} color="subText" data-test-id="more-information" />
         ) : (

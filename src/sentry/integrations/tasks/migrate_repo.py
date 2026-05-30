@@ -25,7 +25,6 @@ from sentry.taskworker.retry import Retry
             times=5,
             delay=60 * 5,
         ),
-        processing_deadline_duration=60,
     ),
 )
 @retry(exclude=(Integration.DoesNotExist, Repository.DoesNotExist, Organization.DoesNotExist))

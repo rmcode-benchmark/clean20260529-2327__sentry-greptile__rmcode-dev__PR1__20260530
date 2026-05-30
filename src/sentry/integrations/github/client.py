@@ -25,7 +25,7 @@ from sentry.integrations.source_code_management.commit_context import (
 )
 from sentry.integrations.source_code_management.repo_trees import RepoTreesClient
 from sentry.integrations.source_code_management.repository import RepositoryClient
-from sentry.integrations.types import EXTERNAL_PROVIDERS, ExternalProviders, IntegrationProviderSlug
+from sentry.integrations.types import EXTERNAL_PROVIDERS, ExternalProviders
 from sentry.models.pullrequest import PullRequest, PullRequestComment
 from sentry.models.repository import Repository
 from sentry.shared_integrations.client.proxy import IntegrationProxyClient
@@ -184,10 +184,6 @@ class GithubProxyClient(IntegrationProxyClient):
             return jwt
 
         # The rest should use access tokens...
-        return self.get_access_token()
-
-    @control_silo_function
-    def get_access_token(self) -> str | None:
         now = datetime.utcnow()
         access_token: str | None = self.integration.metadata.get("access_token")
         expires_at: str | None = self.integration.metadata.get("expires_at")
@@ -199,6 +195,7 @@ class GithubProxyClient(IntegrationProxyClient):
         if should_refresh:
             access_token = self._refresh_access_token()
 
+        logger.info("token.access_token", extra=logger_extra)
         return access_token
 
     @control_silo_function
@@ -247,7 +244,7 @@ class GitHubBaseClient(GithubProxyClient, RepositoryClient, CommitContextClient,
     allow_redirects = True
 
     base_url = "https://api.github.com"
-    integration_name = IntegrationProviderSlug.GITHUB.value
+    integration_name = "github"
     # Github gives us links to navigate, however, let's be safe in case we're fed garbage
     page_number_limit = 50  # With a default of 100 per page -> 5,000 items
 
@@ -559,7 +556,7 @@ class GitHubBaseClient(GithubProxyClient, RepositoryClient, CommitContextClient,
     ) -> Sequence[FileBlameInfo]:
         log_info = {
             **extra,
-            "provider": IntegrationProviderSlug.GITHUB,
+            "provider": "github",
             "organization_integration_id": self.org_integration_id,
         }
         metrics.incr("integrations.github.get_blame_for_files")
@@ -576,7 +573,7 @@ class GitHubBaseClient(GithubProxyClient, RepositoryClient, CommitContextClient,
                 logger.error(
                     "sentry.integrations.github.get_blame_for_files.rate_limit",
                     extra={
-                        "provider": IntegrationProviderSlug.GITHUB,
+                        "provider": "github",
                         "specific_resource": "graphql",
                         "remaining": rate_limit.remaining,
                         "next_window": rate_limit.next_window(),
@@ -632,7 +629,7 @@ class GitHubBaseClient(GithubProxyClient, RepositoryClient, CommitContextClient,
             files=files,
             extra={
                 **extra,
-                "provider": IntegrationProviderSlug.GITHUB,
+                "provider": "github",
                 "organization_integration_id": self.org_integration_id,
             },
         )

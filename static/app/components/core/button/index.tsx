@@ -1,10 +1,10 @@
 import isPropValid from '@emotion/is-prop-valid';
 import styled from '@emotion/styled';
 
-import InteractionStateLayer from 'sentry/components/core/interactionStateLayer';
 import {Tooltip} from 'sentry/components/core/tooltip';
-// eslint-disable-next-line boundaries/element-types
+import InteractionStateLayer from 'sentry/components/interactionStateLayer';
 import {IconDefaultsProvider} from 'sentry/icons/useIconDefaults';
+import {space} from 'sentry/styles/space';
 
 import {
   DO_NOT_USE_BUTTON_ICON_SIZES as BUTTON_ICON_SIZES,
@@ -25,14 +25,12 @@ export function Button({
   type = 'button',
   title,
   tooltipProps,
-  busy,
   ...props
 }: ButtonProps) {
   const {handleClick, hasChildren, accessibleLabel} = useButtonFunctionality({
     ...props,
     type,
     disabled,
-    busy,
   });
 
   return (
@@ -40,11 +38,9 @@ export function Button({
       <StyledButton
         aria-label={accessibleLabel}
         aria-disabled={disabled}
-        aria-busy={busy}
         disabled={disabled}
         size={size}
         type={type}
-        busy={busy}
         {...props}
         onClick={handleClick}
         role="button"
@@ -82,7 +78,6 @@ const ButtonLabel = styled('span', {
     !['size', 'borderless'].includes(prop),
 })<Pick<CommonButtonProps, 'size' | 'borderless'>>`
   height: 100%;
-  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,8 +93,8 @@ const Icon = styled('span')<{
   margin-right: ${p =>
     p.hasChildren
       ? p.size === 'xs' || p.size === 'zero'
-        ? p.theme.space.sm
-        : p.theme.space.md
+        ? space(0.75)
+        : space(1)
       : '0'};
   flex-shrink: 0;
 `;

@@ -9,17 +9,17 @@ import {Samples} from 'sentry/views/dashboards/widgets/timeSeriesWidget/plottabl
 // TODO(release-drawer): Used in spanSummarPage/samplelist and spanSamplesPanelContainer
 // eslint-disable-next-line no-restricted-imports
 import {InsightsLineChartWidget} from 'sentry/views/insights/common/components/insightsLineChartWidget';
-import {useSpans} from 'sentry/views/insights/common/queries/useDiscover';
-import {useSpanSeries} from 'sentry/views/insights/common/queries/useDiscoverSeries';
+import {useSpanMetrics} from 'sentry/views/insights/common/queries/useDiscover';
+import {useSpanMetricsSeries} from 'sentry/views/insights/common/queries/useDiscoverSeries';
 import type {
   NonDefaultSpanSampleFields,
   SpanSample,
 } from 'sentry/views/insights/common/queries/useSpanSamples';
 import {useSpanSamples} from 'sentry/views/insights/common/queries/useSpanSamples';
-import type {SpanQueryFilters, SubregionCode} from 'sentry/views/insights/types';
-import {SpanFields} from 'sentry/views/insights/types';
+import type {SpanMetricsQueryFilters, SubregionCode} from 'sentry/views/insights/types';
+import {SpanMetricsField} from 'sentry/views/insights/types';
 
-const {SPAN_SELF_TIME, SPAN_OP} = SpanFields;
+const {SPAN_SELF_TIME, SPAN_OP} = SpanMetricsField;
 
 type Props = {
   groupId: string;
@@ -55,7 +55,7 @@ function DurationChart({
 }: Props) {
   const {setPageError} = usePageAlert();
 
-  const filters: SpanQueryFilters = {
+  const filters: SpanMetricsQueryFilters = {
     'span.group': groupId,
     transaction: transactionName,
   };
@@ -70,7 +70,7 @@ function DurationChart({
 
   if (subregions) {
     // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-    filters[SpanFields.USER_GEO_SUBREGION] = `[${subregions.join(',')}]`;
+    filters[SpanMetricsField.USER_GEO_SUBREGION] = `[${subregions.join(',')}]`;
   }
 
   if (platform) {
@@ -81,13 +81,12 @@ function DurationChart({
     ...filters,
     ...additionalFilters,
   });
-  const referrer = 'api.starfish.sidebar-span-metrics-chart';
 
   const {
     isPending,
     data: spanMetricsSeriesData,
     error: spanMetricsSeriesError,
-  } = useSpanSeries(
+  } = useSpanMetricsSeries(
     {
       search,
       yAxis: [`avg(${SPAN_SELF_TIME})`],
@@ -96,10 +95,10 @@ function DurationChart({
       ),
       transformAliasToInputFormat: true,
     },
-    referrer
+    'api.starfish.sidebar-span-metrics-chart'
   );
 
-  const {data, error: spanMetricsError} = useSpans(
+  const {data, error: spanMetricsError} = useSpanMetrics(
     {
       search: MutableSearch.fromQueryObject(filters),
       fields: [`avg(${SPAN_SELF_TIME})`, SPAN_OP],
@@ -133,7 +132,7 @@ function DurationChart({
     }
 
     return new Samples(spanSamplesData as TabularData, {
-      attributeName: SpanFields.SPAN_SELF_TIME,
+      attributeName: SpanMetricsField.SPAN_SELF_TIME,
       baselineValue: avg,
       baselineLabel: t('Average'),
       onClick: sample => {
@@ -173,12 +172,12 @@ function DurationChart({
 
   return (
     <InsightsLineChartWidget
-      queryInfo={{search, referrer}}
+      search={search}
       showLegend="never"
       title={t('Average Duration')}
       isLoading={isPending}
       error={spanMetricsSeriesError}
-      series={[spanMetricsSeriesData[`avg(${SpanFields.SPAN_SELF_TIME})`]]}
+      series={[spanMetricsSeriesData[`avg(${SpanMetricsField.SPAN_SELF_TIME})`]]}
       samples={samplesPlottable}
     />
   );

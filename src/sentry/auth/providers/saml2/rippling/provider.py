@@ -18,9 +18,9 @@ class WaitForCompletion(AuthView):
     This is simply an extra step to wait for them to complete that.
     """
 
-    def handle(self, request: HttpRequest, pipeline) -> HttpResponseBase:
+    def handle(self, request: HttpRequest, helper) -> HttpResponseBase:
         if "continue_setup" in request.POST:
-            return pipeline.next_step()
+            return helper.next_step()
 
         return self.respond("sentry_auth_rippling/wait-for-completion.html")
 

@@ -267,7 +267,7 @@ function SpikeProtectionProjects({subscription}: Props) {
     <Fragment>
       <Container>
         <StyledSearch placeholder={t('Search projects')} onChange={onChange} />
-        <StyledButtonBar gap="none" merged>
+        <StyledButtonBar merged>
           {AllProjectsAction(false)}
           {AllProjectsAction(true)}
         </StyledButtonBar>
@@ -368,7 +368,7 @@ const StyledAccordionDetails = styled('div')`
   margin-right: ${space(3)};
   margin-top: ${space(2)};
   padding-bottom: ${space(1)};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const StyledPanelTableHeader = styled('div')`

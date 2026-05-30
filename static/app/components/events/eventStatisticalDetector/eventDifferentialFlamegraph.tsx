@@ -5,7 +5,7 @@ import type {LocationDescriptor} from 'history';
 
 import {Button} from 'sentry/components/core/button';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
-import {Link} from 'sentry/components/core/link';
+import Link from 'sentry/components/links/link';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import Panel from 'sentry/components/panels/panel';
 import Placeholder from 'sentry/components/placeholder';
@@ -453,7 +453,7 @@ const DifferentialFlamegraphChangedFunctionStats = styled('div')`
 
 const DifferentialFlamegraphFunctionSecondaryStats = styled('div')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const DifferentialFlamegraphChangedFunctionNameLink = styled(Link)`
@@ -513,7 +513,7 @@ const DifferentialFlamegraphExplanationBarContainer = styled('div')`
   justify-content: space-between;
   border-radius: 0 0 ${p => p.theme.borderRadius} ${p => p.theme.borderRadius};
   padding: ${space(0.5)} ${space(1)};
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
   color: ${p => p.theme.subText};
   border-top: 1px solid ${p => p.theme.border};
   background: ${p => p.theme.backgroundSecondary};
@@ -576,7 +576,7 @@ function DifferentialFlamegraphChangedFunctionsTitle(props: {
           {props.subtitle}
         </DifferentialFlamegraphChangedFunctionsSubtitleText>
       </DifferentialFlamegraphChangedFunctionsTitleText>
-      <ButtonBar merged gap="none">
+      <ButtonBar merged>
         <DifferentialFlamegraphPaginationButton
           size="xs"
           disabled={!props.onPreviousPageClick}
@@ -603,13 +603,13 @@ const DifferentialFlamegraphChangedFunctionsTitleContainer = styled('div')`
 `;
 
 const DifferentialFlamegraphChangedFunctionsTitleText = styled('div')`
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
   flex: 1;
 `;
 
 const DifferentialFlamegraphChangedFunctionsSubtitleText = styled('div')`
-  font-weight: ${p => p.theme.fontWeight.normal};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-weight: ${p => p.theme.fontWeightNormal};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
 `;
 

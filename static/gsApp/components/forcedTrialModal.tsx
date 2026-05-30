@@ -122,7 +122,7 @@ function ForcedTrialModal(props: ForcedTrialModalProps) {
           <br />
           <p>{secondParagraph}</p>
         </TrialCheckInfo>
-        <StyledButtonBar gap="xl">
+        <StyledButtonBar gap={2}>
           <UpgradeOrTrialButton
             source="force_trial_modal"
             action="upgrade"
@@ -145,7 +145,7 @@ const TrialCheckInfo = styled('div')`
   padding: ${space(3)} 0;
 
   p {
-    font-size: ${p => p.theme.fontSize.md};
+    font-size: ${p => p.theme.fontSizeMedium};
     margin: 0;
   }
 
@@ -170,7 +170,7 @@ const Subheader = styled('h4')`
   text-transform: uppercase;
   font-weight: bold;
   color: ${p => p.theme.purple300};
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
 `;
 
 const StyledButtonBar = styled(ButtonBar)`

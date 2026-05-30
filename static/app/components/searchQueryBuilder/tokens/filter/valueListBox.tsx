@@ -1,4 +1,4 @@
-import {Fragment, useCallback} from 'react';
+import {Fragment} from 'react';
 import {createPortal} from 'react-dom';
 import styled from '@emotion/styled';
 import {isMac} from '@react-aria/utils';
@@ -12,48 +12,11 @@ import {itemIsSection} from 'sentry/components/searchQueryBuilder/tokens/utils';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 
-interface ConstrainAndAlignListBoxArgs {
-  popoverRef: React.RefObject<HTMLElement | null>;
-  referenceRef: React.RefObject<HTMLElement | null>;
-  refsToSync: Array<React.RefObject<HTMLElement | null>>;
-}
-
-function constrainAndAlignListBox({
-  popoverRef,
-  referenceRef,
-  refsToSync,
-}: ConstrainAndAlignListBoxArgs) {
-  if (!referenceRef.current || !popoverRef.current) return;
-
-  const referenceRect = referenceRef.current.getBoundingClientRect();
-  const popoverRect = popoverRef.current.getBoundingClientRect();
-
-  refsToSync.forEach(ref => {
-    if (!ref.current) return;
-    ref.current.style.maxWidth = `${referenceRect.width}px`;
-  });
-
-  // Align popover position when it's width is constrained
-  if (popoverRect.width === referenceRect.width) {
-    const parentOfTarget = popoverRef.current.offsetParent || document.documentElement;
-    const parentRect = parentOfTarget.getBoundingClientRect();
-
-    const sourceCenterViewport = referenceRect.left + referenceRect.width / 2;
-    const desiredTargetLeftViewport = sourceCenterViewport - popoverRect.width / 2;
-    const newX = desiredTargetLeftViewport - parentRect.left;
-
-    popoverRef.current.style.left = `${newX}px`;
-  } else {
-    popoverRef.current.style.left = 'auto';
-  }
-}
-
 interface ValueListBoxProps<T> extends CustomComboboxMenuProps<T> {
   canUseWildcard: boolean;
   isLoading: boolean;
   isMultiSelect: boolean;
   items: T[];
-  wrapperRef: React.RefObject<HTMLDivElement | null>;
   portalTarget?: HTMLElement | null;
 }
 
@@ -73,7 +36,6 @@ function Footer({
       {isMultiSelect ? (
         <Label>{t('Hold %s to select multiple', isMac() ? '⌘' : 'Ctrl')}</Label>
       ) : null}
-      <Label>{t('Type to search suggestions')}</Label>
       {canUseWildcard ? <Label>{t('Wildcard (*) matching allowed')}</Label> : null}
     </FooterContainer>
   );
@@ -93,44 +55,12 @@ export function ValueListBox<T extends SelectOptionOrSectionWithKey<string>>({
   items,
   canUseWildcard,
   portalTarget,
-  wrapperRef,
 }: ValueListBoxProps<T>) {
   const totalOptions = items.reduce(
     (acc, item) => acc + (itemIsSection(item) ? item.options.length : 1),
     0
   );
   const anyItemsShowing = totalOptions > hiddenOptions.size;
-
-  const listBoxRefCallback = useCallback(
-    (element: HTMLUListElement | null) => {
-      listBoxRef.current = element;
-
-      if (!element) return undefined;
-
-      const refsToSync = [listBoxRef, popoverRef];
-
-      constrainAndAlignListBox({
-        popoverRef,
-        refsToSync,
-        referenceRef: wrapperRef,
-      });
-
-      const observer = new ResizeObserver(() => {
-        constrainAndAlignListBox({
-          popoverRef,
-          refsToSync,
-          referenceRef: wrapperRef,
-        });
-      });
-
-      observer.observe(element);
-
-      return () => {
-        observer.disconnect();
-      };
-    },
-    [listBoxRef, popoverRef, wrapperRef]
-  );
 
   if (!isOpen || (!anyItemsShowing && !isLoading)) {
     return null;
@@ -147,7 +77,7 @@ export function ValueListBox<T extends SelectOptionOrSectionWithKey<string>>({
           <Fragment>
             <StyledListBox
               {...listBoxProps}
-              ref={listBoxRefCallback}
+              ref={listBoxRef}
               listState={state}
               hasSearch={!!filterValue}
               hiddenOptions={hiddenOptions}
@@ -198,7 +128,7 @@ const FooterContainer = styled('div')`
   padding: ${space(1)} ${space(2)};
   color: ${p => p.theme.subText};
   border-top: 1px solid ${p => p.theme.innerBorder};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   display: flex;
   flex-direction: column;
   gap: ${space(0.5)};

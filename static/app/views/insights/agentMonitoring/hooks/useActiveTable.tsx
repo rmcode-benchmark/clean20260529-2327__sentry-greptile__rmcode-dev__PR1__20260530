@@ -1,7 +1,9 @@
 import {useCallback} from 'react';
 
+import {trackAnalytics} from 'sentry/utils/analytics';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
+import useOrganization from 'sentry/utils/useOrganization';
 
 export enum TableType {
   TRACES = 'traces',
@@ -14,6 +16,7 @@ function isTableType(value: any): value is TableType {
 }
 
 export function useActiveTable() {
+  const organization = useOrganization();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -41,15 +44,18 @@ export function useActiveTable() {
 
   const onActiveTableChange = useCallback(
     (view: TableType) => {
+      trackAnalytics('agents-insights.table_view_change', {
+        organization,
+        view,
+      });
       updateQuery({
         view,
-        // Clear table cursors and sort order
-        tableCursor: undefined,
-        field: undefined,
-        order: undefined,
+        tracesCursor: undefined,
+        modelsCursor: undefined,
+        toolsCursor: undefined,
       });
     },
-    [updateQuery]
+    [organization, updateQuery]
   );
 
   return {activeTable, onActiveTableChange};

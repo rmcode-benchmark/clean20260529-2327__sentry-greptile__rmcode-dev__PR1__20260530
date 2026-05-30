@@ -20,7 +20,6 @@ import {trackAnalytics} from 'sentry/utils/analytics';
 import {singleLineRenderer} from 'sentry/utils/marked/marked';
 import {MarkedText} from 'sentry/utils/marked/markedText';
 import {useMutation, useQueryClient} from 'sentry/utils/queryClient';
-import {ellipsize} from 'sentry/utils/string/ellipsize';
 import useApi from 'sentry/utils/useApi';
 import useOrganization from 'sentry/utils/useOrganization';
 
@@ -88,7 +87,7 @@ function AutofixInsightCard({
   const truncatedTitleHtml = useMemo(() => {
     let truncatedTitle = displayedInsightTitle;
     if (newlineIndex !== -1 && newlineIndex < displayedInsightTitle.length - 1) {
-      truncatedTitle = ellipsize(truncatedTitle, newlineIndex);
+      truncatedTitle = displayedInsightTitle.substring(0, newlineIndex) + '...';
     }
     return {
       __html: singleLineRenderer(truncatedTitle),
@@ -152,7 +151,7 @@ function AutofixInsightCard({
                         }
                       }}
                     />
-                    <ButtonBar merged gap="none">
+                    <ButtonBar merged>
                       <Button
                         type="button"
                         size="sm"
@@ -296,7 +295,6 @@ interface AutofixInsightCardsProps {
   insights: AutofixInsight[];
   runId: string;
   stepIndex: number;
-  shouldCollapseByDefault?: boolean;
 }
 
 interface CollapsibleChainLinkProps {
@@ -404,7 +402,7 @@ function CollapsibleChainLink({
                       }
                     }}
                   />
-                  <ButtonBar merged gap="none">
+                  <ButtonBar merged>
                     <Button
                       type="button"
                       size="sm"
@@ -457,9 +455,8 @@ function AutofixInsightCards({
   stepIndex,
   groupId,
   runId,
-  shouldCollapseByDefault,
 }: AutofixInsightCardsProps) {
-  const [isCollapsed, setIsCollapsed] = useState(shouldCollapseByDefault ?? false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedCardIndex, setExpandedCardIndex] = useState<number | null>(null);
   const previousInsightsRef = useRef<AutofixInsight[]>([]);
   const [newInsightIndices, setNewInsightIndices] = useState<number[]>([]);
@@ -598,12 +595,7 @@ export function useUpdateInsightCard({groupId, runId}: {groupId: string; runId: 
       );
     },
     onSuccess: _ => {
-      queryClient.invalidateQueries({
-        queryKey: makeAutofixQueryKey(orgSlug, groupId, true),
-      });
-      queryClient.invalidateQueries({
-        queryKey: makeAutofixQueryKey(orgSlug, groupId, false),
-      });
+      queryClient.invalidateQueries({queryKey: makeAutofixQueryKey(orgSlug, groupId)});
       addSuccessMessage(t('Rethinking this...'));
     },
     onError: () => {
@@ -657,9 +649,9 @@ const CardsStack = styled('div')`
 `;
 
 const ContextMarkedText = styled(MarkedText)`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   code {
-    font-size: ${p => p.theme.fontSize.sm};
+    font-size: ${p => p.theme.fontSizeSmall};
   }
 `;
 
@@ -840,7 +832,7 @@ const CollapseIconChevron = styled(IconChevron)`
 
 const CollapsedCount = styled('span')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const AddEditContainer = styled('div')`
@@ -877,7 +869,7 @@ const CheckpointIcon = styled('span')`
 const RethinkLabel = styled('span')`
   display: flex;
   align-items: center;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
   margin-right: ${space(0.5)};
 `;

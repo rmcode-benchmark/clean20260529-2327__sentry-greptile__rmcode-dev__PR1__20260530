@@ -83,10 +83,10 @@ export function IssuesSecondaryNav() {
 }
 
 function ConfigureSection({baseUrl}: {baseUrl: string}) {
-  const {layout} = useNavContext();
+  const {layout, isCollapsed} = useNavContext();
   const hasWorkflowEngine = useWorkflowEngineFeatureGate();
 
-  const isSticky = layout === NavLayout.SIDEBAR;
+  const isSticky = layout === NavLayout.SIDEBAR && !isCollapsed;
 
   return (
     <StickyBottomSection
@@ -133,7 +133,6 @@ const StickyBottomSection = styled(SecondaryNav.Section, {
     css`
       position: sticky;
       bottom: 0;
-      z-index: 1;
       background: ${p.theme.isChonk ? p.theme.background : p.theme.surface200};
     `}
 `;

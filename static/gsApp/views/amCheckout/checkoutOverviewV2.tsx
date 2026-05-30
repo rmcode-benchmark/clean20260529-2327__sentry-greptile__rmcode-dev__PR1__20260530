@@ -191,9 +191,12 @@ function CheckoutOverviewV2({activePlan, formData, onUpdate: _onUpdate}: Props) 
   };
 
   const renderObservabilityProductBreakdown = () => {
-    const paygCategories = activePlan.onDemandCategories.filter(
-      category => activePlan.planCategories[category]?.length === 1
-    );
+    const paygCategories = [
+      DataCategory.MONITOR_SEATS,
+      DataCategory.PROFILE_DURATION,
+      DataCategory.PROFILE_DURATION_UI,
+      DataCategory.UPTIME,
+    ];
 
     const budgetCategories = Object.values(
       activePlan.availableReservedBudgetTypes
@@ -375,7 +378,7 @@ const Column = styled('div')<{alignItems?: string; minWidth?: string}>`
 
 const Description = styled('div')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const SpaceBetweenRow = styled('div')`
@@ -386,7 +389,7 @@ const SpaceBetweenRow = styled('div')`
 `;
 
 const Title = styled('div')`
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   font-weight: 600;
   color: ${p => p.theme.textColor};
   line-height: initial;
@@ -396,7 +399,7 @@ const Subtitle = styled('div')`
   display: flex;
   align-items: center;
   gap: ${space(0.5)};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   font-weight: 600;
   color: ${p => p.theme.subText};
   margin-bottom: ${space(0.5)};
@@ -417,7 +420,7 @@ const ReservedItem = styled(Title)<{isIndividualProduct?: boolean}>`
 
 const Section = styled(PanelChild)`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
 `;
 
 const Separator = styled('div')`
@@ -444,7 +447,7 @@ const TotalPrice = styled(Price)`
 
 const AdditionalMonthlyCharge = styled('div')`
   text-align: right;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
   text-wrap: pretty;
 `;

@@ -1,7 +1,7 @@
 import styled from '@emotion/styled';
 
 import Card from 'sentry/components/card';
-import {ExternalLink} from 'sentry/components/core/link';
+import ExternalLink from 'sentry/components/links/externalLink';
 import {space} from 'sentry/styles/space';
 
 type Props = {
@@ -36,7 +36,7 @@ const StyledImg = styled('img')`
 
 const StyledTitle = styled('div')`
   color: ${p => p.theme.textColor};
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   text-align: center;
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
 `;

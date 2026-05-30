@@ -1,5 +1,6 @@
 import {useEffect} from 'react';
 
+import {Flex} from 'sentry/components/container/flex';
 import type {OrderBy, SortBy} from 'sentry/components/events/featureFlags/utils';
 import LoadingError from 'sentry/components/loadingError';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
@@ -19,6 +20,7 @@ import {
 } from 'sentry/views/issueDetails/groupTags/tagDrawerContent';
 
 interface Props {
+  debugSuspectScores: boolean;
   environments: string[];
   group: Group;
   orderBy: OrderBy;
@@ -27,6 +29,7 @@ interface Props {
 }
 
 export default function FlagDrawerContent({
+  debugSuspectScores,
   environments,
   group,
   orderBy,
@@ -87,8 +90,27 @@ export default function FlagDrawerContent({
           <FlagDetailsLink flag={flag} key={flag.key}>
             <TagDistribution tag={flag} key={flag.key} />
           </FlagDetailsLink>
+          {debugSuspectScores && <DebugSuspectScore {...flag.suspect} />}
         </div>
       ))}
     </Container>
+  );
+}
+
+function DebugSuspectScore({
+  baselinePercent,
+  score,
+}: {
+  baselinePercent: undefined | number;
+  score: undefined | number;
+}) {
+  return (
+    <Flex justify="space-between" w="100%">
+      <span>Sus: {score?.toFixed(5) ?? '_'}</span>
+      <span>
+        Baseline:{' '}
+        {baselinePercent === undefined ? '_' : `${(baselinePercent * 100).toFixed(5)}%`}
+      </span>
+    </Flex>
   );
 }

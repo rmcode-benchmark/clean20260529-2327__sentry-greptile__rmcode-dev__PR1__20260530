@@ -12,5 +12,4 @@ export enum Referrer {
 
   QUEUES_SAMPLES_PANEL = 'api.performance.queues.samples-panel',
   QUEUES_SAMPLES_PANEL_TABLE = 'api.performance.queues.samples-panel-table',
-  QUEUES_SAMPLES_PANEL_DURATION_CHART = 'api.performance.queues.samples-panel-duration-chart',
 }

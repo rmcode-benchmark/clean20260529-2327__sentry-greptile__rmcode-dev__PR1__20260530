@@ -18,5 +18,4 @@ processing:
   topics:
     metrics_transactions: ingest-performance-metrics
     metrics_sessions: ingest-metrics
-    spans: ingest-spans
   redis: redis://sentry_redis:6379

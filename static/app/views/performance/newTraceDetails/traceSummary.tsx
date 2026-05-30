@@ -1,7 +1,8 @@
 import styled from '@emotion/styled';
 
+import {FeatureBadge} from 'sentry/components/core/badge/featureBadge';
 import {Button} from 'sentry/components/core/button';
-import {Link} from 'sentry/components/core/link';
+import Link from 'sentry/components/links/link';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import {IconMegaphone} from 'sentry/icons';
 import {IconInfo} from 'sentry/icons/iconInfo';
@@ -16,6 +17,9 @@ import {useApiQuery, useQueryClient} from 'sentry/utils/queryClient';
 import {useFeedbackForm} from 'sentry/utils/useFeedbackForm';
 import {useLocation} from 'sentry/utils/useLocation';
 import useOrganization from 'sentry/utils/useOrganization';
+import {InterimSection} from 'sentry/views/issueDetails/streamline/interimSection';
+import {TraceContextSectionKeys} from 'sentry/views/performance/newTraceDetails/traceHeader/scrollToSectionLinks';
+import {useHasTraceTabsUI} from 'sentry/views/performance/newTraceDetails/useHasTraceTabsUI';
 import {getTraceDetailsUrl} from 'sentry/views/performance/traceDetails/utils';
 
 interface SpanInsight {
@@ -71,6 +75,36 @@ function useTraceSummary(traceSlug: string) {
 }
 
 export function TraceSummarySection({traceSlug}: {traceSlug: string}) {
+  const hasTraceTabsUi = useHasTraceTabsUI();
+  if (hasTraceTabsUi) {
+    return <TraceSummaryContent traceSlug={traceSlug} />;
+  }
+
+  return (
+    <InterimSection
+      key="trace-summary"
+      type={TraceContextSectionKeys.SUMMARY}
+      title={
+        <TitleWrapper>
+          {t('Trace Insights')}
+          <FeatureBadge type="alpha" />
+        </TitleWrapper>
+      }
+      data-test-id="trace-summary-section"
+      initialCollapse={false}
+    >
+      <TraceSummaryContent traceSlug={traceSlug} />
+    </InterimSection>
+  );
+}
+
+const TitleWrapper = styled('div')`
+  display: flex;
+  align-items: center;
+  gap: ${space(1)};
+`;
+
+function TraceSummaryContent({traceSlug}: {traceSlug: string}) {
   const traceContent = useTraceSummary(traceSlug);
   const openFeedbackForm = useFeedbackForm();
   const organization = useOrganization();
@@ -209,7 +243,7 @@ const StyledIcon = styled('div')`
 
 const SectionTitle = styled('h6')`
   color: ${p => p.theme.gray400};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   font-weight: 600;
   text-transform: uppercase;
   margin: 0;
@@ -217,7 +251,7 @@ const SectionTitle = styled('h6')`
 
 const SectionContent = styled(MarkedText)`
   color: ${p => p.theme.textColor};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   line-height: 1.4;
   margin-bottom: ${space(3)};
 

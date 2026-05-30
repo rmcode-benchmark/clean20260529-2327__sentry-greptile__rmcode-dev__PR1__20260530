@@ -1,14 +1,12 @@
-import {useCallback, useMemo} from 'react';
+import {useCallback, useMemo, useRef} from 'react';
 
 import {ALL_ACCESS_PROJECTS} from 'sentry/constants/pageFilters';
 import useFetchParallelPages from 'sentry/utils/api/useFetchParallelPages';
 import useFetchSequentialPages from 'sentry/utils/api/useFetchSequentialPages';
 import {DiscoverDatasets} from 'sentry/utils/discover/types';
-import type {FeedbackEvent} from 'sentry/utils/feedback/types';
 import parseLinkHeader from 'sentry/utils/parseLinkHeader';
 import type {ApiQueryKey} from 'sentry/utils/queryClient';
 import {useApiQuery, useQueryClient} from 'sentry/utils/queryClient';
-import useFeedbackEvents from 'sentry/utils/replays/hooks/useFeedbackEvents';
 import {useReplayProjectSlug} from 'sentry/utils/replays/hooks/useReplayProjectSlug';
 import {mapResponseToReplayRecord} from 'sentry/utils/replays/replayDataUtils';
 import type RequestError from 'sentry/utils/requestError/requestError';
@@ -43,13 +41,10 @@ interface Result {
   attachments: unknown[];
   errors: ReplayError[];
   fetchError: undefined | RequestError;
-  isError: boolean;
-  isPending: boolean;
+  fetching: boolean;
   onRetry: () => void;
   projectSlug: string | null;
   replayRecord: ReplayRecord | undefined;
-  status: 'pending' | 'error' | 'success';
-  feedbackEvents?: FeedbackEvent[];
 }
 
 /**
@@ -82,9 +77,8 @@ function useReplayData({
   errorsPerPage = 50,
   segmentsPerPage = 100,
 }: Options): Result {
+  const hasFetchedAttachments = useRef(false);
   const queryClient = useQueryClient();
-
-  const enableReplayRecord = Boolean(replayId);
 
   // Fetch every field of the replay. The TS type definition lists every field
   // that's available. It's easier to ask for them all and not have to deal with
@@ -92,12 +86,12 @@ function useReplayData({
   // We're overfetching for sure.
   const {
     data: replayData,
-    status: fetchReplayStatus,
+    isFetching: isFetchingReplay,
     error: fetchReplayError,
   } = useApiQuery<{data: unknown}>([`/organizations/${orgSlug}/replays/${replayId}/`], {
-    enabled: enableReplayRecord,
-    retry: false,
     staleTime: Infinity,
+    retry: false,
+    enabled: Boolean(replayId),
   });
   const replayRecord = useMemo(
     () => (replayData?.data ? mapResponseToReplayRecord(replayData.data) : undefined),
@@ -122,20 +116,18 @@ function useReplayData({
     [orgSlug, projectSlug, replayId]
   );
 
-  const enableAttachments =
-    !fetchReplayError &&
-    Boolean(replayId) &&
-    Boolean(projectSlug) &&
-    Boolean(replayRecord);
-
   const {
     pages: attachmentPages,
-    status: fetchAttachmentsStatus,
+    isFetching: isFetchingAttachments,
     error: fetchAttachmentsError,
   } = useFetchParallelPages({
-    enabled: enableAttachments,
-    getQueryKey: getAttachmentsQueryKey,
+    enabled:
+      !fetchReplayError &&
+      Boolean(replayId) &&
+      Boolean(projectSlug) &&
+      Boolean(replayRecord),
     hits: replayRecord?.count_segments ?? 0,
+    getQueryKey: getAttachmentsQueryKey,
     perPage: segmentsPerPage,
   });
 
@@ -154,7 +146,7 @@ function useReplayData({
           query: {
             referrer: 'replay_details',
             dataset: DiscoverDatasets.DISCOVER,
-            start: replayRecord?.started_at?.toISOString() ?? '',
+            start: replayRecord?.started_at.toISOString(),
             end: finishedAtClone.toISOString(),
             project: ALL_ACCESS_PROJECTS,
             query: `replayId:[${replayRecord?.id}]`,
@@ -182,7 +174,7 @@ function useReplayData({
           query: {
             referrer: 'replay_details',
             dataset: DiscoverDatasets.ISSUE_PLATFORM,
-            start: replayRecord?.started_at?.toISOString() ?? '',
+            start: replayRecord?.started_at.toISOString(),
             end: finishedAtClone.toISOString(),
             project: ALL_ACCESS_PROJECTS,
             query: `replayId:[${replayRecord?.id}]`,
@@ -195,13 +187,12 @@ function useReplayData({
     [orgSlug, replayRecord]
   );
 
-  const enableErrors = Boolean(replayRecord) && Boolean(projectSlug);
   const {
     pages: errorPages,
-    status: fetchErrorsStatus,
+    isFetching: isFetchingErrors,
     getLastResponseHeader: lastErrorsResponseHeader,
   } = useFetchParallelPages<{data: ReplayError[]}>({
-    enabled: enableErrors,
+    enabled: !fetchReplayError && Boolean(projectSlug) && Boolean(replayRecord),
     hits: replayRecord?.count_errors ?? 0,
     getQueryKey: getErrorsQueryKey,
     perPage: errorsPerPage,
@@ -209,19 +200,18 @@ function useReplayData({
 
   const linkHeader = lastErrorsResponseHeader?.('Link') ?? null;
   const links = parseLinkHeader(linkHeader);
-  const enableExtraErrors =
-    Boolean(replayRecord) &&
-    (!replayRecord?.count_errors || Boolean(links.next?.results)) &&
-    fetchErrorsStatus === 'success';
-  const {pages: extraErrorPages, status: fetchExtraErrorsStatus} =
+  const {pages: extraErrorPages, isFetching: isFetchingExtraErrors} =
     useFetchSequentialPages<{data: ReplayError[]}>({
-      enabled: enableExtraErrors,
+      enabled:
+        !fetchReplayError &&
+        !isFetchingErrors &&
+        (!replayRecord?.count_errors || Boolean(links.next?.results)),
       initialCursor: links.next?.cursor,
       getQueryKey: getErrorsQueryKey,
       perPage: errorsPerPage,
     });
 
-  const {pages: platformErrorPages, status: fetchPlatformErrorsStatus} =
+  const {pages: platformErrorPages, isFetching: isFetchingPlatformErrors} =
     useFetchSequentialPages<{data: ReplayError[]}>({
       enabled: true,
       getQueryKey: getPlatformErrorsQueryKey,
@@ -244,66 +234,56 @@ function useReplayData({
     });
   }, [orgSlug, replayId, projectSlug, queryClient]);
 
-  const {allErrors, feedbackEventIds} = useMemo(() => {
-    const errors = errorPages
+  return useMemo(() => {
+    // This hook can enter a state where `fetching` below is false
+    // before it is entirely ready (i.e. it has not fetched
+    // attachemnts yet). This can cause downstream components to
+    // think it is no longer fetching and will display an error
+    // because there are no attachments. The below will require
+    // that we have attempted to fetch an attachment once (or it
+    // errors) before we toggle fetching state to false.
+    hasFetchedAttachments.current =
+      hasFetchedAttachments.current || isFetchingAttachments;
+
+    const fetching =
+      isFetchingReplay ||
+      isFetchingAttachments ||
+      isFetchingErrors ||
+      isFetchingExtraErrors ||
+      isFetchingPlatformErrors ||
+      (!hasFetchedAttachments.current &&
+        !fetchAttachmentsError &&
+        Boolean(replayRecord?.count_segments));
+
+    const allErrors = errorPages
       .concat(extraErrorPages)
       .concat(platformErrorPages)
       .flatMap(page => page.data);
-
-    const feedbackIds = errors
-      ?.filter(error => error?.title.includes('User Feedback'))
-      .map(error => error.id);
-
-    return {allErrors: errors, feedbackEventIds: feedbackIds};
-  }, [errorPages, extraErrorPages, platformErrorPages]);
-
-  const {
-    feedbackEvents,
-    isPending: feedbackEventsPending,
-    isError: feedbackEventsError,
-  } = useFeedbackEvents({
-    feedbackEventIds: feedbackEventIds ?? [],
-    projectId: replayRecord?.project_id,
-  });
-
-  const allStatuses = [
-    enableReplayRecord ? fetchReplayStatus : undefined,
-    enableAttachments ? fetchAttachmentsStatus : undefined,
-    enableErrors ? fetchErrorsStatus : undefined,
-    enableExtraErrors ? fetchExtraErrorsStatus : undefined,
-    fetchPlatformErrorsStatus,
-  ];
-
-  const isError = allStatuses.includes('error') || feedbackEventsError;
-  const isPending = allStatuses.includes('pending') || feedbackEventsPending;
-  const status = isError ? 'error' : isPending ? 'pending' : 'success';
-
-  return useMemo(() => {
     return {
       attachments: attachmentPages.flat(2),
       errors: allErrors,
       fetchError: fetchReplayError ?? undefined,
       attachmentError: fetchAttachmentsError ?? undefined,
-      feedbackEvents,
-      isError,
-      isPending,
-      status,
+      fetching,
       onRetry: clearQueryCache,
       projectSlug,
       replayRecord,
     };
   }, [
     attachmentPages,
+    clearQueryCache,
+    errorPages,
+    extraErrorPages,
     fetchReplayError,
     fetchAttachmentsError,
-    feedbackEvents,
-    isError,
-    isPending,
-    status,
-    clearQueryCache,
+    isFetchingAttachments,
+    isFetchingErrors,
+    isFetchingExtraErrors,
+    isFetchingPlatformErrors,
+    isFetchingReplay,
+    platformErrorPages,
     projectSlug,
     replayRecord,
-    allErrors,
   ]);
 }
 

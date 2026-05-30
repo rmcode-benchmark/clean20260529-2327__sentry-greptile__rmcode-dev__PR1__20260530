@@ -31,7 +31,6 @@ interface TransactionSearchQueryBuilderProps {
   searchSource: string;
   datetime?: PageFilters['datetime'];
   disableLoadingTags?: boolean;
-  disallowFreeText?: boolean;
   filterKeyMenuWidth?: number;
   onSearch?: (query: string, state: CallbackSearchState) => void;
   placeholder?: string;
@@ -46,7 +45,6 @@ export function TransactionSearchQueryBuilder({
   onSearch,
   placeholder,
   projects,
-  disallowFreeText = true,
   disableLoadingTags,
   filterKeyMenuWidth,
   trailingItems,
@@ -137,11 +135,12 @@ export function TransactionSearchQueryBuilder({
       searchSource={searchSource}
       filterKeySections={filterKeySections}
       getTagValues={getTransactionFilterTagValues}
-      disallowFreeText={disallowFreeText}
+      disallowFreeText
       disallowUnsupportedFilters
       recentSearches={SavedSearchType.EVENT}
       filterKeyMenuWidth={filterKeyMenuWidth}
       trailingItems={trailingItems}
+      searchOnChange={organization.features.includes('ui-search-on-change')}
     />
   );
 }

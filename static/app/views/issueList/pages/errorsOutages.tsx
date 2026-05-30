@@ -4,7 +4,6 @@ import Redirect from 'sentry/components/redirect';
 import type {RouteComponentProps} from 'sentry/types/legacyReactRouter';
 import useOrganization from 'sentry/utils/useOrganization';
 import IssueListContainer from 'sentry/views/issueList';
-import {MonitorsDropdown} from 'sentry/views/issueList/monitorsDropdown';
 import IssueListOverview from 'sentry/views/issueList/overview';
 import {ISSUE_TAXONOMY_CONFIG, IssueTaxonomy} from 'sentry/views/issueList/taxonomies';
 
@@ -30,7 +29,6 @@ export default function ErrorsOutagesPage(props: Props) {
             initialQuery={QUERY}
             title={CONFIG.label}
             titleDescription={CONFIG.description}
-            headerActions={<MonitorsDropdown />}
           />
         </NoProjectMessage>
       </PageFiltersContainer>

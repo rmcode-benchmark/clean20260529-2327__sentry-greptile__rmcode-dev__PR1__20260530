@@ -6,13 +6,15 @@ import {renderHook} from 'sentry-test/reactTestingLibrary';
 
 import type {Organization} from 'sentry/types/organization';
 import {parseFunction} from 'sentry/utils/discover/fields';
+import {DiscoverDatasets} from 'sentry/utils/discover/types';
 import {QueryClientProvider} from 'sentry/utils/queryClient';
 import {useLocation} from 'sentry/utils/useLocation';
 import {PageParamsProvider} from 'sentry/views/explore/contexts/pageParamsContext';
-import {useTraceItemTags} from 'sentry/views/explore/contexts/spanTagsContext';
-import {TraceItemAttributeProvider} from 'sentry/views/explore/contexts/traceItemAttributeContext';
+import {
+  SpanTagsProvider,
+  useSpanTags,
+} from 'sentry/views/explore/contexts/spanTagsContext';
 import {useVisualizeFields} from 'sentry/views/explore/hooks/useVisualizeFields';
-import {TraceItemDataset} from 'sentry/views/explore/types';
 import {OrganizationContext} from 'sentry/views/organizationContext';
 
 jest.mock('sentry/utils/useLocation');
@@ -24,9 +26,9 @@ function createWrapper(organization: Organization) {
       <QueryClientProvider client={makeTestQueryClient()}>
         <OrganizationContext value={organization}>
           <PageParamsProvider>
-            <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+            <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
               {children}
-            </TraceItemAttributeProvider>
+            </SpanTagsProvider>
           </PageParamsProvider>
         </OrganizationContext>
       </QueryClientProvider>
@@ -35,11 +37,12 @@ function createWrapper(organization: Organization) {
 }
 
 function useWrapper(yAxis: string) {
-  const {tags: stringTags} = useTraceItemTags('string');
-  const {tags: numberTags} = useTraceItemTags('number');
+  const {tags: stringTags} = useSpanTags('string');
+  const {tags: numberTags} = useSpanTags('number');
   return useVisualizeFields({
     numberTags,
     stringTags,
+    yAxes: [yAxis],
     parsedFunction: parseFunction(yAxis) ?? undefined,
   });
 }

@@ -242,11 +242,11 @@ const StyledHovercard = styled(Hovercard)<{prefersNewNav: boolean}>`
 
 const HovercardBody = styled('div')`
   h1 {
-    font-size: ${p => p.theme.fontSize.lg};
+    font-size: ${p => p.theme.fontSizeLarge};
     margin-bottom: ${space(1.5)};
   }
   p {
-    font-size: ${p => p.theme.fontSize.md};
+    font-size: ${p => p.theme.fontSizeMedium};
   }
 `;
 
@@ -256,7 +256,7 @@ const Bullets = styled('div')`
   grid-auto-rows: max-content;
   gap: ${space(1)};
   align-items: center;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   margin-bottom: ${space(2)};
 `;
 

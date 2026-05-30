@@ -325,7 +325,7 @@ describe('Dashboards - DashboardGrid', function () {
       />,
       {
         organization: {
-          features: organization.features,
+          features: ['dashboards-favourite', ...organization.features],
         },
       }
     );
@@ -368,7 +368,7 @@ describe('Dashboards - DashboardGrid', function () {
       />,
       {
         organization: {
-          features: organization.features,
+          features: ['dashboards-favourite', ...organization.features],
         },
       }
     );

@@ -12,9 +12,10 @@ type Props = {
   hasFeature: boolean;
   onDelete: () => void;
   onEdit: () => void;
+  repositoryName: string;
 };
 
-function Actions({onEdit, onDelete, hasFeature, hasAccess}: Props) {
+function Actions({repositoryName, onEdit, onDelete, hasFeature, hasAccess}: Props) {
   const actionsDisabled = !hasAccess || !hasFeature;
 
   return (
@@ -50,6 +51,7 @@ function Actions({onEdit, onDelete, hasFeature, hasAccess}: Props) {
           label: t('Delete'),
           onAction: () => {
             openConfirmModal({
+              header: <h6>{t('Delete %s?', repositoryName)}</h6>,
               message: (
                 <Fragment>
                   <TextBlock>

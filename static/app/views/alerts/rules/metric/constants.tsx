@@ -23,7 +23,6 @@ import {
   getQueryDatasource,
   isSessionAggregate,
 } from 'sentry/views/alerts/utils';
-import {TIME_WINDOW_MAP} from 'sentry/views/alerts/utils/timePeriods';
 import type {AlertType, WizardRuleTemplate} from 'sentry/views/alerts/wizard/options';
 
 export const DEFAULT_COUNT_TIME_WINDOW = 5; // 5min (lowest common denominator supported for all datasets)
@@ -118,6 +117,18 @@ export const COMPARISON_DELTA_OPTIONS = [
   {value: 43200, label: t('same time one month ago')}, // 30 days
 ];
 
+const TIME_WINDOW_MAP: Record<TimeWindow, string> = {
+  [TimeWindow.ONE_MINUTE]: t('1 minute'),
+  [TimeWindow.FIVE_MINUTES]: t('5 minutes'),
+  [TimeWindow.TEN_MINUTES]: t('10 minutes'),
+  [TimeWindow.FIFTEEN_MINUTES]: t('15 minutes'),
+  [TimeWindow.THIRTY_MINUTES]: t('30 minutes'),
+  [TimeWindow.ONE_HOUR]: t('1 hour'),
+  [TimeWindow.TWO_HOURS]: t('2 hours'),
+  [TimeWindow.FOUR_HOURS]: t('4 hours'),
+  [TimeWindow.ONE_DAY]: t('24 hours'),
+};
+
 export function getTimeWindowOptions(
   dataset: Dataset,
   comparisonType: AlertRuleComparisonType
@@ -169,11 +180,10 @@ export function getWizardAlertFieldConfig(
     return errorFieldConfig;
   }
   // If user selected apdex we must include that in the OptionConfig as it has a user specified column
-  const aggregations = ['apdex', 'trace_item_apdex', 'custom_transactions'].includes(
-    alertType
-  )
-    ? allAggregations
-    : commonAggregations;
+  const aggregations =
+    alertType === 'apdex' || alertType === 'custom_transactions'
+      ? allAggregations
+      : commonAggregations;
 
   const config: OptionConfig = {
     aggregations,

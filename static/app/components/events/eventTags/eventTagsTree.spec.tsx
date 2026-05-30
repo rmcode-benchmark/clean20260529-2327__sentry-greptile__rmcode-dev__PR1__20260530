@@ -13,7 +13,6 @@ import {
 } from 'sentry-test/reactTestingLibrary';
 
 import {EventTags} from 'sentry/components/events/eventTags';
-import ModalStore from 'sentry/stores/modalStore';
 
 describe('EventTagsTree', function () {
   const {organization, project} = initializeOrg();
@@ -67,7 +66,6 @@ describe('EventTagsTree', function () {
   let mockDetailedProject: jest.Mock;
 
   beforeEach(function () {
-    ModalStore.reset();
     MockApiClient.clearMockResponses();
     mockDetailedProject = MockApiClient.addMockResponse({
       url: `/projects/${organization.slug}/${project.slug}/`,
@@ -111,23 +109,30 @@ describe('EventTagsTree', function () {
     for (const link of linkDropdowns) {
       await userEvent.click(link);
       expect(
-        await within(link.parentElement!).findByLabelText(
-          'Search issues with this tag value'
-        )
+        await screen.findByLabelText('Search issues with this tag value')
       ).toBeInTheDocument();
       expect(
-        await within(link.parentElement!).findByLabelText(
-          'View other events with this tag value'
-        )
+        await screen.findByLabelText('View other events with this tag value')
       ).toBeInTheDocument();
-      expect(
-        await within(link.parentElement!).findByLabelText('Copy tag value to clipboard')
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText('Copy tag value to clipboard')).toBeInTheDocument();
     }
   });
 
   it('renders release tag differently', async function () {
     const releaseVersion = 'v1.0';
+
+    const reposRequest = MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/repos/`,
+      body: [],
+    });
+    const releasesRequest = MockApiClient.addMockResponse({
+      url: `/projects/${organization.slug}/${project.slug}/releases/${releaseVersion}/`,
+      body: [],
+    });
+    const deploysRequest = MockApiClient.addMockResponse({
+      url: `/organizations/${organization.slug}/releases/${releaseVersion}/deploys/`,
+      body: [],
+    });
 
     const releaseEvent = EventFixture({
       tags: [{key: 'release', value: releaseVersion}],
@@ -143,10 +148,12 @@ describe('EventTagsTree', function () {
       HTMLElement & {parentElement: HTMLAnchorElement}
     >(releaseVersion);
     const anchorLink = versionText.parentElement;
-    // Release links are opened in the Release Drawer
     expect(anchorLink.href).toContain(
-      `/mock-pathname/?rd=show&rdRelease=${releaseVersion}&rdSource=release-version-link`
+      `/organizations/${organization.slug}/releases/${releaseVersion}/`
     );
+    expect(reposRequest).toHaveBeenCalled();
+    expect(releasesRequest).toHaveBeenCalled();
+    expect(deploysRequest).toHaveBeenCalled();
     const dropdown = screen.getByLabelText('Tag Actions Menu');
     await userEvent.click(dropdown);
     expect(screen.getByLabelText('View this release')).toBeInTheDocument();
@@ -181,7 +188,7 @@ describe('EventTagsTree', function () {
       labelText: 'Visit this external link',
       validateLink: async () => {
         renderGlobalModal();
-        const linkElement = await screen.findByText('https://example.com');
+        const linkElement = screen.getByText('https://example.com');
         await userEvent.click(linkElement);
         expect(await screen.findByTestId('external-link-warning')).toBeInTheDocument();
       },
@@ -200,7 +207,7 @@ describe('EventTagsTree', function () {
       const dropdown = screen.getByLabelText('Tag Actions Menu');
       await userEvent.click(dropdown);
       expect(screen.getByLabelText(labelText)).toBeInTheDocument();
-      await (validateLink as () => Promise<void>)();
+      validateLink();
     }
   );
 

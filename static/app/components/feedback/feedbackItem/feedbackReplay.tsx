@@ -1,5 +1,5 @@
 import ErrorBoundary from 'sentry/components/errorBoundary';
-import FeedbackItemSection from 'sentry/components/feedback/feedbackItem/feedbackItemSection';
+import Section from 'sentry/components/feedback/feedbackItem/feedbackItemSection';
 import ReplayInlineCTAPanel from 'sentry/components/feedback/feedbackItem/replayInlineCTAPanel';
 import ReplaySection from 'sentry/components/feedback/feedbackItem/replaySection';
 import Placeholder from 'sentry/components/placeholder';
@@ -36,12 +36,7 @@ export default function FeedbackReplay({eventData, feedbackItem, organization}: 
 
   if (replayId && hasReplayId) {
     return (
-      <FeedbackItemSection
-        collapsible
-        icon={<IconPlay size="xs" />}
-        sectionKey="replay"
-        title={t('Linked Replay')}
-      >
+      <Section icon={<IconPlay size="xs" />} title={t('Linked Replay')}>
         <ErrorBoundary mini>
           <ReplaySection
             eventTimestampMs={new Date(feedbackItem.firstSeen).getTime()}
@@ -49,33 +44,23 @@ export default function FeedbackReplay({eventData, feedbackItem, organization}: 
             replayId={replayId}
           />
         </ErrorBoundary>
-      </FeedbackItemSection>
+      </Section>
     );
   }
 
   if ((replayId && hasReplayId === undefined) || isFetchingSentOneReplay) {
     return (
-      <FeedbackItemSection
-        collapsible
-        icon={<IconPlay size="xs" />}
-        sectionKey="replay"
-        title={t('Linked Replay')}
-      >
+      <Section icon={<IconPlay size="xs" />} title={t('Linked Replay')}>
         <Placeholder />
-      </FeedbackItemSection>
+      </Section>
     );
   }
 
   if (!hasSentOneReplay && platformSupported) {
     return (
-      <FeedbackItemSection
-        collapsible
-        icon={<IconPlay size="xs" />}
-        sectionKey="replay"
-        title={t('Linked Replay')}
-      >
+      <Section icon={<IconPlay size="xs" />} title={t('Linked Replay')}>
         <ReplayInlineCTAPanel />
-      </FeedbackItemSection>
+      </Section>
     );
   }
 

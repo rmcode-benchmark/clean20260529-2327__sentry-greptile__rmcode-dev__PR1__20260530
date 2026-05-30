@@ -5,7 +5,6 @@ import {openModal} from 'sentry/actionCreators/modal';
 import Card from 'sentry/components/card';
 import {openConfirmModal} from 'sentry/components/confirm';
 import {Button} from 'sentry/components/core/button';
-import {Link} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import {DateTime} from 'sentry/components/dateTime';
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
@@ -14,6 +13,7 @@ import ScreenshotModal, {
   modalCss,
 } from 'sentry/components/events/eventTagsAndScreenshot/screenshot/modal';
 import {LazyRender} from 'sentry/components/lazyRender';
+import Link from 'sentry/components/links/link';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import PanelBody from 'sentry/components/panels/panelBody';
 import {IconEllipsis} from 'sentry/icons/iconEllipsis';
@@ -82,10 +82,8 @@ export function ScreenshotCard({
   return (
     <StyledCard>
       <CardHeader>
-        <ScreenshotInfo>
-          <Tooltip title={eventAttachment.name} showOnlyOnOverflow skipWrapper>
-            <AttachmentName>{eventAttachment.name}</AttachmentName>
-          </Tooltip>
+        <div>
+          <AttachmentName>{eventAttachment.name}</AttachmentName>
           <div>
             <DateTime date={eventAttachment.dateCreated} /> &middot;{' '}
             <Link
@@ -96,7 +94,7 @@ export function ScreenshotCard({
               </Tooltip>
             </Link>
           </div>
-        </ScreenshotInfo>
+        </div>
         <DropdownMenu
           items={[
             {
@@ -117,7 +115,6 @@ export function ScreenshotCard({
                   confirmText: t('Delete'),
                 });
               },
-              priority: 'danger',
             },
           ]}
           position="bottom-end"
@@ -158,31 +155,24 @@ export function ScreenshotCard({
   );
 }
 
-const ScreenshotInfo = styled('div')`
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-`;
-
 const StyledCard = styled(Card)`
   margin: 0;
-  padding: ${space(1)} ${space(1.5)};
 `;
 
-const AttachmentName = styled('span')`
-  display: flex;
-  font-weight: ${p => p.theme.fontWeight.bold};
+const AttachmentName = styled('div')`
+  font-weight: bold;
   ${p => p.theme.overflowEllipsis};
 `;
 
 const CardHeader = styled('div')`
   display: flex;
   justify-content: space-between;
-  padding-bottom: ${space(1)};
-  flex-shrink: 0;
+  padding: ${space(1.5)} ${space(1.5)} ${space(1.5)} ${space(2)};
 `;
 
 const CardBody = styled('div')`
+  background: ${p => p.theme.gray100};
+  padding: ${space(1)} ${space(1.5)};
   max-height: 250px;
   min-height: 250px;
   overflow: hidden;
@@ -199,7 +189,6 @@ const StyledPanelBody = styled(PanelBody)`
   align-items: center;
   justify-content: center;
   flex: 1;
-  border-radius: ${p => p.theme.borderRadius};
 `;
 
 const StyledLoadingIndicator = styled('div')`

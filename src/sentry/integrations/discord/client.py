@@ -12,7 +12,6 @@ from rest_framework import status
 from sentry import options
 from sentry.integrations.client import ApiClient
 from sentry.integrations.discord.utils.consts import DISCORD_ERROR_CODES, DISCORD_USER_ERRORS
-from sentry.integrations.types import IntegrationProviderSlug
 from sentry.shared_integrations.exceptions import ApiError
 
 # to avoid a circular import
@@ -44,7 +43,7 @@ USER_URL = "/users/@me"
 
 
 class DiscordClient(ApiClient):
-    integration_name: str = IntegrationProviderSlug.DISCORD.value
+    integration_name: str = "discord"
     base_url: str = DISCORD_BASE_URL
     _METRICS_FAILURE_KEY: str = "sentry.integrations.discord.failure"
     _METRICS_SUCCESS_KEY: str = "sentry.integrations.discord.success"

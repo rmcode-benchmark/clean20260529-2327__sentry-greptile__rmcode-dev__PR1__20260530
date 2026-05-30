@@ -143,7 +143,7 @@ describe('OrganizationAuthTokensIndex', function () {
     render(<OrganizationAuthTokensIndex {...defaultProps} />);
 
     expect(await screen.findByTestId('loading-error')).toHaveTextContent(
-      'Failed to load organization tokens.'
+      'Failed to load auth tokens for the organization.'
     );
     expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument();
     expect(screen.queryByTestId('empty-state')).not.toBeInTheDocument();

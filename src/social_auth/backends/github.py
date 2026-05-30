@@ -16,7 +16,6 @@ from urllib.request import Request
 
 from django.conf import settings
 
-from sentry.integrations.types import IntegrationProviderSlug
 from sentry.utils import json
 from social_auth.backends import BaseOAuth2, OAuthBackend
 from social_auth.exceptions import AuthFailed
@@ -36,7 +35,7 @@ GITHUB_ORGANIZATION_MEMBER_OF_URL = "https://%s/orgs/{org}/members/{username}" %
 class GithubBackend(OAuthBackend):
     """Github OAuth authentication backend"""
 
-    name = IntegrationProviderSlug.GITHUB.value
+    name = "github"
     # Default extra data to store
     EXTRA_DATA = [("id", "id"), ("expires", "expires")]
 
@@ -121,4 +120,4 @@ class GithubAuth(BaseOAuth2):
 
 
 # Backend definition
-BACKENDS = {IntegrationProviderSlug.GITHUB.value: GithubAuth}
+BACKENDS = {"github": GithubAuth}

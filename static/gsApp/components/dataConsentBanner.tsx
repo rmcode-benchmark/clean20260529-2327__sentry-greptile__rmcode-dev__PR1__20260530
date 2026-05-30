@@ -118,7 +118,7 @@ const DataConsentBannerWrapper = styled('div')`
 `;
 
 const DataConsentBannerTitle = styled('div')`
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   margin-bottom: ${space(1)};
   font-weight: 600;
 `;
@@ -126,7 +126,7 @@ const DataConsentBannerTitle = styled('div')`
 const StarContainer = styled('div')`
   display: none;
 
-  @media (min-width: ${p => p.theme.breakpoints.xl}) {
+  @media (min-width: ${p => p.theme.breakpoints.xlarge}) {
     display: block;
     position: absolute;
     bottom: 0;
@@ -141,7 +141,7 @@ const StarContainer = styled('div')`
 const IllustrationContainer = styled('div')`
   display: none;
 
-  @media (min-width: ${p => p.theme.breakpoints.lg}) {
+  @media (min-width: ${p => p.theme.breakpoints.large}) {
     display: block;
     position: absolute;
     bottom: 0;

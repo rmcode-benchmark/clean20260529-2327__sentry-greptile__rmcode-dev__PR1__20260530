@@ -1,7 +1,7 @@
 import {Fragment, memo} from 'react';
-import styled from '@emotion/styled';
 
-import SortLink from 'sentry/components/tables/gridEditable/sortLink';
+import type {GridColumnHeader} from 'sentry/components/gridEditable';
+import SortLink from 'sentry/components/gridEditable/sortLink';
 import type {QueryValue} from 'sentry/utils/queryString';
 import useLocationQuery from 'sentry/utils/url/useLocationQuery';
 import {useLocation} from 'sentry/utils/useLocation';
@@ -35,55 +35,30 @@ export function useTableSortParams() {
 }
 
 export const HeadSortCell = memo(function HeadCell({
-  sortKey,
+  column,
   children,
-  align = 'left',
-  forceCellGrow = false,
-  cursorParamName = 'cursor',
-  onClick,
 }: {
   children: React.ReactNode;
-  sortKey: string;
-  align?: 'left' | 'right';
-  cursorParamName?: string;
-  forceCellGrow?: boolean;
-  onClick?: (sortKey: string, newDirection: 'asc' | 'desc') => void;
+  column: GridColumnHeader<string>;
 }) {
   const location = useLocation();
   const {sortField, sortOrder} = useTableSortParams();
-  const newDirection =
-    sortField === sortKey ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'desc';
-
   return (
     <SortLink
-      align={align}
-      direction={sortField === sortKey ? sortOrder : undefined}
+      align={'left'}
+      direction={sortField === column.key ? sortOrder : undefined}
       canSort
       preventScrollReset
       generateSortLink={() => ({
         ...location,
         query: {
           ...location.query,
-          [cursorParamName]: undefined,
-          field: sortKey,
-          order: newDirection,
+          field: column.key,
+          order:
+            sortField === column.key ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'desc',
         },
       })}
-      onClick={() => onClick?.(sortKey, newDirection)}
-      title={
-        <Fragment>
-          {forceCellGrow && <CellExpander />}
-          {children}
-        </Fragment>
-      }
+      title={<Fragment>{children}</Fragment>}
     />
   );
 });
-
-/**
- * Used to force the cell to expand take as much width as possible in the table layout
- * otherwise grid editable will let the last column grow
- */
-const CellExpander = styled('div')`
-  width: 100vw;
-`;

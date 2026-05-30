@@ -77,14 +77,13 @@ const StyledBadge = styled('span')<BadgeProps>`
   min-width: 20px;
   line-height: 20px;
   border-radius: 20px;
-  font-weight: ${p => p.theme.fontWeight.normal};
-  font-size: ${p => p.theme.fontSize.xs};
-  padding: 0 ${space(0.75)};
+  font-weight: ${p => p.theme.fontWeightNormal};
 
   /* @TODO(jonasbadalic) can we standardize this transition? */
   transition: background 100ms linear;
 
   /* @TODO(jonasbadalic) why are these needed? */
+  padding: 0 5px;
   margin-left: ${space(0.5)};
   position: relative;
 `;

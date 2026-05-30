@@ -26,8 +26,9 @@ import {useLocation} from 'sentry/utils/useLocation';
 import useOrganization from 'sentry/utils/useOrganization';
 import usePageFilters from 'sentry/utils/usePageFilters';
 import {WidgetSyncContextProvider} from 'sentry/views/dashboards/contexts/widgetSyncContext';
+import {useExploreDataset} from 'sentry/views/explore/contexts/pageParamsContext';
 import {getIdFromLocation} from 'sentry/views/explore/contexts/pageParamsContext/id';
-import {TraceItemAttributeProvider} from 'sentry/views/explore/contexts/traceItemAttributeContext';
+import {SpanTagsProvider} from 'sentry/views/explore/contexts/spanTagsContext';
 import {useGetSavedQuery} from 'sentry/views/explore/hooks/useGetSavedQueries';
 import {useSaveMultiQuery} from 'sentry/views/explore/hooks/useSaveMultiQuery';
 import {useVisitQuery} from 'sentry/views/explore/hooks/useVisitQuery';
@@ -36,7 +37,6 @@ import {
   useReadQueriesFromLocation,
 } from 'sentry/views/explore/multiQueryMode/locationUtils';
 import {QueryRow} from 'sentry/views/explore/multiQueryMode/queryRow';
-import {TraceItemDataset} from 'sentry/views/explore/types';
 import {limitMaxPickableDays} from 'sentry/views/explore/utils';
 
 export const MAX_QUERIES_ALLOWED = 5;
@@ -204,10 +204,11 @@ function Content() {
 }
 
 export function MultiQueryModeContent() {
+  const dataset = useExploreDataset();
   return (
-    <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+    <SpanTagsProvider dataset={dataset} enabled>
       <Content />
-    </TraceItemAttributeProvider>
+    </SpanTagsProvider>
   );
 }
 

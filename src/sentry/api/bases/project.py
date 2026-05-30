@@ -4,7 +4,6 @@ import http
 from collections.abc import Mapping
 from typing import Any
 
-import sentry_sdk
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -184,7 +183,7 @@ class ProjectEndpoint(Endpoint):
 
         self.check_object_permissions(request, project)
 
-        sentry_sdk.get_isolation_scope().set_tag("project", project.id)
+        Scope.get_isolation_scope().set_tag("project", project.id)
 
         bind_organization_context(project.organization)
 

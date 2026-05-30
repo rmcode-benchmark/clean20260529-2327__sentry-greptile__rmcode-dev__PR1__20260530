@@ -1,6 +1,7 @@
 __all__ = [
     "Action",
     "ActionAlertRuleTriggerAction",
+    "ActionGroupStatus",
     "AlertRuleDetector",
     "AlertRuleWorkflow",
     "Condition",
@@ -12,7 +13,6 @@ __all__ = [
     "DataSource",
     "DataSourceDetector",
     "Detector",
-    "DetectorGroup",
     "DetectorState",
     "DetectorWorkflow",
     "IncidentGroupOpenPeriod",
@@ -24,6 +24,7 @@ __all__ = [
 
 from .action import Action
 from .action_alertruletriggeraction import ActionAlertRuleTriggerAction
+from .action_group_status import ActionGroupStatus
 from .alertrule_detector import AlertRuleDetector
 from .alertrule_workflow import AlertRuleWorkflow
 from .data_condition import Condition, DataCondition
@@ -33,7 +34,6 @@ from .data_source import DataPacket, DataSource
 from .data_source_detector import DataSourceDetector
 from .datacondition_alertruletrigger import DataConditionAlertRuleTrigger
 from .detector import Detector
-from .detector_group import DetectorGroup
 from .detector_state import DetectorState
 from .detector_workflow import DetectorWorkflow
 from .incident_groupopenperiod import IncidentGroupOpenPeriod

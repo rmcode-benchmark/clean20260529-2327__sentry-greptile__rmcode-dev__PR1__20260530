@@ -1,9 +1,6 @@
 import {OrganizationFixture} from 'sentry-fixture/organization';
 
-import {
-  SubscriptionFixture,
-  SubscriptionWithSeerFixture,
-} from 'getsentry-test/fixtures/subscription';
+import {SubscriptionFixture} from 'getsentry-test/fixtures/subscription';
 
 import {DataCategory} from 'sentry/types/core';
 
@@ -29,7 +26,6 @@ describe('calculateTotalSpend', () => {
 
     expect(calculateTotalSpend(subscription)).toEqual({
       prepaidTotalSpent: 5000,
-      prepaidReservedBudgetPrice: 0,
       prepaidTotalPrice: 10000,
       onDemandTotalSpent: 0,
     });
@@ -52,7 +48,6 @@ describe('calculateTotalSpend', () => {
 
     expect(calculateTotalSpend(subscription)).toEqual({
       prepaidTotalSpent: 10_000,
-      prepaidReservedBudgetPrice: 0,
       prepaidTotalPrice: 10_000,
       // Directly from onDemandSpendUsed
       onDemandTotalSpent: 10_000,
@@ -73,7 +68,6 @@ describe('calculateTotalSpend', () => {
     ];
     expect(calculateTotalSpend(subscription)).toEqual({
       prepaidTotalSpent: 0,
-      prepaidReservedBudgetPrice: 0,
       prepaidTotalPrice: monthlyPrice,
       onDemandTotalSpent: 0,
     });
@@ -96,24 +90,5 @@ describe('calculateTotalSpend', () => {
 
     const result = calculateTotalSpend(subscription);
     expect(result.prepaidTotalSpent).toBe(0);
-  });
-
-  it('should calculate reserved budget spend', () => {
-    const seerSubscription = SubscriptionWithSeerFixture({
-      organization,
-      plan: 'am3_business',
-    });
-    const errorsPrice = 10000;
-    seerSubscription.planDetails.planCategories.errors = [
-      {events: 100_000, price: errorsPrice, unitPrice: 0.1, onDemandPrice: 0.2},
-    ];
-    seerSubscription.categories.errors!.reserved = 100_000;
-
-    expect(calculateTotalSpend(seerSubscription)).toEqual({
-      prepaidTotalSpent: 2000,
-      prepaidReservedBudgetPrice: 2000,
-      prepaidTotalPrice: 2000 + errorsPrice,
-      onDemandTotalSpent: 0,
-    });
   });
 });

@@ -35,8 +35,7 @@ describe('OrganizationAuditLog', function () {
     render(<OrganizationAuditLog location={router.location} />);
 
     expect(await screen.findByRole('heading')).toHaveTextContent('Audit Log');
-    // Check that both textboxes are present (date selector search and event selector)
-    expect(screen.getAllByRole('textbox')).toHaveLength(2);
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
     expect(screen.getByText('Member')).toBeInTheDocument();
     expect(screen.getByText('Action')).toBeInTheDocument();
     expect(screen.getByText('IP')).toBeInTheDocument();

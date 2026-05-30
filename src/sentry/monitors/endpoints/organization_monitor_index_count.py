@@ -29,15 +29,7 @@ class OrganizationMonitorIndexCountEndpoint(OrganizationEndpoint):
         try:
             filter_params = self.get_filter_params(request, organization, date_filter_optional=True)
         except NoProjects:
-            return self.respond(
-                {
-                    "counts": {
-                        "total": 0,
-                        "active": 0,
-                        "disabled": 0,
-                    },
-                }
-            )
+            return self.respond([])
 
         queryset = Monitor.objects.filter(
             organization_id=organization.id, project_id__in=filter_params["project_id"]

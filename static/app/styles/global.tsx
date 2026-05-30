@@ -97,7 +97,7 @@ const prismStyles = (theme: Theme) => css`
     }
     .token.important,
     .token.bold {
-      font-weight: ${theme.fontWeight.bold};
+      font-weight: ${theme.fontWeightBold};
     }
     .token.italic {
       font-style: italic;
@@ -226,18 +226,14 @@ const styles = (theme: Theme, isDark: boolean) => css`
             h6 {
               color: ${theme.headingColor};
             }
+
+            a {
+              color: ${theme.textColor};
+            }
           }
 
           .box-header {
             border-bottom-color: ${theme.border};
-
-            a {
-              color: ${theme.textColor};
-
-              &:hover {
-                color: ${theme.linkHoverColor};
-              }
-            }
           }
         }
         .loading .loading-indicator {

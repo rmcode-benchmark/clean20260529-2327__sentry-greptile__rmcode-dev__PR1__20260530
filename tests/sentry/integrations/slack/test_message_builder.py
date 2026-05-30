@@ -8,6 +8,7 @@ import orjson
 from django.urls import reverse
 from urllib3.response import HTTPResponse
 
+from sentry.autofix.utils import SeerAutomationSource
 from sentry.eventstore.models import Event
 from sentry.grouping.grouptype import ErrorGroupType
 from sentry.incidents.logic import CRITICAL_TRIGGER_LABEL
@@ -53,7 +54,6 @@ from sentry.models.rule import Rule as IssueAlertRule
 from sentry.models.team import Team
 from sentry.notifications.utils.actions import MessageAction
 from sentry.seer.anomaly_detection.types import StoreDataResponse
-from sentry.seer.autofix.constants import SeerAutomationSource
 from sentry.silo.base import SiloMode
 from sentry.testutils.cases import PerformanceIssueTestCase, TestCase
 from sentry.testutils.factories import EventType
@@ -990,7 +990,6 @@ class BuildGroupAttachmentTest(TestCase, PerformanceIssueTestCase, OccurrenceTes
 
         self.project.flags.has_releases = True
         self.project.save(update_fields=["flags"])
-        self.project.update_option("sentry:seer_scanner_automation", True)
 
         mock_summary = {
             "headline": "Custom AI Title",
@@ -1054,7 +1053,6 @@ class BuildGroupAttachmentTest(TestCase, PerformanceIssueTestCase, OccurrenceTes
 
         self.project.flags.has_releases = True
         self.project.save(update_fields=["flags"])
-        self.project.update_option("sentry:seer_scanner_automation", True)
 
         patch_path = "sentry.integrations.utils.issue_summary_for_alerts.get_issue_summary"
 
@@ -1099,8 +1097,6 @@ class BuildGroupAttachmentTest(TestCase, PerformanceIssueTestCase, OccurrenceTes
         group1 = event1.group
         group1.type = ErrorGroupType.type_id
         group1.save()
-
-        self.project.update_option("sentry:seer_scanner_automation", True)
 
         # Test case for long exception text (over 50 characters)
         long_text = (
@@ -1401,6 +1397,7 @@ class BuildIncidentAttachmentTest(TestCase):
         }
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @patch(
         "sentry.seer.anomaly_detection.store_data.seer_anomaly_detection_connection_pool.urlopen"
     )
@@ -1617,6 +1614,7 @@ class BuildMetricAlertAttachmentTest(TestCase):
         }
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @patch(
         "sentry.seer.anomaly_detection.store_data.seer_anomaly_detection_connection_pool.urlopen"
     )

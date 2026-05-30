@@ -1,4 +1,6 @@
 import logging
+import math
+import time
 from datetime import timedelta
 from uuid import uuid4
 
@@ -54,7 +56,6 @@ from sentry.models.project import Project
 from sentry.models.projectbookmark import ProjectBookmark
 from sentry.models.projectredirect import ProjectRedirect
 from sentry.notifications.utils import has_alert_integration
-from sentry.seer.autofix.constants import AutofixAutomationTuningSettings
 from sentry.tasks.delete_seer_grouping_records import call_seer_delete_project_grouping_records
 from sentry.tempest.utils import has_tempest_access
 
@@ -95,33 +96,6 @@ class ProjectMemberSerializer(serializers.Serializer):
         help_text="Enables starring the project within the projects tab. Can be updated with **`project:read`** permission.",
         required=False,
     )
-    autofixAutomationTuning = serializers.ChoiceField(
-        choices=[item.value for item in AutofixAutomationTuningSettings],
-        required=False,
-    )
-    seerScannerAutomation = serializers.BooleanField(required=False)
-
-    def validate_autofixAutomationTuning(self, value):
-        organization = self.context["project"].organization
-        actor = self.context["request"].user
-        if not features.has(
-            "organizations:trigger-autofix-on-issue-summary", organization, actor=actor
-        ):
-            raise serializers.ValidationError(
-                "Organization does not have the trigger-autofix-on-issue-summary feature enabled."
-            )
-        return value
-
-    def validate_seerScannerAutomation(self, value):
-        organization = self.context["project"].organization
-        actor = self.context["request"].user
-        if not features.has(
-            "organizations:trigger-autofix-on-issue-summary", organization, actor=actor
-        ):
-            raise serializers.ValidationError(
-                "Organization does not have the trigger-autofix-on-issue-summary feature enabled."
-            )
-        return value
 
 
 @extend_schema_serializer(
@@ -157,7 +131,6 @@ class ProjectMemberSerializer(serializers.Serializer):
         "tempestFetchScreenshots",
         "tempestFetchDumps",
         "autofixAutomationTuning",
-        "seerScannerAutomation",
     ]
 )
 class ProjectAdminSerializer(ProjectMemberSerializer):
@@ -249,6 +222,9 @@ E.g. `['release', 'environment']`""",
     dynamicSamplingBiases = DynamicSamplingBiasSerializer(required=False, many=True)
     tempestFetchScreenshots = serializers.BooleanField(required=False)
     tempestFetchDumps = serializers.BooleanField(required=False)
+    autofixAutomationTuning = serializers.ChoiceField(
+        choices=["off", "low", "medium", "high", "always"], required=False
+    )
 
     # DO NOT ADD MORE TO OPTIONS
     # Each param should be a field in the serializer like above.
@@ -377,15 +353,22 @@ E.g. `['release', 'environment']`""",
 
         return value
 
-    # TODO: Once these have been in place for a while we can probably remove them
-    def validate_groupingConfig(self, value):
-        raise serializers.ValidationError("Grouping config cannot be manually set.")
-
-    def validate_secondaryGroupingConfig(self, value):
-        raise serializers.ValidationError("Secondary grouping config cannot be manually set.")
-
     def validate_secondaryGroupingExpiry(self, value):
-        raise serializers.ValidationError("Secondary grouping expiry cannot be manually set.")
+        if not isinstance(value, (int, float)) or math.isnan(value):
+            raise serializers.ValidationError(
+                f"Grouping expiry must be a numerical value, a UNIX timestamp with second resolution, found {type(value)}"
+            )
+        now = time.time()
+        if value < now:
+            raise serializers.ValidationError(
+                "Grouping expiry must be sometime within the next 90 days and not in the past. Perhaps you specified the timestamp not in seconds?"
+            )
+
+        max_expiry_date = now + (91 * 24 * 3600)
+        if value > max_expiry_date:
+            value = max_expiry_date
+
+        return value
 
     def validate_fingerprintingRules(self, value):
         if not value:
@@ -466,6 +449,17 @@ E.g. `['release', 'environment']`""",
         if not has_tempest_access(organization, actor=actor):
             raise serializers.ValidationError(
                 "Organization does not have the tempest feature enabled."
+            )
+        return value
+
+    def validate_autofixAutomationTuning(self, value):
+        organization = self.context["project"].organization
+        actor = self.context["request"].user
+        if not features.has(
+            "organizations:trigger-autofix-on-issue-summary", organization, actor=actor
+        ):
+            raise serializers.ValidationError(
+                "Organization does not have the trigger-autofix-on-issue-summary feature enabled."
             )
         return value
 
@@ -567,7 +561,7 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
         Update various attributes and configurable settings for the given project.
 
         Note that solely having the **`project:read`** scope restricts updatable settings to
-        `isBookmarked`, `autofixAutomationTuning`, and `seerScannerAutomation`.
+        `isBookmarked`.
         """
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -652,6 +646,9 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
         if result.get("scrubIPAddresses") is not None:
             if project.update_option("sentry:scrub_ip_address", result["scrubIPAddresses"]):
                 changed_proj_settings["sentry:scrub_ip_address"] = result["scrubIPAddresses"]
+        if result.get("groupingConfig") is not None:
+            if project.update_option("sentry:grouping_config", result["groupingConfig"]):
+                changed_proj_settings["sentry:grouping_config"] = result["groupingConfig"]
         if result.get("groupingEnhancements") is not None:
             if project.update_option(
                 "sentry:grouping_enhancements", result["groupingEnhancements"]
@@ -662,6 +659,20 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
         if result.get("fingerprintingRules") is not None:
             if project.update_option("sentry:fingerprinting_rules", result["fingerprintingRules"]):
                 changed_proj_settings["sentry:fingerprinting_rules"] = result["fingerprintingRules"]
+        if result.get("secondaryGroupingConfig") is not None:
+            if project.update_option(
+                "sentry:secondary_grouping_config", result["secondaryGroupingConfig"]
+            ):
+                changed_proj_settings["sentry:secondary_grouping_config"] = result[
+                    "secondaryGroupingConfig"
+                ]
+        if result.get("secondaryGroupingExpiry") is not None:
+            if project.update_option(
+                "sentry:secondary_grouping_expiry", result["secondaryGroupingExpiry"]
+            ):
+                changed_proj_settings["sentry:secondary_grouping_expiry"] = result[
+                    "secondaryGroupingExpiry"
+                ]
         if result.get("securityToken") is not None:
             if project.update_option("sentry:token", result["securityToken"]):
                 changed_proj_settings["sentry:token"] = result["securityToken"]
@@ -766,13 +777,6 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
             ):
                 changed_proj_settings["sentry:autofix_automation_tuning"] = result[
                     "autofixAutomationTuning"
-                ]
-        if result.get("seerScannerAutomation") is not None:
-            if project.update_option(
-                "sentry:seer_scanner_automation", result["seerScannerAutomation"]
-            ):
-                changed_proj_settings["sentry:seer_scanner_automation"] = result[
-                    "seerScannerAutomation"
                 ]
 
         if has_elevated_scopes:
@@ -1024,20 +1028,15 @@ class ProjectDetailsEndpoint(ProjectEndpoint):
         if old_raw_dynamic_sampling_biases is None:
             return
 
-        old_biases = {bias["id"]: bias for bias in old_raw_dynamic_sampling_biases}
-        new_biases = {bias["id"]: bias for bias in new_raw_dynamic_sampling_biases}
-        for bias_id, new_bias in new_biases.items():
-            old_bias = old_biases.get(bias_id)
-            if (old_bias is None and new_bias["active"]) or (
-                old_bias is not None and new_bias["active"] != old_bias["active"]
-            ):
+        for index, rule in enumerate(new_raw_dynamic_sampling_biases):
+            if rule["active"] != old_raw_dynamic_sampling_biases[index]["active"]:
                 self.create_audit_entry(
                     request=request,
                     organization=project.organization,
                     target_object=project.id,
                     event=audit_log.get_event_id(
-                        "SAMPLING_BIAS_ENABLED" if new_bias["active"] else "SAMPLING_BIAS_DISABLED"
+                        "SAMPLING_BIAS_ENABLED" if rule["active"] else "SAMPLING_BIAS_DISABLED"
                     ),
-                    data={**project.get_audit_log_data(), "name": bias_id},
+                    data={**project.get_audit_log_data(), "name": rule["id"]},
                 )
                 return

@@ -6,7 +6,7 @@ import ProjectToolbarSettings from 'sentry/views/settings/project/projectToolbar
 describe('ProjectToolbarSettings', function () {
   const {routerProps, organization, project} = initializeOrg({
     organization: {
-      features: ['sentry-toolbar-ui'],
+      features: ['dev-toolbar-ui'],
     },
   });
   const url = `/projects/${organization.slug}/${project.slug}/`;

@@ -49,7 +49,7 @@ from sentry.snuba import spans_rpc
 from sentry.snuba.dataset import Dataset
 from sentry.snuba.referrer import Referrer
 from sentry.utils.numbers import clip
-from sentry.utils.sdk import set_span_attribute
+from sentry.utils.sdk import set_span_data
 from sentry.utils.snuba import bulk_snuba_queries_with_referrers
 from sentry.utils.snuba_rpc import get_traces_rpc
 
@@ -93,7 +93,9 @@ class TraceResult(TypedDict):
 
 
 class OrganizationTracesSerializer(serializers.Serializer):
-    dataset = serializers.ChoiceField(["spans", "spansIndexed"], required=False, default="spans")
+    dataset = serializers.ChoiceField(
+        ["spans", "spansIndexed"], required=False, default="spansIndexed"
+    )
 
     breakdownSlices = serializers.IntegerField(default=40, min_value=1, max_value=100)
     query = serializers.ListField(
@@ -141,8 +143,6 @@ class OrganizationTracesEndpoint(OrganizationTracesEndpointBase):
     def get(self, request: Request, organization: Organization) -> Response:
         if not features.has(
             "organizations:performance-trace-explorer", organization, actor=request.user
-        ) and not features.has(
-            "organizations:visibility-explore-view", organization, actor=request.user
         ):
             return Response(status=404)
 
@@ -192,7 +192,9 @@ class OrganizationTracesEndpoint(OrganizationTracesEndpointBase):
 
 
 class OrganizationTraceSpansSerializer(serializers.Serializer):
-    dataset = serializers.ChoiceField(["spans", "spansIndexed"], required=False, default="spans")
+    dataset = serializers.ChoiceField(
+        ["spans", "spansIndexed"], required=False, default="spansIndexed"
+    )
 
     field = serializers.ListField(required=True, allow_empty=False, child=serializers.CharField())
     sort = serializers.ListField(required=False, allow_empty=True, child=serializers.CharField())
@@ -451,9 +453,7 @@ class TracesExecutor:
             # This is the first span in this trace.
             traces_default_info[span["trace"]] = name
 
-        def get_trace_info(
-            trace: str,
-        ) -> tuple[str, str, float] | tuple[None, None, None]:
+        def get_trace_info(trace: str) -> tuple[str, str, float] | tuple[None, None, None]:
             if trace in traces_primary_info:
                 return traces_primary_info[trace]
 
@@ -1417,7 +1417,7 @@ def process_user_queries(
             where, _ = resolve_conditions(user_query)
             queries[user_query] = where
 
-    set_span_attribute("user_queries_count", len(queries))
+    set_span_data("user_queries_count", len(queries))
     sentry_sdk.set_context("user_queries", {"raw_queries": user_queries})
 
     return queries
@@ -1452,7 +1452,7 @@ def process_rpc_user_queries(
         if where is not None:
             queries[user_query] = where
 
-    set_span_attribute("user_queries_count", len(queries))
+    set_span_data("user_queries_count", len(queries))
     sentry_sdk.set_context("user_queries", {"raw_queries": user_queries})
 
     return queries

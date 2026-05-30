@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import builtins
 import logging
 from dataclasses import asdict
 from enum import StrEnum
@@ -14,7 +13,6 @@ from jsonschema import ValidationError, validate
 from sentry.backup.scopes import RelocationScope
 from sentry.db.models import DefaultFieldsModel, region_silo_model, sane_repr
 from sentry.db.models.fields.hybrid_cloud_foreign_key import HybridCloudForeignKey
-from sentry.utils import metrics
 from sentry.workflow_engine.models.json_config import JSONConfigBase
 from sentry.workflow_engine.registry import action_handler_registry
 from sentry.workflow_engine.types import ActionHandler, WorkflowEventData
@@ -81,19 +79,11 @@ class Action(DefaultFieldsModel, JSONConfigBase):
         "sentry.Integration", blank=True, null=True, on_delete="CASCADE"
     )
 
-    def get_handler(self) -> builtins.type[ActionHandler]:
+    def get_handler(self) -> ActionHandler:
         action_type = Action.Type(self.type)
         return action_handler_registry.get(action_type)
 
     def trigger(self, event_data: WorkflowEventData, detector: Detector) -> None:
-        handler = self.get_handler()
-        handler.execute(event_data, self, detector)
-
-        metrics.incr(
-            "workflow_engine.action.trigger",
-            tags={"action_type": self.type, "detector_type": detector.type},
-        )
-
         logger.info(
             "workflow_engine.action.trigger",
             extra={
@@ -102,6 +92,9 @@ class Action(DefaultFieldsModel, JSONConfigBase):
                 "event_data": asdict(event_data),
             },
         )
+
+        handler = self.get_handler()
+        handler.execute(event_data, self, detector)
 
 
 @receiver(pre_save, sender=Action)

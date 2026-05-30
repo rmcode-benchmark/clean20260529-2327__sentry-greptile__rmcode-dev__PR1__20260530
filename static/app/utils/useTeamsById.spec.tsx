@@ -6,7 +6,6 @@ import {renderHook, waitFor} from 'sentry-test/reactTestingLibrary';
 import OrganizationStore from 'sentry/stores/organizationStore';
 import TeamStore from 'sentry/stores/teamStore';
 import {QueryClient, QueryClientProvider} from 'sentry/utils/queryClient';
-import {OrganizationContext} from 'sentry/views/organizationContext';
 
 import {useTeamsById as useTeamsById} from './useTeamsById';
 
@@ -23,9 +22,7 @@ describe('useTeamsById', function () {
   const mockTeams = [TeamFixture()];
 
   const wrapper = ({children}: {children?: any}) => (
-    <OrganizationContext.Provider value={org}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </OrganizationContext.Provider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
   beforeEach(function () {
@@ -99,7 +96,7 @@ describe('useTeamsById', function () {
     expect(teams).toEqual(expect.arrayContaining(mockTeams));
   });
 
-  it('can load team by id', async function () {
+  it('can load teams by id', async function () {
     const requestedTeams = [TeamFixture({id: '2', slug: 'requested-team'})];
     const mockRequest = MockApiClient.addMockResponse({
       url: `/organizations/${org.slug}/teams/`,
@@ -115,10 +112,7 @@ describe('useTeamsById', function () {
     });
 
     expect(result.current.isLoading).toBe(true);
-    expect(mockRequest).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({query: {query: 'id:2'}})
-    );
+    expect(mockRequest).toHaveBeenCalled();
 
     await waitFor(() => expect(result.current.teams).toHaveLength(1));
 
@@ -127,79 +121,16 @@ describe('useTeamsById', function () {
     expect(TeamStore.getState().teams).toEqual(expect.arrayContaining(requestedTeams));
   });
 
-  it('can load multiple teams by id', async function () {
-    const requestedTeams = [
-      TeamFixture({id: '2', slug: 'requested-team'}),
-      TeamFixture({id: '3', slug: 'requested-team-2'}),
-    ];
-    const mockRequest = MockApiClient.addMockResponse({
-      url: `/organizations/${org.slug}/teams/`,
-      method: 'GET',
-      body: requestedTeams,
-    });
-
+  it('only loads ids when needed', function () {
     TeamStore.loadInitialData(mockTeams);
 
     const {result} = renderHook(useTeamsById, {
-      initialProps: {ids: ['2', '3']},
-      wrapper,
-    });
-
-    expect(result.current.isLoading).toBe(true);
-    expect(mockRequest).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({query: {query: 'id:2 id:3'}})
-    );
-
-    await waitFor(() => expect(result.current.teams).toHaveLength(2));
-
-    const {teams} = result.current;
-    expect(teams).toEqual(expect.arrayContaining(requestedTeams));
-    expect(TeamStore.getState().teams).toEqual(expect.arrayContaining(requestedTeams));
-  });
-
-  it('does not fetch anything if the teams are already loaded', function () {
-    TeamStore.loadInitialData(mockTeams);
-
-    const {result} = renderHook(useTeamsById, {
-      initialProps: {ids: ['1']},
+      initialProps: {ids: [mockTeams[0]!.id]},
       wrapper,
     });
 
     const {teams, isLoading} = result.current;
     expect(isLoading).toBe(false);
     expect(teams).toEqual(expect.arrayContaining(mockTeams));
-  });
-
-  it('only loads ids when needed', async function () {
-    const mockTeamsToFetch = [
-      TeamFixture({id: '1', slug: 'requested-team-1'}),
-      TeamFixture({id: '2', slug: 'requested-team-2'}),
-    ];
-
-    const mockRequest = MockApiClient.addMockResponse({
-      url: `/organizations/${org.slug}/teams/`,
-      method: 'GET',
-      match: [MockApiClient.matchQuery({query: 'id:2'})],
-      body: [mockTeamsToFetch[1]],
-    });
-
-    // Team 1 is already loaded
-    TeamStore.loadInitialData([mockTeamsToFetch[0]!]);
-
-    // Request teams 1 and 2
-    const {result} = renderHook(useTeamsById, {
-      initialProps: {ids: ['1', '2']},
-      wrapper,
-    });
-
-    // Should return both teams
-    await waitFor(() => expect(result.current.teams).toEqual(mockTeamsToFetch));
-
-    // Should only have fetched team 2
-    expect(mockRequest).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({query: {query: 'id:2'}})
-    );
   });
 });

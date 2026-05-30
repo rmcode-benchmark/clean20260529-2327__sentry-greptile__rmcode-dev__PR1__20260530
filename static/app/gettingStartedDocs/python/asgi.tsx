@@ -1,14 +1,13 @@
 import {Fragment} from 'react';
 
-import {ExternalLink} from 'sentry/components/core/link';
-import {StepType} from 'sentry/components/onboarding/gettingStartedDoc/types';
+import ExternalLink from 'sentry/components/links/externalLink';
+import {StepType} from 'sentry/components/onboarding/gettingStartedDoc/step';
 import {
   type Docs,
   type DocsParams,
   type OnboardingConfig,
 } from 'sentry/components/onboarding/gettingStartedDoc/types';
 import {
-  agentMonitoringOnboarding,
   AlternativeConfiguration,
   crashReportOnboardingPython,
 } from 'sentry/gettingStartedDocs/python/python';
@@ -167,7 +166,6 @@ const docs: Docs = {
 
   crashReportOnboarding: crashReportOnboardingPython,
   profilingOnboarding: getPythonProfilingOnboarding(),
-  agentMonitoringOnboarding,
 };
 
 export default docs;

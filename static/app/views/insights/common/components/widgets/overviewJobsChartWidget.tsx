@@ -12,7 +12,7 @@ import {Widget} from 'sentry/views/dashboards/widgets/widget/widget';
 import {Mode} from 'sentry/views/explore/contexts/pageParamsContext/mode';
 import {ChartType} from 'sentry/views/insights/common/components/chart';
 import type {LoadableChartWidgetProps} from 'sentry/views/insights/common/components/widgets/types';
-import {useSpanSeries} from 'sentry/views/insights/common/queries/useDiscoverSeries';
+import {useEAPSeries} from 'sentry/views/insights/common/queries/useDiscoverSeries';
 import {convertSeriesToTimeseries} from 'sentry/views/insights/common/utils/convertSeriesToTimeseries';
 import {Referrer} from 'sentry/views/insights/pages/platform/laravel/referrers';
 import {usePageFilterChartParams} from 'sentry/views/insights/pages/platform/laravel/utils';
@@ -28,11 +28,6 @@ import {Toolbar} from 'sentry/views/insights/pages/platform/shared/toolbar';
 import {useTransactionNameQuery} from 'sentry/views/insights/pages/platform/shared/useTransactionNameQuery';
 import {QueuesWidgetEmptyStateWarning} from 'sentry/views/performance/landing/widgets/components/selectableList';
 
-const ALIASES = {
-  'count(span.duration)': t('Jobs'),
-  'trace_status_rate(internal_error)': t('Error Rate'),
-};
-
 export default function OverviewJobsChartWidget(props: LoadableChartWidgetProps) {
   const organization = useOrganization();
   const {query} = useTransactionNameQuery();
@@ -45,7 +40,7 @@ export default function OverviewJobsChartWidget(props: LoadableChartWidgetProps)
 
   const fullQuery = `span.op:queue.process ${query}`.trim();
 
-  const {data, isLoading, error} = useSpanSeries(
+  const {data, isLoading, error} = useEAPSeries(
     {
       ...pageFilterChartParams,
       search: fullQuery,
@@ -59,15 +54,15 @@ export default function OverviewJobsChartWidget(props: LoadableChartWidgetProps)
   const plottables = useMemo(() => {
     return [
       new Bars(convertSeriesToTimeseries(data['count(span.duration)']), {
-        alias: ALIASES['count(span.duration)'],
-        color: theme.chart.neutral,
+        alias: t('Jobs'),
+        color: theme.gray200,
       }),
       new Line(convertSeriesToTimeseries(data['trace_status_rate(internal_error)']), {
-        alias: ALIASES['trace_status_rate(internal_error)'],
+        alias: t('Error Rate'),
         color: theme.error,
       }),
     ];
-  }, [data, theme.error, theme.chart.neutral]);
+  }, [data, theme.error, theme.gray200]);
 
   const isEmpty = useMemo(
     () =>
@@ -144,8 +139,6 @@ export default function OverviewJobsChartWidget(props: LoadableChartWidgetProps)
         organization.features.includes('visibility-explore-view') &&
         !isEmpty && (
           <Toolbar
-            showCreateAlert
-            aliases={ALIASES}
             exploreParams={{
               mode: Mode.AGGREGATE,
               visualize: [

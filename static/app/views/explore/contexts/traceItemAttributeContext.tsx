@@ -74,15 +74,22 @@ export function TraceItemAttributeProvider({
     return {...stringAttributes, ...Object.fromEntries(tags)};
   }, [traceItemType, stringAttributes]);
 
+  const attributesResult = useMemo(() => {
+    return {
+      number: allNumberAttributes,
+      string: allStringAttributes,
+      numberAttributesLoading,
+      stringAttributesLoading,
+    };
+  }, [
+    allNumberAttributes,
+    allStringAttributes,
+    numberAttributesLoading,
+    stringAttributesLoading,
+  ]);
+
   return (
-    <TraceItemAttributeContext
-      value={{
-        number: allNumberAttributes,
-        string: allStringAttributes,
-        numberAttributesLoading,
-        stringAttributesLoading,
-      }}
-    >
+    <TraceItemAttributeContext value={attributesResult}>
       {children}
     </TraceItemAttributeContext>
   );

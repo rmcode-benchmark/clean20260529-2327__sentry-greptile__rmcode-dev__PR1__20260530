@@ -74,7 +74,7 @@ function LabelWithPowerIcon({children, id, subscription}: Props) {
     return children as React.ReactElement;
   }
 
-  if (!subscription?.plan || isEnterprise(subscription.plan)) {
+  if (!subscription || isEnterprise(subscription)) {
     return children as React.ReactElement;
   }
 

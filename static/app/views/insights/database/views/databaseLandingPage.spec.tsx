@@ -8,7 +8,6 @@ import ProjectsStore from 'sentry/stores/projectsStore';
 import {useLocation} from 'sentry/utils/useLocation';
 import usePageFilters from 'sentry/utils/usePageFilters';
 import {useReleaseStats} from 'sentry/utils/useReleaseStats';
-import {SAMPLING_MODE} from 'sentry/views/explore/hooks/useProgressiveQuery';
 import {DatabaseLandingPage} from 'sentry/views/insights/database/views/databaseLandingPage';
 
 jest.mock('sentry/utils/useLocation');
@@ -139,8 +138,7 @@ describe('DatabaseLandingPage', function () {
         method: 'GET',
         query: {
           cursor: undefined,
-          dataset: 'spans',
-          sampling: SAMPLING_MODE.NORMAL,
+          dataset: 'spansMetrics',
           environment: [],
           excludeOther: 0,
           field: [],
@@ -149,9 +147,8 @@ describe('DatabaseLandingPage', function () {
           partial: 1,
           per_page: 50,
           project: [],
-          query:
-            'span.category:db !span.op:[db.sql.room,db.redis] has:sentry.normalized_description',
-          referrer: 'api.insights.database.landing-throughput-chart',
+          query: 'span.module:db has:sentry.normalized_description',
+          referrer: 'api.starfish.span-landing-page-metrics-chart',
           statsPeriod: '10d',
           topEvents: undefined,
           yAxis: 'epm()',
@@ -167,8 +164,7 @@ describe('DatabaseLandingPage', function () {
         method: 'GET',
         query: {
           cursor: undefined,
-          dataset: 'spans',
-          sampling: SAMPLING_MODE.NORMAL,
+          dataset: 'spansMetrics',
           environment: [],
           excludeOther: 0,
           field: [],
@@ -177,9 +173,8 @@ describe('DatabaseLandingPage', function () {
           partial: 1,
           per_page: 50,
           project: [],
-          query:
-            'span.category:db !span.op:[db.sql.room,db.redis] has:sentry.normalized_description',
-          referrer: 'api.insights.database.landing-duration-chart',
+          query: 'span.module:db has:sentry.normalized_description',
+          referrer: 'api.starfish.span-landing-page-metrics-chart',
           statsPeriod: '10d',
           topEvents: undefined,
           yAxis: 'avg(span.self_time)',
@@ -193,8 +188,7 @@ describe('DatabaseLandingPage', function () {
       expect.objectContaining({
         method: 'GET',
         query: {
-          dataset: 'spans',
-          sampling: SAMPLING_MODE.NORMAL,
+          dataset: 'spansMetrics',
           environment: [],
           field: [
             'project.id',
@@ -207,8 +201,7 @@ describe('DatabaseLandingPage', function () {
           ],
           per_page: 25,
           project: [],
-          query:
-            'span.category:db !span.op:[db.sql.room,db.redis] has:sentry.normalized_description',
+          query: 'span.module:db has:sentry.normalized_description',
           referrer: 'api.starfish.use-span-list',
           sort: '-sum(span.self_time)',
           statsPeriod: '10d',
@@ -260,8 +253,7 @@ describe('DatabaseLandingPage', function () {
         method: 'GET',
         query: {
           cursor: undefined,
-          dataset: 'spans',
-          sampling: SAMPLING_MODE.NORMAL,
+          dataset: 'spansMetrics',
           environment: [],
           excludeOther: 0,
           field: [],
@@ -271,8 +263,8 @@ describe('DatabaseLandingPage', function () {
           per_page: 50,
           project: [],
           query:
-            'span.category:db !span.op:[db.sql.room,db.redis] has:sentry.normalized_description span.action:SELECT span.domain:organizations',
-          referrer: 'api.insights.database.landing-throughput-chart',
+            'span.module:db has:sentry.normalized_description span.action:SELECT span.domain:organizations',
+          referrer: 'api.starfish.span-landing-page-metrics-chart',
           statsPeriod: '10d',
           topEvents: undefined,
           yAxis: 'epm()',
@@ -288,8 +280,7 @@ describe('DatabaseLandingPage', function () {
         method: 'GET',
         query: {
           cursor: undefined,
-          dataset: 'spans',
-          sampling: SAMPLING_MODE.NORMAL,
+          dataset: 'spansMetrics',
           environment: [],
           excludeOther: 0,
           field: [],
@@ -299,8 +290,8 @@ describe('DatabaseLandingPage', function () {
           per_page: 50,
           project: [],
           query:
-            'span.category:db !span.op:[db.sql.room,db.redis] has:sentry.normalized_description span.action:SELECT span.domain:organizations',
-          referrer: 'api.insights.database.landing-duration-chart',
+            'span.module:db has:sentry.normalized_description span.action:SELECT span.domain:organizations',
+          referrer: 'api.starfish.span-landing-page-metrics-chart',
           statsPeriod: '10d',
           topEvents: undefined,
           yAxis: 'avg(span.self_time)',
@@ -314,8 +305,7 @@ describe('DatabaseLandingPage', function () {
       expect.objectContaining({
         method: 'GET',
         query: {
-          dataset: 'spans',
-          sampling: SAMPLING_MODE.NORMAL,
+          dataset: 'spansMetrics',
           environment: [],
           field: [
             'project.id',
@@ -329,7 +319,7 @@ describe('DatabaseLandingPage', function () {
           per_page: 25,
           project: [],
           query:
-            'span.category:db !span.op:[db.sql.room,db.redis] has:sentry.normalized_description span.action:SELECT span.domain:organizations',
+            'span.module:db has:sentry.normalized_description span.action:SELECT span.domain:organizations',
           referrer: 'api.starfish.use-span-list',
           sort: '-sum(span.self_time)',
           statsPeriod: '10d',

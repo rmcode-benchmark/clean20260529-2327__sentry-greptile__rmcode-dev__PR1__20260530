@@ -16,12 +16,14 @@ import type {Organization} from 'sentry/types/organization';
 import {defined} from 'sentry/utils';
 import useOrganization from 'sentry/utils/useOrganization';
 import ExploreBreadcrumb from 'sentry/views/explore/components/breadcrumb';
+import {TraceExploreAiQueryProvider} from 'sentry/views/explore/components/traceExploreAiQueryProvider';
 import {
   PageParamsProvider,
+  useExploreDataset,
   useExploreId,
   useExploreTitle,
 } from 'sentry/views/explore/contexts/pageParamsContext';
-import {TraceItemAttributeProvider} from 'sentry/views/explore/contexts/traceItemAttributeContext';
+import {SpanTagsProvider} from 'sentry/views/explore/contexts/spanTagsContext';
 import {useGetSavedQuery} from 'sentry/views/explore/hooks/useGetSavedQueries';
 import {SavedQueryEditMenu} from 'sentry/views/explore/savedQueryEditMenu';
 import {SpansTabContent, SpansTabOnboarding} from 'sentry/views/explore/spans/spansTab';
@@ -33,7 +35,6 @@ import {
   useExploreSpansTourModal,
 } from 'sentry/views/explore/spans/tour';
 import {StarSavedQueryButton} from 'sentry/views/explore/starSavedQueryButton';
-import {TraceItemDataset} from 'sentry/views/explore/types';
 import {limitMaxPickableDays} from 'sentry/views/explore/utils';
 import {useOnboardingProject} from 'sentry/views/insights/common/queries/useOnboardingProject';
 import {usePrefersStackedNav} from 'sentry/views/nav/usePrefersStackedNav';
@@ -73,7 +74,9 @@ function SpansTabWrapper({children}: SpansTabContextProps) {
     <SpansTabTourProvider>
       <SpansTabTourTrigger />
       <PageParamsProvider>
-        <ExploreTagsProvider>{children}</ExploreTagsProvider>
+        <TraceExploreAiQueryProvider>
+          <ExploreTagsProvider>{children}</ExploreTagsProvider>
+        </TraceExploreAiQueryProvider>
       </PageParamsProvider>
     </SpansTabTourProvider>
   );
@@ -112,10 +115,12 @@ function SpansTabTourTrigger() {
 }
 
 function ExploreTagsProvider({children}: SpansTabContextProps) {
+  const dataset = useExploreDataset();
+
   return (
-    <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+    <SpanTagsProvider dataset={dataset} enabled>
       {children}
-    </TraceItemAttributeProvider>
+    </SpanTagsProvider>
   );
 }
 
@@ -145,7 +150,7 @@ function SpansTabHeader({organization}: SpansTabHeaderProps) {
         </Layout.Title>
       </Layout.HeaderContent>
       <Layout.HeaderActions>
-        <ButtonBar>
+        <ButtonBar gap={1}>
           {!prefersStackedNav && (
             <LinkButton
               to={`/organizations/${organization.slug}/explore/saved-queries/`}

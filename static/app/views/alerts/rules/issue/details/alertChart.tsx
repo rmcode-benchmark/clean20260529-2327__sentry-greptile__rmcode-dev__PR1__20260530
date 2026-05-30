@@ -129,8 +129,8 @@ const ChartFooter = styled(PanelFooter)`
 
 const FooterHeader = styled('h4')`
   margin: 0;
-  font-weight: ${p => p.theme.fontWeight.bold};
-  font-size: ${p => p.theme.fontSize.md};
+  font-weight: ${p => p.theme.fontWeightBold};
+  font-size: ${p => p.theme.fontSizeMedium};
   line-height: 1;
 `;
 

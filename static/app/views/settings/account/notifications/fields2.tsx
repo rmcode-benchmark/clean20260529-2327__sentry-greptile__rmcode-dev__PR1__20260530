@@ -1,8 +1,8 @@
 import {Fragment} from 'react';
 import upperFirst from 'lodash/upperFirst';
 
-import {ExternalLink} from 'sentry/components/core/link';
 import type {Field} from 'sentry/components/forms/types';
+import ExternalLink from 'sentry/components/links/externalLink';
 import QuestionTooltip from 'sentry/components/questionTooltip';
 import {DATA_CATEGORY_INFO} from 'sentry/constants';
 import {t, tct} from 'sentry/locale';
@@ -111,13 +111,13 @@ export const NOTIFICATION_SETTING_FIELDS = {
   brokenMonitors: {
     name: 'brokenMonitors',
     type: 'select',
-    label: t('Broken Cron Monitors'),
+    label: t('Broken Monitors'),
     choices: [
       ['always', t('On')],
       ['never', t('Off')],
     ],
     help: t(
-      'Notifications for Cron Monitors that have been in a failing state for a prolonged period of time'
+      'Notifications for monitors that have been in a failing state for a prolonged period of time'
     ),
   },
   // legacy options

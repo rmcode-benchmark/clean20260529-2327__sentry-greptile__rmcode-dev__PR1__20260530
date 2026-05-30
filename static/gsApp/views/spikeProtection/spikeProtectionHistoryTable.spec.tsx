@@ -2,6 +2,7 @@ import {OrganizationFixture} from 'sentry-fixture/organization';
 import {ProjectFixture} from 'sentry-fixture/project';
 
 import {SubscriptionFixture} from 'getsentry-test/fixtures/subscription';
+import {initializeOrg} from 'sentry-test/initializeOrg';
 import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
 import {DATA_CATEGORY_INFO} from 'sentry/constants';
@@ -14,15 +15,17 @@ import type {SpikeDetails} from 'getsentry/views/spikeProtection/types';
 import {SPIKE_PROTECTION_OPTION_DISABLED} from './constants';
 
 describe('SpikeProtectionHistoryTable', () => {
-  const organization = OrganizationFixture({
-    features: ['discover-basic'],
+  const {router, organization} = initializeOrg({
+    organization: OrganizationFixture({
+      features: ['discover-basic'],
+    }),
   });
   const subscription = SubscriptionFixture({organization});
 
   const project = ProjectFixture();
 
   const dataCategoryInfo = DATA_CATEGORY_INFO[DataCategoryExact.ERROR];
-  let mockPost: jest.Mock;
+  let mockPost: any;
 
   beforeEach(() => {
     project.options = {[SPIKE_PROTECTION_OPTION_DISABLED]: false};
@@ -44,7 +47,11 @@ describe('SpikeProtectionHistoryTable', () => {
         project={project}
         onEnableSpikeProtection={() => {}}
       />,
-      {organization}
+      {
+        router,
+        organization,
+        deprecatedRouterMocks: true,
+      }
     );
 
     const emptyState = await screen.findByTestId('spike-history-empty');
@@ -64,7 +71,11 @@ describe('SpikeProtectionHistoryTable', () => {
         project={project}
         onEnableSpikeProtection={onEnableFunction}
       />,
-      {organization}
+      {
+        router,
+        organization,
+        deprecatedRouterMocks: true,
+      }
     );
 
     const disabledState = screen.getByTestId('spike-history-disabled');
@@ -92,14 +103,18 @@ describe('SpikeProtectionHistoryTable', () => {
         dataCategory: dataCategoryInfo.name,
       },
     ];
-    const {router} = render(
+    render(
       <SpikeProtectionHistoryTable
         spikes={spikes}
         dataCategoryInfo={dataCategoryInfo}
         project={project}
         onEnableSpikeProtection={() => {}}
       />,
-      {organization}
+      {
+        router,
+        organization,
+        deprecatedRouterMocks: true,
+      }
     );
     await screen.findByTestId('spike-protection-history-table');
     screen.getByText('2wk');
@@ -113,7 +128,7 @@ describe('SpikeProtectionHistoryTable', () => {
     expect(discoverLink).toHaveTextContent(/Discover/);
     await userEvent.click(discoverLink);
 
-    expect(router.location).toEqual(
+    expect(router.push).toHaveBeenCalledWith(
       expect.objectContaining({
         pathname: expect.stringContaining('discover/homepage'),
         query: expect.objectContaining({
@@ -142,12 +157,16 @@ describe('SpikeProtectionHistoryTable', () => {
         project={project}
         onEnableSpikeProtection={() => {}}
       />,
-      {organization}
+      {
+        router,
+        organization,
+        deprecatedRouterMocks: true,
+      }
     );
 
     await screen.findByTestId('spike-protection-history-table');
     screen.getByText('Ongoing');
     screen.getByText('200K');
-    screen.getByText('Jan 2, 2022 - present');
+    screen.getByText('Jan 2nd 2022 - present');
   });
 });

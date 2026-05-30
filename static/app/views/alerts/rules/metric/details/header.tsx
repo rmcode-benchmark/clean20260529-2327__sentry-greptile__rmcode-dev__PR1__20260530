@@ -66,8 +66,6 @@ function DetailsHeader({
     getAlertTypeFromAggregateDataset({
       aggregate: rule.aggregate,
       dataset: rule.dataset,
-      eventTypes: rule.eventTypes,
-      organization,
     });
 
   return (
@@ -102,7 +100,7 @@ function DetailsHeader({
         </RuleTitle>
       </Layout.HeaderContent>
       <Layout.HeaderActions>
-        <ButtonBar>
+        <ButtonBar gap={1}>
           {rule && project && (
             <Access access={['alerts:write']}>
               {({hasAccess}) => (

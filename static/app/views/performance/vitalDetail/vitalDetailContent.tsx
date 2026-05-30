@@ -37,7 +37,6 @@ import {decodeScalar} from 'sentry/utils/queryString';
 import Teams from 'sentry/utils/teams';
 import {MutableSearch} from 'sentry/utils/tokenizeSearch';
 import withProjects from 'sentry/utils/withProjects';
-import {deprecateTransactionAlerts} from 'sentry/views/insights/common/utils/hasEAPAlerts';
 import Breadcrumb from 'sentry/views/performance/breadcrumb';
 import {getTransactionSearchQuery} from 'sentry/views/performance/utils';
 
@@ -169,7 +168,9 @@ function VitalDetailContent(props: Props) {
 
     return (
       <Alert.Container>
-        <Alert type="error">{error}</Alert>
+        <Alert type="error" showIcon>
+          {error}
+        </Alert>
       </Alert.Container>
     );
   }
@@ -270,14 +271,10 @@ function VitalDetailContent(props: Props) {
           <Layout.Title>{vitalMap[vital]}</Layout.Title>
         </Layout.HeaderContent>
         <Layout.HeaderActions>
-          <ButtonBar>
+          <ButtonBar gap={1}>
             {renderVitalSwitcher()}
             <Feature organization={organization} features="incidents">
-              {({hasFeature}) =>
-                hasFeature &&
-                !deprecateTransactionAlerts(organization) &&
-                renderCreateAlertButton()
-              }
+              {({hasFeature}) => hasFeature && renderCreateAlertButton()}
             </Feature>
           </ButtonBar>
         </Layout.HeaderActions>
@@ -308,7 +305,7 @@ function VitalDetailContent(props: Props) {
 export default withProjects(VitalDetailContent);
 
 const StyledDescription = styled('div')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   margin-bottom: ${space(3)};
 `;
 
@@ -333,18 +330,18 @@ const FilterActions = styled('div')`
   gap: ${space(2)};
   margin-bottom: ${space(2)};
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     grid-template-columns: auto 1fr;
   }
 `;
 
 const StyledSearchBarWrapper = styled('div')`
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     order: 1;
     grid-column: 1/6;
   }
 
-  @media (min-width: ${p => p.theme.breakpoints.xl}) {
+  @media (min-width: ${p => p.theme.breakpoints.xlarge}) {
     order: initial;
     grid-column: auto;
   }

@@ -90,16 +90,9 @@ export function FilterKeyCombobox({token, onCommit, item}: KeyComboboxProps) {
 
   const onValueCommited = useCallback(
     (keyName: string) => {
-      const trimmedKeyName = keyName.trim();
-
-      if (!trimmedKeyName) {
-        onCommit();
-        return;
-      }
-
-      handleSelectKey(getSuggestedFilterKey(trimmedKeyName) ?? trimmedKeyName);
+      handleSelectKey(getSuggestedFilterKey(keyName) ?? keyName);
     },
-    [handleSelectKey, getSuggestedFilterKey, onCommit]
+    [handleSelectKey, getSuggestedFilterKey]
   );
 
   const onCustomValueBlurred = useCallback(() => {

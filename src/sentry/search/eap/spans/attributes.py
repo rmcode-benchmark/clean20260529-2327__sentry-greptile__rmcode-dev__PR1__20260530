@@ -10,6 +10,7 @@ from sentry.search.eap import constants
 from sentry.search.eap.columns import (
     ResolvedAttribute,
     VirtualColumnDefinition,
+    datetime_processor,
     project_context_constructor,
     project_term_resolver,
     simple_measurements_field,
@@ -45,16 +46,6 @@ SPAN_ATTRIBUTE_DEFINITIONS = {
             internal_name="sentry.parent_span_id",
             search_type="string",
             validator=[is_empty_string, is_span_id],
-        ),
-        ResolvedAttribute(
-            public_alias="span.name",
-            internal_name="sentry.name",
-            search_type="string",
-        ),
-        ResolvedAttribute(
-            public_alias="span.kind",
-            internal_name="sentry.kind",
-            search_type="string",
         ),
         ResolvedAttribute(
             public_alias="span.action",
@@ -100,6 +91,12 @@ SPAN_ATTRIBUTE_DEFINITIONS = {
             search_type="string",
         ),
         ResolvedAttribute(
+            public_alias="span.name",
+            internal_name="sentry.op",
+            search_type="string",
+            secondary_alias=True,
+        ),
+        ResolvedAttribute(
             public_alias="span.category",
             internal_name="sentry.category",
             search_type="string",
@@ -122,11 +119,6 @@ SPAN_ATTRIBUTE_DEFINITIONS = {
         ResolvedAttribute(
             public_alias="span.status_code",
             internal_name="sentry.status_code",
-            search_type="string",
-        ),
-        ResolvedAttribute(
-            public_alias="span.status.message",
-            internal_name="sentry.status.message",
             search_type="string",
         ),
         ResolvedAttribute(
@@ -186,12 +178,6 @@ SPAN_ATTRIBUTE_DEFINITIONS = {
             search_type="string",
         ),
         ResolvedAttribute(
-            public_alias="sentry.links",
-            internal_name="sentry.links",
-            search_type="string",
-            private=True,
-        ),
-        ResolvedAttribute(
             public_alias="ai.total_tokens.used",
             internal_name="ai_total_tokens_used",
             search_type="integer",
@@ -199,36 +185,6 @@ SPAN_ATTRIBUTE_DEFINITIONS = {
         ResolvedAttribute(
             public_alias="ai.total_cost",
             internal_name="ai.total_cost",
-            search_type="number",
-        ),
-        ResolvedAttribute(
-            public_alias="gen_ai.usage.input_tokens",
-            internal_name="gen_ai.usage.input_tokens",
-            search_type="integer",
-        ),
-        ResolvedAttribute(
-            public_alias="gen_ai.usage.input_tokens.cached",
-            internal_name="gen_ai.usage.input_tokens.cached",
-            search_type="integer",
-        ),
-        ResolvedAttribute(
-            public_alias="gen_ai.usage.output_tokens",
-            internal_name="gen_ai.usage.output_tokens",
-            search_type="integer",
-        ),
-        ResolvedAttribute(
-            public_alias="gen_ai.usage.output_tokens.reasoning",
-            internal_name="gen_ai.usage.output_tokens.reasoning",
-            search_type="integer",
-        ),
-        ResolvedAttribute(
-            public_alias="gen_ai.usage.total_tokens",
-            internal_name="gen_ai.usage.total_tokens",
-            search_type="integer",
-        ),
-        ResolvedAttribute(
-            public_alias="gen_ai.usage.total_cost",
-            internal_name="gen_ai.usage.total_cost",
             search_type="number",
         ),
         ResolvedAttribute(
@@ -250,6 +206,12 @@ SPAN_ATTRIBUTE_DEFINITIONS = {
             public_alias="sampling_rate",
             internal_name="sentry.sampling_factor",
             search_type="percentage",
+        ),
+        ResolvedAttribute(
+            public_alias="timestamp",
+            internal_name="sentry.timestamp",
+            search_type="string",
+            processor=datetime_processor,
         ),
         ResolvedAttribute(
             public_alias="cache.hit",
@@ -370,7 +332,6 @@ SPAN_ATTRIBUTE_DEFINITIONS = {
             search_type="number",
         ),
         simple_sentry_field("browser.name"),
-        simple_sentry_field("file_extension"),
         simple_sentry_field("device.family"),
         simple_sentry_field("device.arch"),
         simple_sentry_field("device.battery_level"),
@@ -575,6 +536,7 @@ SPANS_INTERNAL_TO_PUBLIC_ALIAS_MAPPINGS: dict[Literal["string", "number"], dict[
         # Temporarily reverse map these old aliases.
         # TODO: Once TraceItemAttributeNamesResponse is updated
         # to return the new aliases, remove these temp mappings.
+        "sentry.name": "span.description",
         "sentry.description": "sentry.normalized_description",
         "sentry.span_id": "id",
         "sentry.segment_name": "transaction",
@@ -595,9 +557,6 @@ SPANS_PRIVATE_ATTRIBUTES: set[str] = {
     for definition in SPAN_ATTRIBUTE_DEFINITIONS.values()
     if definition.private
 }
-
-# For dynamic internal attributes (eg. meta information for attributes) we match by the beginning of the key.
-SPANS_PRIVATE_ATTRIBUTE_PREFIXES: set[str] = {constants.META_PREFIX}
 
 SPANS_REPLACEMENT_ATTRIBUTES: set[str] = {
     definition.replacement
@@ -635,16 +594,3 @@ for key in constants.PROJECT_FIELDS:
         term_resolver=project_term_resolver,
         filter_column="project.id",
     )
-
-SPAN_INTERNAL_TO_SECONDARY_ALIASES_MAPPING: dict[str, set[str]] = {}
-
-
-for definition in SPAN_ATTRIBUTE_DEFINITIONS.values():
-    if not definition.secondary_alias:
-        continue
-
-    secondary_aliases = SPAN_INTERNAL_TO_SECONDARY_ALIASES_MAPPING.get(
-        definition.internal_name, set()
-    )
-    secondary_aliases.add(definition.public_alias)
-    SPAN_INTERNAL_TO_SECONDARY_ALIASES_MAPPING[definition.internal_name] = secondary_aliases

@@ -56,6 +56,7 @@ class TestProcessProfileConsumerStrategy(TestCase):
         process_profile_task.assert_called_with(
             payload=b64encode(payload).decode("utf-8"),
             sampled=True,
+            compressed_profile=False,
         )
 
 

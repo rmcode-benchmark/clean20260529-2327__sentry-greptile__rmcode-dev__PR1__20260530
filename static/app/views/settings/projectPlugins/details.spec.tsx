@@ -2,6 +2,7 @@ import {OrganizationFixture} from 'sentry-fixture/organization';
 import {PluginFixture} from 'sentry-fixture/plugin';
 import {PluginsFixture} from 'sentry-fixture/plugins';
 import {ProjectFixture} from 'sentry-fixture/project';
+import {RouterFixture} from 'sentry-fixture/routerFixture';
 
 import {render, screen, userEvent, waitFor} from 'sentry-test/reactTestingLibrary';
 
@@ -15,13 +16,6 @@ describe('ProjectPluginDetails', function () {
   const project = ProjectFixture();
   const plugins = PluginsFixture();
   const plugin = PluginFixture();
-
-  const initialRouterConfig = {
-    location: {
-      pathname: `/settings/${organization.slug}/projects/${project.slug}/settings/plugins/${plugin.id}/`,
-    },
-    route: '/settings/:orgId/projects/:projectId/settings/plugins/:pluginId/',
-  };
 
   beforeAll(function () {
     jest.spyOn(console, 'info').mockImplementation(() => {});
@@ -56,22 +50,35 @@ describe('ProjectPluginDetails', function () {
   });
 
   it('renders', async function () {
+    const router = RouterFixture({
+      params: {projectId: project.slug, pluginId: plugin.id},
+    });
     render(
       <ProjectPluginDetailsContainer organization={organization} project={project} />,
-      {initialRouterConfig}
+      {
+        router,
+        deprecatedRouterMocks: true,
+      }
     );
     expect(await screen.findByRole('heading', {name: 'Amazon SQS'})).toBeInTheDocument();
   });
 
   it('resets plugin', async function () {
     jest.spyOn(indicators, 'addSuccessMessage');
+    const router = RouterFixture({
+      params: {projectId: project.slug, pluginId: plugin.id},
+    });
+
     render(
       <ProjectPluginDetails
         organization={organization}
         project={project}
         plugins={{plugins}}
       />,
-      {initialRouterConfig}
+      {
+        router,
+        deprecatedRouterMocks: true,
+      }
     );
 
     await userEvent.click(
@@ -85,9 +92,16 @@ describe('ProjectPluginDetails', function () {
 
   it('enables/disables plugin', async function () {
     jest.spyOn(indicators, 'addSuccessMessage');
+    const router = RouterFixture({
+      params: {projectId: project.slug, pluginId: plugin.id},
+    });
+
     render(
       <ProjectPluginDetailsContainer organization={organization} project={project} />,
-      {initialRouterConfig}
+      {
+        router,
+        deprecatedRouterMocks: true,
+      }
     );
 
     await userEvent.click(await screen.findByRole('button', {name: 'Enable Plugin'}));

@@ -49,7 +49,7 @@ function DemoSignUpModal({closeModal}: Props) {
             )}
           </p>
         </TrialCheckInfo>
-        <StyledButtonBar>
+        <StyledButtonBar gap={1}>
           <LinkButton
             priority="primary"
             href={signupUrl}
@@ -84,7 +84,7 @@ function DemoSignUpModal({closeModal}: Props) {
 const TrialCheckInfo = styled('div')`
   padding: ${space(3)} 0;
   p {
-    font-size: ${p => p.theme.fontSize.lg};
+    font-size: ${p => p.theme.fontSizeLarge};
     margin: 0;
   }
   h2 {
@@ -107,9 +107,9 @@ export const modalCss = css`
 const Subheader = styled('h4')`
   margin-bottom: ${space(2)};
   text-transform: uppercase;
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
   color: ${p => p.theme.activeText};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 const StyledButtonBar = styled(ButtonBar)`

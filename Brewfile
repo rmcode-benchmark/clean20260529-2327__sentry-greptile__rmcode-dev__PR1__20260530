@@ -9,7 +9,7 @@ brew 'qemu'
 brew 'docker'
 brew 'docker-buildx'
 
-# required for pnpm test -u
+# required for yarn test -u
 brew 'watchman'
 
 # direnv isn't defined here, because we have it configured to check for a bootstrapped environment.

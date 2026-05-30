@@ -156,7 +156,9 @@ def handle_status_update(
         if update_open_period:
             update_group_open_period(
                 group=group,
-                new_status=GroupStatus.UNRESOLVED,
+                new_status=new_status,
+                activity=activity,
+                should_reopen_open_period=True,
             )
 
         # TODO(dcramer): we need a solution for activity rollups

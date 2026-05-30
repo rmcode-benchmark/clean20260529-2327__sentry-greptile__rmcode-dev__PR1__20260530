@@ -108,12 +108,7 @@ function Grid(props: GridProps) {
         dispatch({type: 'COMMIT_QUERY'});
       }}
     >
-      <SelectionKeyHandler
-        ref={selectionKeyHandlerRef}
-        state={state}
-        undo={undo}
-        gridRef={ref}
-      />
+      <SelectionKeyHandler ref={selectionKeyHandlerRef} state={state} undo={undo} />
       {[...state.collection].map(item => {
         const token = item.value;
 
@@ -196,9 +191,8 @@ export function TokenizedQueryGrid({
 }
 
 const SearchQueryGridWrapper = styled('div')`
-  /* calc + 1px to account for the border */
-  padding-top: ${p => (p.theme.isChonk ? `calc(${space(0.5)} + 1px);` : space(0.75))};
-  padding-bottom: ${p => (p.theme.isChonk ? `calc(${space(0.5)} + 1px);` : space(0.75))};
+  padding-top: ${space(0.75)};
+  padding-bottom: ${space(0.75)};
   padding-left: 32px;
   padding-right: ${space(0.75)};
   display: flex;

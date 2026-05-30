@@ -1,6 +1,6 @@
 /* eslint-env node */
 /* eslint import/no-nodejs-modules:0 */
-import remarkCallout from '@r4ai/remark-callout';
+
 import {RsdoctorRspackPlugin} from '@rsdoctor/rspack-plugin';
 import type {
   Configuration,
@@ -10,21 +10,15 @@ import type {
 } from '@rspack/core';
 import rspack from '@rspack/core';
 import ReactRefreshRspackPlugin from '@rspack/plugin-react-refresh';
-import {sentryWebpackPlugin} from '@sentry/webpack-plugin/webpack5';
+import {sentryWebpackPlugin} from '@sentry/webpack-plugin';
 import CompressionPlugin from 'compression-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import fs from 'node:fs';
-import {createRequire} from 'node:module';
 import path from 'node:path';
-import rehypeExpressiveCode from 'rehype-expressive-code';
-import remarkFrontmatter from 'remark-frontmatter';
-import remarkGfm from 'remark-gfm';
-import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 import {TsCheckerRspackPlugin} from 'ts-checker-rspack-plugin';
 
-// @ts-expect-error: ts(5097) importing `.ts` extension is required for resolution, but not enabled until `allowImportingTsExtensions` is added to tsconfig
-import LastBuiltPlugin from './build-utils/last-built-plugin.ts';
-import packageJson from './package.json' with {type: 'json'};
+import LastBuiltPlugin from './build-utils/last-built-plugin';
+import packageJson from './package.json';
 
 const {env} = process;
 
@@ -56,13 +50,7 @@ const CONTROL_SILO_PORT = env.SENTRY_CONTROL_SILO_PORT;
 
 // Sentry Developer Tool flags. These flags are used to enable / disable different developer tool
 // features in the Sentry UI.
-// React query devtools are disabled by default, but can be enabled by setting the USE_REACT_QUERY_DEVTOOL env var to 'true'
 const USE_REACT_QUERY_DEVTOOL = !!env.USE_REACT_QUERY_DEVTOOL;
-// Sentry toolbar is enabled by default, but can be disabled by setting the DISABLE_SENTRY_TOOLBAR env var to 'true'
-const ENABLE_SENTRY_TOOLBAR =
-  env.ENABLE_SENTRY_TOOLBAR === undefined
-    ? true
-    : Boolean(JSON.parse(env.ENABLE_SENTRY_TOOLBAR));
 
 // Environment variables that are used by other tooling and should
 // not be user configurable.
@@ -93,8 +81,6 @@ const DEPLOY_PREVIEW_CONFIG = IS_DEPLOY_PREVIEW && {
   githubRepo: env.NOW_GITHUB_COMMIT_REPO,
 };
 
-const require = createRequire(import.meta.url);
-
 // When deploy previews are enabled always enable experimental SPA mode --
 // deploy previews are served standalone. Otherwise fallback to the environment
 // configuration.
@@ -111,9 +97,9 @@ const ENABLE_CODECOV_BA = env.CODECOV_ENABLE_BA === 'true';
 
 // this is the path to the django "sentry" app, we output the webpack build here to `dist`
 // so that `django collectstatic` and so that we can serve the post-webpack bundles
-const sentryDjangoAppPath = path.join(import.meta.dirname, 'src/sentry/static/sentry');
+const sentryDjangoAppPath = path.join(__dirname, 'src/sentry/static/sentry');
 const distPath = path.join(sentryDjangoAppPath, 'dist');
-const staticPrefix = path.join(import.meta.dirname, 'static');
+const staticPrefix = path.join(__dirname, 'static');
 
 // Locale compilation and optimizations.
 //
@@ -129,7 +115,7 @@ const staticPrefix = path.join(import.meta.dirname, 'static');
 // dependency list, so that our compiled bundle does not expect that *all*
 // locale chunks must be loaded
 const localeCatalogPath = path.join(
-  import.meta.dirname,
+  __dirname,
   'src',
   'sentry',
   'locale',
@@ -186,9 +172,8 @@ const swcReactLoaderConfig: SwcLoaderOptions = {
   env: {
     mode: 'usage',
     // https://rspack.rs/guide/features/builtin-swc-loader#polyfill-injection
-    coreJs: '3.41.0',
+    coreJs: '3.41',
     targets: packageJson.browserslist.production,
-    shippedProposals: true,
   },
   jsc: {
     experimental: {
@@ -199,15 +184,6 @@ const swcReactLoaderConfig: SwcLoaderOptions = {
             sourceMap: true,
             // The "dev-only" option does not seem to apply correctly
             autoLabel: DEV_MODE ? 'always' : 'never',
-          },
-        ],
-        [
-          'swc-plugin-component-annotate',
-          {
-            'annotate-fragments': false,
-            'component-attr': 'data-sentry-component',
-            'element-attr': 'data-sentry-element',
-            'source-file-attr': 'data-sentry-source-file',
           },
         ],
       ],
@@ -294,22 +270,6 @@ const appConfig: Configuration = {
           },
           {
             loader: '@mdx-js/loader',
-            options: {
-              remarkPlugins: [
-                remarkFrontmatter,
-                remarkMdxFrontmatter,
-                remarkGfm,
-                remarkCallout,
-              ],
-              rehypePlugins: [
-                [
-                  rehypeExpressiveCode,
-                  {
-                    useDarkModeMediaQuery: false,
-                  },
-                ],
-              ],
-            },
           },
         ],
       },
@@ -325,9 +285,7 @@ const appConfig: Configuration = {
       },
       {
         test: /\.pegjs$/,
-        use: [
-          {loader: path.resolve(import.meta.dirname, './build-utils/peggy-loader.ts')},
-        ],
+        use: [{loader: path.resolve(__dirname, './build-utils/peggy-loader.ts')}],
       },
       {
         test: /\.css/,
@@ -373,7 +331,7 @@ const appConfig: Configuration = {
      */
     new rspack.ContextReplacementPlugin(
       /sentry-locale$/,
-      path.join(import.meta.dirname, 'src', 'sentry', 'locale', path.sep),
+      path.join(__dirname, 'src', 'sentry', 'locale', path.sep),
       true,
       new RegExp(`(${supportedLocales.join('|')})/.*\\.po$`)
     ),
@@ -411,17 +369,13 @@ const appConfig: Configuration = {
       'process.env.SPA_DSN': JSON.stringify(SENTRY_SPA_DSN),
       'process.env.SENTRY_RELEASE_VERSION': JSON.stringify(SENTRY_RELEASE_VERSION),
       'process.env.USE_REACT_QUERY_DEVTOOL': JSON.stringify(USE_REACT_QUERY_DEVTOOL),
-      'process.env.ENABLE_SENTRY_TOOLBAR': JSON.stringify(ENABLE_SENTRY_TOOLBAR),
     }),
 
     ...(SHOULD_FORK_TS
       ? [
           new TsCheckerRspackPlugin({
             typescript: {
-              configFile: path.resolve(
-                import.meta.dirname,
-                './config/tsconfig.build.json'
-              ),
+              configFile: path.resolve(__dirname, './config/tsconfig.build.json'),
             },
             devServer: false,
           }),
@@ -458,10 +412,7 @@ const appConfig: Configuration = {
 
   resolveLoader: {
     alias: {
-      'type-loader': path.resolve(
-        import.meta.dirname,
-        'static/app/stories/type-loader.ts'
-      ),
+      'type-loader': path.resolve(__dirname, 'static/app/stories/type-loader.ts'),
     },
   },
 
@@ -474,16 +425,16 @@ const appConfig: Configuration = {
 
       getsentry: path.join(staticPrefix, 'gsApp'),
       'getsentry-images': path.join(staticPrefix, 'images'),
-      'getsentry-test': path.join(import.meta.dirname, 'tests', 'js', 'getsentry-test'),
+      'getsentry-test': path.join(__dirname, 'tests', 'js', 'getsentry-test'),
       admin: path.join(staticPrefix, 'gsAdmin'),
 
       // Aliasing this for getsentry's build, otherwise `less/select2` will not be able
       // to be resolved
       less: path.join(staticPrefix, 'less'),
-      'sentry-test': path.join(import.meta.dirname, 'tests', 'js', 'sentry-test'),
-      'sentry-locale': path.join(import.meta.dirname, 'src', 'sentry', 'locale'),
+      'sentry-test': path.join(__dirname, 'tests', 'js', 'sentry-test'),
+      'sentry-locale': path.join(__dirname, 'src', 'sentry', 'locale'),
       'ios-device-list': path.join(
-        import.meta.dirname,
+        __dirname,
         'node_modules',
         'ios-device-list',
         'dist',
@@ -496,7 +447,7 @@ const appConfig: Configuration = {
       stream: false,
       // Node crypto is imported in @sentry-internal/global-search but not used here
       crypto: false,
-      // `pnpm why` says this is only needed in dev deps
+      // `yarn why` says this is only needed in dev deps
       string_decoder: false,
       // For framer motion v6, might be able to remove on v11
       'process/browser': require.resolve('process/browser'),
@@ -506,7 +457,7 @@ const appConfig: Configuration = {
     preferAbsolute: true,
     modules: ['node_modules'],
     extensions: ['.js', '.tsx', '.ts', '.json', '.less'],
-    symlinks: true,
+    symlinks: false,
   },
   output: {
     crossOriginLoading: 'anonymous',
@@ -534,19 +485,7 @@ const appConfig: Configuration = {
     // This only runs in production mode
     minimizer: [
       new rspack.LightningCssMinimizerRspackPlugin(),
-      new rspack.SwcJsMinimizerRspackPlugin({
-        minimizerOptions: {
-          compress: {
-            // We are turning off these 3 minifier options because it has caused
-            // unexpected behaviour. See the following issues for more details.
-            // - https://github.com/swc-project/swc/issues/10822
-            // - https://github.com/swc-project/swc/issues/10824
-            reduce_vars: false,
-            inline: 0,
-            collapse_vars: false,
-          },
-        },
-      }),
+      new rspack.SwcJsMinimizerRspackPlugin(),
     ],
   },
   devtool: IS_PRODUCTION ? 'source-map' : 'eval-cheap-module-source-map',
@@ -554,14 +493,14 @@ const appConfig: Configuration = {
 
 if (IS_TEST) {
   (appConfig.resolve!.alias! as Record<string, string>)['sentry-fixture'] = path.join(
-    import.meta.dirname,
+    __dirname,
     'fixtures',
     'js-stubs'
   );
 }
 
 if (IS_ACCEPTANCE_TEST) {
-  appConfig.plugins?.push(new LastBuiltPlugin({basePath: import.meta.dirname}));
+  appConfig.plugins?.push(new LastBuiltPlugin({basePath: __dirname}));
 }
 
 // Dev only! Hot module reloading
@@ -704,8 +643,8 @@ if (IS_UI_DEV_ONLY) {
     return slug;
   };
 
-  // Try and load certificates from mkcert if available. Use $ pnpm mkcert-localhost
-  const certPath = path.join(import.meta.dirname, 'config');
+  // Try and load certificates from mkcert if available. Use $ yarn mkcert-localhost
+  const certPath = path.join(__dirname, 'config');
   const httpsOptions = fs.existsSync(path.join(certPath, 'localhost.pem'))
     ? {
         key: fs.readFileSync(path.join(certPath, 'localhost-key.pem')),
@@ -779,8 +718,9 @@ if (IS_UI_DEV_ONLY) {
       rewrites: [{from: /^\/.*$/, to: '/_assets/index.html'}],
     },
   };
-  // Hot reloading breaks if we aren't using a single runtime chunk
-  appConfig.optimization!.runtimeChunk = 'single';
+  appConfig.optimization = {
+    runtimeChunk: 'single',
+  };
 }
 
 if (IS_UI_DEV_ONLY || SENTRY_EXPERIMENTAL_SPA) {
@@ -832,8 +772,8 @@ if (IS_PRODUCTION) {
         create: false,
       },
       reactComponentAnnotation: {
-        // Using swc-plugin-react-component-annotate instead
-        enabled: false,
+        // Only enable in production, annotating is slow in development
+        enabled: true,
       },
       bundleSizeOptimizations: {
         // This is enabled so that our SDKs send exceptions to Sentry
@@ -873,7 +813,7 @@ if (env.WEBPACK_CACHE_PATH) {
     // https://rspack.dev/config/experiments#cachestorage
     storage: {
       type: 'filesystem',
-      directory: path.join(import.meta.dirname, env.WEBPACK_CACHE_PATH),
+      directory: path.join(__dirname, env.WEBPACK_CACHE_PATH),
     },
   };
 }

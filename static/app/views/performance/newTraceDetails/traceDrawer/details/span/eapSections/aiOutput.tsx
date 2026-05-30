@@ -1,19 +1,28 @@
 import {Fragment} from 'react';
 
+import {StructuredData} from 'sentry/components/structuredEventData';
 import {t} from 'sentry/locale';
 import type {EventTransaction} from 'sentry/types/event';
 import useOrganization from 'sentry/utils/useOrganization';
 import type {TraceItemResponseAttribute} from 'sentry/views/explore/hooks/useTraceItemDetails';
+import {hasAgentInsightsFeature} from 'sentry/views/insights/agentMonitoring/utils/features';
 import {
   getIsAiNode,
   getTraceNodeAttribute,
-} from 'sentry/views/insights/agentMonitoring/utils/aiTraceNodes';
-import {hasAgentInsightsFeature} from 'sentry/views/insights/agentMonitoring/utils/features';
+} from 'sentry/views/insights/agentMonitoring/utils/highlightedSpanAttributes';
 import {SectionKey} from 'sentry/views/issueDetails/streamline/context';
 import {FoldSection} from 'sentry/views/issueDetails/streamline/foldSection';
 import {TraceDrawerComponents} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/styles';
 import type {TraceTree} from 'sentry/views/performance/newTraceDetails/traceModels/traceTree';
 import type {TraceTreeNode} from 'sentry/views/performance/newTraceDetails/traceModels/traceTreeNode';
+
+function tryParseJson(value: any) {
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    return value;
+  }
+}
 
 export function AIOutputSection({
   node,
@@ -29,27 +38,15 @@ export function AIOutputSection({
     return null;
   }
 
-  const responseText = getTraceNodeAttribute(
-    'gen_ai.response.text',
-    node,
-    event,
-    attributes
-  );
+  const responseText = getTraceNodeAttribute('ai.response.text', node, event, attributes);
   const toolCalls = getTraceNodeAttribute(
-    'gen_ai.response.tool_calls',
-    node,
-    event,
-    attributes
-  );
-  const toolOutput = getTraceNodeAttribute('gen_ai.tool.output', node, event, attributes);
-  const responseObject = getTraceNodeAttribute(
-    'gen_ai.response.object',
+    'ai.response.toolCalls',
     node,
     event,
     attributes
   );
 
-  if (!responseText && !responseObject && !toolCalls && !toolOutput) {
+  if (!responseText && !toolCalls) {
     return null;
   }
 
@@ -65,19 +62,8 @@ export function AIOutputSection({
             {t('Response')}
           </TraceDrawerComponents.MultilineTextLabel>
           <TraceDrawerComponents.MultilineText>
-            {responseText.toString().trim()}
+            {responseText}
           </TraceDrawerComponents.MultilineText>
-        </Fragment>
-      )}
-      {responseObject && (
-        <Fragment>
-          <TraceDrawerComponents.MultilineTextLabel>
-            {t('Response Object')}
-          </TraceDrawerComponents.MultilineTextLabel>
-          <TraceDrawerComponents.MultilineJSON
-            value={responseObject}
-            maxDefaultDepth={2}
-          />
         </Fragment>
       )}
       {toolCalls && (
@@ -85,12 +71,15 @@ export function AIOutputSection({
           <TraceDrawerComponents.MultilineTextLabel>
             {t('Tool Calls')}
           </TraceDrawerComponents.MultilineTextLabel>
-          <TraceDrawerComponents.MultilineJSON value={toolCalls} maxDefaultDepth={2} />
+          <TraceDrawerComponents.MultilineText>
+            <StructuredData
+              value={tryParseJson(toolCalls)}
+              maxDefaultDepth={2}
+              withAnnotatedText
+            />
+          </TraceDrawerComponents.MultilineText>
         </Fragment>
       )}
-      {toolOutput ? (
-        <TraceDrawerComponents.MultilineJSON value={toolOutput} maxDefaultDepth={1} />
-      ) : null}
     </FoldSection>
   );
 }

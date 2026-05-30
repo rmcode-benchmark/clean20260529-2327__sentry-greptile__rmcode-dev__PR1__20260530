@@ -3,7 +3,6 @@ import styled from '@emotion/styled';
 import {addErrorMessage} from 'sentry/actionCreators/indicator';
 import {openEmailVerification} from 'sentry/actionCreators/modal';
 import CircleIndicator from 'sentry/components/circleIndicator';
-import Confirm from 'sentry/components/confirm';
 import {Tag} from 'sentry/components/core/badge/tag';
 import {Button} from 'sentry/components/core/button';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
@@ -23,7 +22,6 @@ import type {Authenticator} from 'sentry/types/auth';
 import type {RouteComponentProps} from 'sentry/types/legacyReactRouter';
 import type {OrganizationSummary} from 'sentry/types/organization';
 import oxfordizeArray from 'sentry/utils/oxfordizeArray';
-import {testableWindowLocation} from 'sentry/utils/testableWindowLocation';
 import useApi from 'sentry/utils/useApi';
 import RemoveConfirm from 'sentry/views/settings/account/accountSecurity/components/removeConfirm';
 import TwoFactorRequired from 'sentry/views/settings/account/accountSecurity/components/twoFactorRequired';
@@ -62,7 +60,7 @@ function AccountSecurity({
         method: 'DELETE',
         data: {all: true},
       });
-      testableWindowLocation.assign('/auth/login/');
+      window.location.assign('/auth/login/');
     } catch (err) {
       addErrorMessage(t('There was a problem closing all sessions'));
       throw err;
@@ -129,14 +127,7 @@ function AccountSecurity({
               'Signing out of all devices will sign you out of this device as well.'
             )}
           >
-            <Confirm
-              onConfirm={handleSessionClose}
-              message={t(
-                'You will need to re-authenticate on all devices you were previously signed in on. Are you sure?'
-              )}
-            >
-              <Button>{t('Sign out of all devices')}</Button>
-            </Confirm>
+            <Button onClick={handleSessionClose}>{t('Sign out of all devices')}</Button>
           </FieldGroup>
         </PanelBody>
       </Panel>
@@ -182,7 +173,7 @@ function AccountSecurity({
                     </AuthenticatorTitle>
                     <AuthenticatorDescription>{description}</AuthenticatorDescription>
                   </AuthenticatorDetails>
-                  <ButtonBar>
+                  <ButtonBar gap={1}>
                     {!isBackupInterface && !isEnrolled && hasVerifiedEmail && (
                       <LinkButton
                         to={`/settings/account/security/mfa/${id}/enroll/`}
@@ -268,7 +259,7 @@ const AuthenticatorTitle = styled('div')`
   display: flex;
   align-items: center;
   gap: ${space(0.75)};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
 `;
 
 const AuthenticatorDescription = styled(TextBlock)`

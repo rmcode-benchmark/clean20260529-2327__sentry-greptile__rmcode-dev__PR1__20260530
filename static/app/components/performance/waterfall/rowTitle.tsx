@@ -16,7 +16,7 @@ export const RowTitleContainer = styled('div')`
 export const RowTitle = styled('div')`
   position: relative;
   height: 100%;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   white-space: nowrap;
   display: flex;
   flex: 1;

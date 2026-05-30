@@ -15,16 +15,12 @@ from sentry.constants import ObjectStatus
 from sentry.integrations.services.integration import integration_service
 from sentry.integrations.services.repository.model import RpcRepository
 from sentry.integrations.source_code_management.repository import RepositoryIntegration
-from sentry.integrations.types import IntegrationProviderSlug
 from sentry.models.repository import Repository
 from sentry.plugins.base import bindings
 from sentry.ratelimits.config import SENTRY_RATELIMITER_GROUP_DEFAULTS, RateLimitConfig
 from sentry.utils.sdk import capture_exception
 
-UNMIGRATABLE_PROVIDERS = (
-    IntegrationProviderSlug.BITBUCKET.value,
-    IntegrationProviderSlug.GITHUB.value,
-)
+UNMIGRATABLE_PROVIDERS = ("bitbucket", "github")
 
 
 @region_silo_endpoint

@@ -10,11 +10,11 @@ import {
 } from 'sentry-test/reactTestingLibrary';
 
 import PageFiltersStore from 'sentry/stores/pageFiltersStore';
+import {DiscoverDatasets} from 'sentry/utils/discover/types';
 import {PageParamsProvider} from 'sentry/views/explore/contexts/pageParamsContext';
-import {TraceItemAttributeProvider} from 'sentry/views/explore/contexts/traceItemAttributeContext';
+import {SpanTagsProvider} from 'sentry/views/explore/contexts/spanTagsContext';
 import {MultiQueryModeContent} from 'sentry/views/explore/multiQueryMode/content';
 import {useReadQueriesFromLocation} from 'sentry/views/explore/multiQueryMode/locationUtils';
-import {TraceItemDataset} from 'sentry/views/explore/types';
 
 jest.mock('sentry/components/lazyRender', () => ({
   LazyRender: ({children}: {children: React.ReactNode}) => children,
@@ -86,10 +86,6 @@ describe('MultiQueryModeContent', function () {
       body: [],
     });
     MockApiClient.addMockResponse({
-      url: `/organizations/${organization.slug}/recent-searches/`,
-      method: 'POST',
-    });
-    MockApiClient.addMockResponse({
       url: `/subscriptions/${organization.slug}/`,
       method: 'GET',
       body: [],
@@ -103,9 +99,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -122,9 +118,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -191,9 +187,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -212,9 +208,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -274,96 +270,6 @@ describe('MultiQueryModeContent', function () {
     ]);
   });
 
-  it('changes to failure_rate() when using failure_rate', async function () {
-    let queries: any;
-    function Component() {
-      queries = useReadQueriesFromLocation();
-      return <MultiQueryModeContent />;
-    }
-
-    render(
-      <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
-          <Component />
-        </TraceItemAttributeProvider>
-      </PageParamsProvider>
-    );
-
-    const section = await screen.findByTestId('section-visualize-0');
-
-    expect(queries).toEqual([
-      {
-        yAxes: ['count(span.duration)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.duration', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-    ]);
-
-    await userEvent.click(within(section).getByRole('button', {name: 'count'}));
-    await userEvent.click(within(section).getByRole('option', {name: 'avg'}));
-    await userEvent.click(within(section).getByRole('button', {name: 'span.duration'}));
-    await userEvent.click(within(section).getByRole('option', {name: 'span.self_time'}));
-
-    expect(queries).toEqual([
-      {
-        yAxes: ['avg(span.self_time)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.self_time', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-    ]);
-
-    await userEvent.click(within(section).getByRole('button', {name: 'avg'}));
-    await userEvent.click(within(section).getByRole('option', {name: 'failure_rate'}));
-
-    expect(queries).toEqual([
-      {
-        yAxes: ['failure_rate()'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-    ]);
-  });
-
-  it('disables changing fields for failure_rate', async function () {
-    function Component() {
-      return <MultiQueryModeContent />;
-    }
-
-    render(
-      <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
-          <Component />
-        </TraceItemAttributeProvider>
-      </PageParamsProvider>
-    );
-
-    const section = await screen.findByTestId('section-visualize-0');
-    await userEvent.click(within(section).getByRole('button', {name: 'count'}));
-    await userEvent.click(within(section).getByRole('option', {name: 'failure_rate'}));
-    expect(within(section).getByRole('button', {name: 'spans'})).toBeDisabled();
-  });
-
   it('defaults count_unique argument to span.op', async function () {
     let queries: any;
     function Component() {
@@ -373,9 +279,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -462,9 +368,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -516,9 +422,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -558,9 +464,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -606,9 +512,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -645,7 +551,7 @@ describe('MultiQueryModeContent', function () {
     ]);
   });
 
-  it('allows changing a query', async function () {
+  it('updates query at the correct index', async function () {
     let queries: any;
     function Component() {
       queries = useReadQueriesFromLocation();
@@ -654,187 +560,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
-      </PageParamsProvider>
-    );
-
-    expect(queries).toEqual([
-      {
-        yAxes: ['count(span.duration)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.duration', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-    ]);
-
-    const section = screen.getByTestId('section-visualize-0');
-    await userEvent.click(within(section).getByRole('button', {name: 'count'}));
-    await userEvent.click(within(section).getByRole('option', {name: 'avg'}));
-    await userEvent.click(within(section).getByRole('button', {name: 'span.duration'}));
-    await userEvent.click(within(section).getByRole('option', {name: 'span.self_time'}));
-    expect(queries).toEqual([
-      {
-        yAxes: ['avg(span.self_time)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.self_time', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-    ]);
-  });
-
-  it('allows adding a query', async function () {
-    let queries: any;
-    function Component() {
-      queries = useReadQueriesFromLocation();
-      return <MultiQueryModeContent />;
-    }
-
-    render(
-      <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
-          <Component />
-        </TraceItemAttributeProvider>
-      </PageParamsProvider>
-    );
-
-    expect(queries).toEqual([
-      {
-        yAxes: ['count(span.duration)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.duration', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-    ]);
-
-    // Add chart
-    await userEvent.click(screen.getByRole('button', {name: 'Add Query'}));
-    expect(queries).toEqual([
-      {
-        yAxes: ['count(span.duration)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.duration', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-      {
-        yAxes: ['count(span.duration)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.duration', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-    ]);
-  });
-
-  it('allows duplicating a query', async function () {
-    let queries: any;
-    function Component() {
-      queries = useReadQueriesFromLocation();
-      return <MultiQueryModeContent />;
-    }
-
-    render(
-      <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
-          <Component />
-        </TraceItemAttributeProvider>
-      </PageParamsProvider>
-    );
-
-    expect(queries).toEqual([
-      {
-        yAxes: ['count(span.duration)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.duration', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-    ]);
-
-    const section = screen.getByTestId('section-visualize-0');
-    await userEvent.click(within(section).getByRole('button', {name: 'count'}));
-    await userEvent.click(within(section).getByRole('option', {name: 'avg'}));
-    await userEvent.click(within(section).getByRole('button', {name: 'span.duration'}));
-    await userEvent.click(within(section).getByRole('option', {name: 'span.self_time'}));
-
-    // Duplicate chart
-    await userEvent.click(screen.getByRole('button', {name: 'More options'}));
-    await userEvent.click(screen.getByRole('menuitemradio', {name: 'Duplicate Query'}));
-    expect(queries).toEqual([
-      {
-        yAxes: ['avg(span.self_time)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.self_time', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-      {
-        yAxes: ['avg(span.self_time)'],
-        sortBys: [
-          {
-            field: 'timestamp',
-            kind: 'desc',
-          },
-        ],
-        fields: ['id', 'span.self_time', 'timestamp'],
-        groupBys: [],
-        query: '',
-      },
-    ]);
-  });
-
-  it('allows deleting a query', async function () {
-    let queries: any;
-    function Component() {
-      queries = useReadQueriesFromLocation();
-      return <MultiQueryModeContent />;
-    }
-
-    render(
-      <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
-          <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -913,10 +641,7 @@ describe('MultiQueryModeContent', function () {
         query: '',
       },
     ]);
-
-    await userEvent.click(screen.getAllByRole('button', {name: 'More options'})[0]!);
-    await userEvent.click(screen.getByRole('menuitemradio', {name: 'Delete Query'}));
-
+    await userEvent.click(screen.getAllByLabelText('Delete Query')[0]!);
     expect(queries).toEqual([
       {
         yAxes: ['count(span.duration)'],
@@ -942,9 +667,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -978,7 +703,7 @@ describe('MultiQueryModeContent', function () {
             interval: '3h',
             orderby: undefined,
             project: ['2'],
-            query: '',
+            query: '!transaction.span_id:00',
             referrer: 'api.explorer.stats',
             statsPeriod: '7d',
             topEvents: undefined,
@@ -1005,7 +730,7 @@ describe('MultiQueryModeContent', function () {
             ],
             per_page: 10,
             project: ['2'],
-            query: '',
+            query: '!transaction.span_id:00',
             referrer: 'api.explore.multi-query-spans-table',
             sort: '-timestamp',
             statsPeriod: '7d',
@@ -1027,7 +752,7 @@ describe('MultiQueryModeContent', function () {
             interval: '3h',
             orderby: '-count_span_duration',
             project: ['2'],
-            query: '',
+            query: '!transaction.span_id:00',
             referrer: 'api.explorer.stats',
             sort: '-count_span_duration',
             statsPeriod: '7d',
@@ -1048,7 +773,7 @@ describe('MultiQueryModeContent', function () {
             field: ['span.op', 'count(span.duration)'],
             per_page: 10,
             project: ['2'],
-            query: '',
+            query: '!transaction.span_id:00',
             referrer: 'api.explore.multi-query-spans-table',
             sort: '-count_span_duration',
             statsPeriod: '7d',
@@ -1089,9 +814,9 @@ describe('MultiQueryModeContent', function () {
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
           <Component />
-        </TraceItemAttributeProvider>
+        </SpanTagsProvider>
       </PageParamsProvider>
     );
 
@@ -1145,12 +870,15 @@ describe('MultiQueryModeContent', function () {
         },
       },
     });
+    function Component() {
+      return <MultiQueryModeContent />;
+    }
 
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
-          <MultiQueryModeContent />
-        </TraceItemAttributeProvider>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
+          <Component />
+        </SpanTagsProvider>
       </PageParamsProvider>,
       {
         router,
@@ -1228,11 +956,15 @@ describe('MultiQueryModeContent', function () {
       },
     });
 
+    function Component() {
+      return <MultiQueryModeContent />;
+    }
+
     render(
       <PageParamsProvider>
-        <TraceItemAttributeProvider traceItemType={TraceItemDataset.SPANS} enabled>
-          <MultiQueryModeContent />
-        </TraceItemAttributeProvider>
+        <SpanTagsProvider dataset={DiscoverDatasets.SPANS_EAP} enabled>
+          <Component />
+        </SpanTagsProvider>
       </PageParamsProvider>,
       {
         router,

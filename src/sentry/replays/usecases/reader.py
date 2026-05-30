@@ -7,7 +7,6 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from typing import Any
 
-import sentry_sdk
 from django.conf import settings
 from django.db.models import Prefetch
 from snuba_sdk import (
@@ -26,7 +25,13 @@ from snuba_sdk import (
 
 from sentry.models.files.file import File
 from sentry.models.files.fileblobindex import FileBlobIndex
-from sentry.replays.lib.storage import RecordingSegmentStorageMeta, filestore, storage
+from sentry.replays.lib.storage import (
+    RecordingSegmentStorageMeta,
+    filestore,
+    make_video_filename,
+    storage,
+    storage_kv,
+)
 from sentry.replays.models import ReplayRecordingSegment
 from sentry.replays.usecases.pack import unpack
 from sentry.utils.snuba import raw_snql_query
@@ -34,7 +39,6 @@ from sentry.utils.snuba import raw_snql_query
 # METADATA QUERY BEHAVIOR.
 
 
-@sentry_sdk.trace
 def fetch_segments_metadata(
     project_id: int,
     replay_id: str,
@@ -68,7 +72,6 @@ def fetch_segment_metadata(
     return fetch_direct_storage_segment_meta(project_id, replay_id, segment_id)
 
 
-@sentry_sdk.trace
 def fetch_filestore_segments_meta(
     project_id: int,
     replay_id: str,
@@ -131,7 +134,6 @@ def fetch_filestore_segment_meta(
     )
 
 
-@sentry_sdk.trace
 def fetch_direct_storage_segments_meta(
     project_id: int,
     replay_id: str,
@@ -166,7 +168,6 @@ def fetch_direct_storage_segment_meta(
         return results[0]
 
 
-@sentry_sdk.trace
 def has_archived_segment(project_id: int, replay_id: str) -> bool:
     """Return true if an archive row exists for this replay."""
     snuba_request = Request(
@@ -249,30 +250,21 @@ def segment_row_to_storage_meta(
 # BLOB DOWNLOAD BEHAVIOR.
 
 
-@sentry_sdk.trace
 def download_segments(segments: list[RecordingSegmentStorageMeta]) -> Iterator[bytes]:
     """Download segment data from remote storage."""
     yield b"["
 
-    for i, segment in iter_segment_data(segments):
-        yield segment
-        if i < len(segments) - 1:
-            yield b","
-
-    yield b"]"
-
-
-def iter_segment_data(
-    segments: list[RecordingSegmentStorageMeta],
-) -> Iterator[tuple[int, memoryview]]:
     with ThreadPoolExecutor(max_workers=10) as pool:
         segment_data = pool.map(_download_segment, segments)
 
     for i, result in enumerate(segment_data):
         if result is None:
-            yield i, memoryview(b"[]")
+            yield b"[]"
         else:
-            yield i, result[1]
+            yield result[1]
+            if i < len(segments) - 1:
+                yield b","
+    yield b"]"
 
 
 def download_segment(segment: RecordingSegmentStorageMeta, span: Any) -> bytes:
@@ -282,15 +274,20 @@ def download_segment(segment: RecordingSegmentStorageMeta, span: Any) -> bytes:
 
 def download_video(segment: RecordingSegmentStorageMeta) -> bytes | None:
     result = _download_segment(segment)
-    if result is not None:
-        video, _ = result
+    if result is None:
+        return storage_kv.get(make_video_filename(segment))
+
+    video, _ = result
+    if video is None:
+        # Fallback -- video was saved separately. This could be removed
+        # post GA if we don't care about breaking beta customers old
+        # replays.
+        return storage_kv.get(make_video_filename(segment))
+    else:
         return video
-    return None
 
 
-def _download_segment(
-    segment: RecordingSegmentStorageMeta,
-) -> tuple[memoryview | None, memoryview] | None:
+def _download_segment(segment: RecordingSegmentStorageMeta) -> tuple[bytes | None, bytes] | None:
     driver = filestore if segment.file_id else storage
 
     result = driver.get(segment)
@@ -301,7 +298,6 @@ def _download_segment(
     return unpack(decompressed)
 
 
-@sentry_sdk.trace
 def decompress(buffer: bytes) -> bytes:
     """Return decompressed output."""
     # If the file starts with a valid JSON character we assume its uncompressed.

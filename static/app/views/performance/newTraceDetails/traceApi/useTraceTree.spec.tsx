@@ -14,8 +14,6 @@ import {
   makeTraceError,
   makeTransaction,
 } from 'sentry/views/performance/newTraceDetails/traceModels/traceTreeTestUtils';
-import {DEFAULT_TRACE_VIEW_PREFERENCES} from 'sentry/views/performance/newTraceDetails/traceState/tracePreferences';
-import {TraceStateProvider} from 'sentry/views/performance/newTraceDetails/traceState/traceStateProvider';
 
 import type {TraceMetaQueryResults} from './useTraceMeta';
 import {useTraceTree} from './useTraceTree';
@@ -39,11 +37,7 @@ const organization = OrganizationFixture();
 
 const contextWrapper = (org: Organization) => {
   return function ({children}: {children: React.ReactNode}) {
-    return (
-      <TraceStateProvider initialPreferences={DEFAULT_TRACE_VIEW_PREFERENCES}>
-        <OrganizationContext value={org}>{children}</OrganizationContext>
-      </TraceStateProvider>
-    );
+    return <OrganizationContext value={org}>{children}</OrganizationContext>;
   };
 };
 

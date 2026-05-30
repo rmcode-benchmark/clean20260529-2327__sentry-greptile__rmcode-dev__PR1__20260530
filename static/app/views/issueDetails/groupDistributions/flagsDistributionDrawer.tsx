@@ -1,7 +1,10 @@
 import {Fragment, useState} from 'react';
+import styled from '@emotion/styled';
 
 import AnalyticsArea from 'sentry/components/analyticsArea';
+import {Flex} from 'sentry/components/container/flex';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
+import {Checkbox} from 'sentry/components/core/checkbox';
 import {
   EventDrawerBody,
   EventNavigator,
@@ -10,10 +13,13 @@ import {
 import FeatureFlagSort from 'sentry/components/events/featureFlags/featureFlagSort';
 import {OrderBy, SortBy} from 'sentry/components/events/featureFlags/utils';
 import SuspectTable from 'sentry/components/issues/suspect/suspectTable';
+import {IconSentry} from 'sentry/icons/iconSentry';
 import {t} from 'sentry/locale';
+import {space} from 'sentry/styles/space';
 import type {Group} from 'sentry/types/group';
 import type {Organization} from 'sentry/types/organization';
 import {trackAnalytics} from 'sentry/utils/analytics';
+import {useLocalStorageState} from 'sentry/utils/useLocalStorageState';
 import {useParams} from 'sentry/utils/useParams';
 import GroupDistributionsSearchInput from 'sentry/views/issueDetails/groupDistributions/groupDistributionsSearchInput';
 import HeaderTitle from 'sentry/views/issueDetails/groupDistributions/headerTitle';
@@ -29,12 +35,27 @@ interface Props {
   setTab: (value: DrawerTab) => void;
 }
 
+const SHOW_SCORES_LOCAL_STORAGE_KEY = 'flag-drawer-show-suspicion-scores';
+
 export default function FlagsDistributionDrawer({group, organization, setTab}: Props) {
   const environments = useEnvironmentsFromUrl();
   const {tagKey} = useParams<{tagKey: string}>();
 
   // If we're showing the suspect section at all
   const enableSuspectFlags = organization.features.includes('feature-flag-suspect-flags');
+
+  // If the user is allowed to toggle debugging on/off
+  // This is internal only
+  const showSuspectSandboxUI = organization.features.includes(
+    'suspect-scores-sandbox-ui'
+  );
+
+  // If the user has suspect-score debugging turned on
+  const [debugValue, setDebugSuspectScores] = useLocalStorageState(
+    SHOW_SCORES_LOCAL_STORAGE_KEY,
+    '0'
+  );
+  const debugSuspectScores = debugValue === '1';
 
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>(SortBy.ALPHABETICAL);
@@ -45,6 +66,10 @@ export default function FlagsDistributionDrawer({group, organization, setTab}: P
         {
           label: t('Alphabetical'),
           value: SortBy.ALPHABETICAL,
+        },
+        {
+          label: t('Suspiciousness'),
+          value: SortBy.SUSPICION,
         },
         {
           label: t('Distribution'),
@@ -95,17 +120,36 @@ export default function FlagsDistributionDrawer({group, organization, setTab}: P
           tab={DrawerTab.FEATURE_FLAGS}
           includeFeatureFlagsTab
         />
+
+        {showSuspectSandboxUI && (
+          <Flex>
+            <Label>
+              <IconSentry size="xs" />
+              {t('Debug')}
+              <Checkbox
+                checked={debugSuspectScores}
+                onChange={() => {
+                  setDebugSuspectScores(debugSuspectScores ? '0' : '1');
+                }}
+              />
+            </Label>
+          </Flex>
+        )}
       </EventNavigator>
       <EventDrawerBody>
         {!tagKey && enableSuspectFlags ? (
-          <SuspectTable environments={environments} group={group} />
+          <SuspectTable
+            debugSuspectScores={debugSuspectScores}
+            environments={environments}
+            group={group}
+          />
         ) : null}
 
         {tagKey ? null : (
           <EventStickyControls>
             <TagFlagPicker setTab={setTab} tab={DrawerTab.FEATURE_FLAGS} />
 
-            <ButtonBar>
+            <ButtonBar gap={1}>
               <GroupDistributionsSearchInput
                 includeFeatureFlagsTab
                 search={search}
@@ -144,11 +188,12 @@ export default function FlagsDistributionDrawer({group, organization, setTab}: P
 
         {tagKey ? (
           <AnalyticsArea name="feature_flag_details">
-            <FlagDetailsDrawerContent group={group} />
+            <FlagDetailsDrawerContent />
           </AnalyticsArea>
         ) : (
           <AnalyticsArea name="feature_flag_distributions">
             <FlagDrawerContent
+              debugSuspectScores={debugSuspectScores}
               environments={environments}
               group={group}
               orderBy={orderBy}
@@ -161,3 +206,11 @@ export default function FlagsDistributionDrawer({group, organization, setTab}: P
     </Fragment>
   );
 }
+
+const Label = styled('label')`
+  display: flex;
+  align-items: center;
+  gap: ${space(0.5)};
+  margin-bottom: 0;
+  cursor: pointer;
+`;

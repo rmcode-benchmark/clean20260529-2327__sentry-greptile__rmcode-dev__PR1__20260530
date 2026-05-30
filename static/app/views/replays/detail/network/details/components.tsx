@@ -19,7 +19,7 @@ export const InspectorMargin = styled('div')`
 
 const NotFoundText = styled('span')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const WarningText = styled('span')`
@@ -84,19 +84,19 @@ const SectionTitle = styled('dt')``;
 const SectionTitleExtra = styled('span')`
   flex-grow: 1;
   text-align: right;
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-weight: ${p => p.theme.fontWeightNormal};
 `;
 
 const SectionData = styled('dd')`
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
 `;
 
 const ToggleButton = styled('button')`
   background: ${p => p.theme.background};
   border: 0;
   color: ${p => p.theme.headingColor};
-  font-size: ${p => p.theme.fontSize.sm};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-size: ${p => p.theme.fontSizeSmall};
+  font-weight: ${p => p.theme.fontWeightBold};
   line-height: ${p => p.theme.text.lineHeightBody};
 
   width: 100%;
@@ -139,12 +139,12 @@ export function SectionItem({
 
 const StyledKeyValueTable = styled(KeyValueTable)`
   & > dt {
-    font-size: ${p => p.theme.fontSize.sm};
+    font-size: ${p => p.theme.fontSizeSmall};
     padding-left: ${space(4)};
   }
   & > dd {
     ${p => p.theme.overflowEllipsis};
-    font-size: ${p => p.theme.fontSize.sm};
+    font-size: ${p => p.theme.fontSizeSmall};
     display: flex;
     justify-content: flex-end;
     white-space: normal;

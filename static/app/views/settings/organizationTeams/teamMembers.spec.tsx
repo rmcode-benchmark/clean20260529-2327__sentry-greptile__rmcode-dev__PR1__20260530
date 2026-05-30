@@ -1,6 +1,7 @@
 import {MemberFixture} from 'sentry-fixture/member';
 import {MembersFixture} from 'sentry-fixture/members';
 import {OrganizationFixture} from 'sentry-fixture/organization';
+import {RouterFixture} from 'sentry-fixture/routerFixture';
 import {TeamFixture} from 'sentry-fixture/team';
 
 import {initializeOrg} from 'sentry-test/initializeOrg';
@@ -30,12 +31,12 @@ describe('TeamMembers', function () {
     name: 'Sentry 9 Name',
   });
 
-  const initialRouterConfig = {
-    location: {
-      pathname: `/settings/${organization.slug}/teams/${team.slug}/members/`,
+  const router = RouterFixture({
+    params: {
+      orgId: organization.slug,
+      teamId: team.slug,
     },
-    route: '/settings/:orgId/teams/:teamId/members/',
-  };
+  });
 
   beforeEach(function () {
     MockApiClient.clearMockResponses();
@@ -69,8 +70,9 @@ describe('TeamMembers', function () {
   it('can add member to team with open membership', async function () {
     const org = OrganizationFixture({access: [], openMembership: true});
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: org,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(
@@ -84,8 +86,9 @@ describe('TeamMembers', function () {
   it('can add multiple members with one click on dropdown', async function () {
     const org = OrganizationFixture({access: [], openMembership: true});
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: org,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(
@@ -100,8 +103,9 @@ describe('TeamMembers', function () {
   it('can add member to team with team:admin permission', async function () {
     const org = OrganizationFixture({access: ['team:admin'], openMembership: false});
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: org,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(
@@ -115,8 +119,9 @@ describe('TeamMembers', function () {
   it('can add member to team with org:write permission', async function () {
     const org = OrganizationFixture({access: ['org:write'], openMembership: false});
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: org,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(
@@ -130,8 +135,9 @@ describe('TeamMembers', function () {
   it('can request access to add member to team without permission', async function () {
     const org = OrganizationFixture({access: [], openMembership: false});
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: org,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(
@@ -150,8 +156,9 @@ describe('TeamMembers', function () {
       }),
     });
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: org,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(
@@ -170,8 +177,9 @@ describe('TeamMembers', function () {
       }),
     });
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: org,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(
@@ -187,8 +195,9 @@ describe('TeamMembers', function () {
       organization: OrganizationFixture({access: [], openMembership: true}),
     });
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: org,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(
@@ -204,8 +213,9 @@ describe('TeamMembers', function () {
       organization: OrganizationFixture({access: [], openMembership: false}),
     });
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: org,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(
@@ -222,8 +232,9 @@ describe('TeamMembers', function () {
       method: 'DELETE',
     });
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization,
+      deprecatedRouterMocks: true,
     });
 
     await screen.findAllByRole('button', {name: 'Add Member'});
@@ -252,8 +263,9 @@ describe('TeamMembers', function () {
     const organizationMember = OrganizationFixture({access: []});
 
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: organizationMember,
+      deprecatedRouterMocks: true,
     });
 
     await screen.findAllByRole('button', {name: 'Add Member'});
@@ -284,8 +296,9 @@ describe('TeamMembers', function () {
     });
 
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization,
+      deprecatedRouterMocks: true,
     });
 
     const admins = await screen.findAllByText('Team Admin');
@@ -310,8 +323,9 @@ describe('TeamMembers', function () {
     const orgWithTeamRoles = OrganizationFixture({features: ['team-roles']});
 
     render(<TeamMembers team={team} />, {
-      initialRouterConfig,
+      router,
       organization: orgWithTeamRoles,
+      deprecatedRouterMocks: true,
     });
 
     const admins = await screen.findAllByText('Team Admin');
@@ -355,8 +369,9 @@ describe('TeamMembers', function () {
     });
 
     render(<TeamMembers team={team2} />, {
-      initialRouterConfig,
+      router,
       organization,
+      deprecatedRouterMocks: true,
     });
 
     expect(
@@ -400,8 +415,9 @@ describe('TeamMembers', function () {
     });
 
     render(<TeamMembers team={team2} />, {
-      initialRouterConfig,
+      router,
       organization,
+      deprecatedRouterMocks: true,
     });
 
     expect(

@@ -3,6 +3,7 @@ from django.urls import reverse
 from sentry.models.groupsearchview import GroupSearchView, GroupSearchViewVisibility
 from sentry.models.groupsearchviewstarred import GroupSearchViewStarred
 from sentry.testutils.cases import APITestCase
+from sentry.testutils.helpers.features import with_feature
 
 
 class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
@@ -45,11 +46,13 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
             )
         return view
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_view_not_found(self) -> None:
         response = self.client.post(self.get_url(737373), data={"starred": True})
 
         assert response.status_code == 404
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_organization_view_accessible(self) -> None:
         other_user = self.create_user()
         view = self.create_view(
@@ -65,6 +68,7 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
             group_search_view=view,
         ).exists()
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_invalid_request_data(self) -> None:
         view = self.create_view()
 
@@ -76,6 +80,7 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
         response = self.client.post(self.get_url(view.id), data={"starred": False, "position": 0})
         assert response.status_code == 400
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_star_view_with_position(self) -> None:
         view1 = self.create_view(starred=True)
         view2 = self.create_view(starred=True)
@@ -107,6 +112,7 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
             position=2,
         ).exists()
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_star_view_without_position(self) -> None:
         view = self.create_view()
 
@@ -122,6 +128,7 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
 
         assert starred_view.position == 0
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_unstar_view(self) -> None:
         starred_view = self.create_view(starred=True)
         view_to_be_unstarred = self.create_view(starred=True)
@@ -140,6 +147,7 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
             group_search_view=starred_view,
         ).exists()
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_star_already_starred_view(self) -> None:
         view = self.create_view(starred=True)
 
@@ -147,6 +155,7 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
 
         assert response.status_code == 204
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_unstar_not_starred_view(self) -> None:
         view = self.create_view()
 
@@ -154,6 +163,7 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
 
         assert response.status_code == 204
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_multiple_starred_views_order(self) -> None:
         view1 = self.create_view()
         view2 = self.create_view()
@@ -196,6 +206,7 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
             == 1
         )
 
+    @with_feature("organizations:issue-stream-custom-views")
     def test_unstar_adjust_positions(self) -> None:
         view1 = self.create_view(starred=True)
         view2 = self.create_view(starred=True)
@@ -223,3 +234,15 @@ class OrganizationGroupSearchViewDetailsStarredEndpointTest(APITestCase):
             ).position
             == 0
         )
+
+    def test_error_when_feature_flag_disabled(self) -> None:
+        view = self.create_view()
+
+        response = self.client.post(self.get_url(view.id), data={"starred": True})
+
+        assert response.status_code == 404
+        assert not GroupSearchViewStarred.objects.filter(
+            organization=self.org,
+            user_id=self.user.id,
+            group_search_view=view,
+        ).exists()

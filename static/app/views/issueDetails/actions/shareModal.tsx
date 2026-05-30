@@ -133,7 +133,7 @@ export default function ShareIssueModal({
         <h4>{t('Share Issue')}</h4>
       </Header>
       <Body>
-        <ModalContent>
+        <ModalContent hasPublicShare={hasPublicShare}>
           <UrlContainer>
             <TextContainer>
               <StyledAutoSelectText ref={urlRef}>{issueUrl}</StyledAutoSelectText>
@@ -148,7 +148,7 @@ export default function ShareIssueModal({
               {t('Include Event ID in link')}
             </CheckboxContainer>
           )}
-          <StyledButtonBar gap="xs">
+          <StyledButtonBar gap={0.5}>
             <Button
               size="sm"
               onClick={handleCopyMarkdownLink}
@@ -201,7 +201,6 @@ export default function ShareIssueModal({
                     {t('Share a link with anyone outside your organization')}
                   </SubText>
                 </div>
-                <div>{(!group || loading) && <LoadingIndicator mini />}</div>
                 <Switch
                   aria-label={isPublished ? t('Unpublish') : t('Publish')}
                   checked={isPublished}
@@ -209,6 +208,11 @@ export default function ShareIssueModal({
                   onChange={handlePublicShare}
                 />
               </SwitchWrapper>
+              {(!group || loading) && (
+                <LoadingContainer>
+                  <LoadingIndicator mini />
+                </LoadingContainer>
+              )}
               {group && !loading && isPublished && shareUrl && (
                 <Fragment>
                   <UrlContainer>
@@ -250,10 +254,11 @@ export default function ShareIssueModal({
   );
 }
 
-const ModalContent = styled('div')`
+const ModalContent = styled('div')<{hasPublicShare: boolean}>`
   display: flex;
   gap: ${space(1)};
   flex-direction: column;
+  min-height: ${p => (p.hasPublicShare ? '275px' : '')};
 `;
 
 const UrlContainer = styled('div')`
@@ -283,7 +288,7 @@ const CheckboxContainer = styled('label')`
   display: flex;
   gap: ${space(1)};
   align-items: center;
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-weight: ${p => p.theme.fontWeightNormal};
 `;
 
 const StyledButtonBar = styled(ButtonBar)`
@@ -291,8 +296,8 @@ const StyledButtonBar = styled(ButtonBar)`
 `;
 
 const SwitchWrapper = styled('div')`
-  display: grid;
-  grid-template-columns: 1fr max-content max-content;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: ${space(2)};
 `;
@@ -304,7 +309,12 @@ const Title = styled('div')`
 
 const SubText = styled('p')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
+`;
+
+const LoadingContainer = styled('div')`
+  display: flex;
+  justify-content: center;
 `;
 
 const ReshareButton = styled(Button)`

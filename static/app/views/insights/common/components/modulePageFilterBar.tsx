@@ -1,4 +1,4 @@
-import {Fragment, useEffect, useState} from 'react';
+import {type ComponentProps, Fragment, useEffect, useState} from 'react';
 import styled from '@emotion/styled';
 
 import {Tooltip} from 'sentry/components/core/tooltip';
@@ -9,12 +9,12 @@ import {
 } from 'sentry/components/organizations/datePageFilter';
 import {EnvironmentPageFilter} from 'sentry/components/organizations/environmentPageFilter';
 import PageFilterBar from 'sentry/components/organizations/pageFilterBar';
+import {ProjectPageFilter} from 'sentry/components/organizations/projectPageFilter';
 import {IconBusiness} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {SECOND} from 'sentry/utils/formatters';
 import useOrganization from 'sentry/utils/useOrganization';
 import useProjects from 'sentry/utils/useProjects';
-import {InsightsProjectSelector} from 'sentry/views/insights/common/components/projectSelector';
 import {useHasFirstSpan} from 'sentry/views/insights/common/queries/useHasFirstSpan';
 import {QUERY_DATE_RANGE_LIMIT} from 'sentry/views/insights/settings';
 import type {ModuleName} from 'sentry/views/insights/types';
@@ -23,6 +23,7 @@ type Props = {
   moduleName: ModuleName;
   disableProjectFilter?: boolean; // This is used primarily for module summary pages when a project can't be selected
   extraFilters?: React.ReactNode;
+  onProjectChange?: ComponentProps<typeof ProjectPageFilter>['onChange'];
 };
 
 const CHANGE_PROJECT_TEXT = t('Make sure you have the correct project selected.');
@@ -30,6 +31,7 @@ const DISABLED_OPTIONS = ['14d', '30d', '90d'];
 
 export function ModulePageFilterBar({
   moduleName,
+  onProjectChange,
   extraFilters,
   disableProjectFilter,
 }: Props) {
@@ -114,7 +116,7 @@ export function ModulePageFilterBar({
       of the readout ribbon which results in buttons being very large. */}
       <div>
         <PageFilterBar condensed>
-          {!disableProjectFilter && <InsightsProjectSelector />}
+          {!disableProjectFilter && <ProjectPageFilter onChange={onProjectChange} />}
           <EnvironmentPageFilter />
           <DatePageFilter {...dateFilterProps} />
         </PageFilterBar>

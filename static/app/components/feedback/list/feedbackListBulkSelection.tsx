@@ -1,17 +1,19 @@
+import {Flex} from 'sentry/components/container/flex';
 import {Button} from 'sentry/components/core/button';
-import {Flex} from 'sentry/components/core/layout';
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
 import ErrorBoundary from 'sentry/components/errorBoundary';
 import type decodeMailbox from 'sentry/components/feedback/decodeMailbox';
 import useBulkEditFeedbacks from 'sentry/components/feedback/list/useBulkEditFeedbacks';
+import type useListItemCheckboxState from 'sentry/components/feedback/list/useListItemCheckboxState';
 import {IconEllipsis} from 'sentry/icons/iconEllipsis';
 import {t, tct} from 'sentry/locale';
+import {space} from 'sentry/styles/space';
 import {GroupStatus} from 'sentry/types/group';
-import type {useListItemCheckboxContext} from 'sentry/utils/list/useListItemCheckboxState';
+import useOrganization from 'sentry/utils/useOrganization';
 
 interface Props
   extends Pick<
-    ReturnType<typeof useListItemCheckboxContext>,
+    ReturnType<typeof useListItemCheckboxState>,
     'countSelected' | 'deselectAll' | 'selectedIds'
   > {
   mailbox: ReturnType<typeof decodeMailbox>;
@@ -23,15 +25,8 @@ export default function FeedbackListBulkSelection({
   selectedIds,
   deselectAll,
 }: Props) {
-  const {
-    hasDelete,
-    enableDelete,
-    enableMarkAsRead,
-    onDelete,
-    onToggleResolved,
-    onMarkAsRead,
-    onMarkUnread,
-  } = useBulkEditFeedbacks({
+  const organization = useOrganization();
+  const {onDelete, onToggleResolved, onMarkAsRead, onMarkUnread} = useBulkEditFeedbacks({
     selectedIds,
     deselectAll,
   });
@@ -43,8 +38,14 @@ export default function FeedbackListBulkSelection({
   const newMailboxSpam =
     mailbox === 'ignored' ? GroupStatus.UNRESOLVED : GroupStatus.IGNORED;
 
+  const hasDelete = selectedIds !== 'all';
+  const disableDelete = !organization.access.includes('event:admin');
+
+  // TODO(ryan953): We should disable markAsRead if you're not a member of any project selected
+  const disableMarkAsRead = false;
+
   return (
-    <Flex gap="md" align="center" justify="space-between" flex="1 0 auto">
+    <Flex gap={space(1)} align="center" justify="space-between" flex="1 0 auto">
       <span>
         <strong>
           {tct('[countSelected] Selected', {
@@ -52,7 +53,7 @@ export default function FeedbackListBulkSelection({
           })}
         </strong>
       </span>
-      <Flex gap="md" justify="flex-end">
+      <Flex gap={space(1)} justify="flex-end">
         <ErrorBoundary mini>
           <Button
             size="xs"
@@ -88,10 +89,7 @@ export default function FeedbackListBulkSelection({
                 key: 'mark read',
                 label: t('Mark Read'),
                 onAction: onMarkAsRead,
-                disabled: !enableMarkAsRead,
-                tooltip: enableMarkAsRead
-                  ? undefined
-                  : t('You must be a member of the project'),
+                disabled: disableMarkAsRead,
               },
               {
                 key: 'mark unread',
@@ -103,11 +101,11 @@ export default function FeedbackListBulkSelection({
                 priority: 'danger' as const,
                 label: t('Delete'),
                 hidden: !hasDelete,
-                disabled: !enableDelete,
+                disabled: disableDelete,
                 onAction: onDelete,
-                tooltip: enableDelete
-                  ? undefined
-                  : t('You must be an admin to delete feedback'),
+                tooltip: disableDelete
+                  ? t('You must be an admin to delete feedback.')
+                  : undefined,
               },
             ]}
           />

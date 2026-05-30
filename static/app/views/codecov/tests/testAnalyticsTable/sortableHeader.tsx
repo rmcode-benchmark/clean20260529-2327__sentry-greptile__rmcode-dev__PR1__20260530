@@ -1,9 +1,7 @@
-import {Fragment, type ReactNode, useCallback} from 'react';
-import {useSearchParams} from 'react-router-dom';
+import type {ReactNode} from 'react';
 import styled from '@emotion/styled';
 
-import {Link} from 'sentry/components/core/link';
-import {Switch} from 'sentry/components/core/switch';
+import Link from 'sentry/components/links/link';
 import QuestionTooltip from 'sentry/components/questionTooltip';
 import {IconArrow} from 'sentry/icons';
 import {space} from 'sentry/styles/space';
@@ -12,45 +10,13 @@ import {useLocation} from 'sentry/utils/useLocation';
 
 type HeaderParams = {
   alignment: string;
-  enableToggle: boolean;
   fieldName: string;
   label: string;
   sort: undefined | Sort;
   tooltip?: string | ReactNode;
 };
 
-function WrapToggle() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const wrapValue = searchParams.get('wrap') === 'true';
-
-  const toggle = useCallback(() => {
-    const currentParams = Object.fromEntries(searchParams.entries());
-    const updatedParams = {
-      ...currentParams,
-      wrap: (!wrapValue).toString(),
-    };
-    setSearchParams(updatedParams);
-  }, [searchParams, setSearchParams, wrapValue]);
-
-  return (
-    <Fragment>
-      | <WrapText>{wrapValue ? 'Wrap' : 'No Wrap'}</WrapText>
-      <span>
-        <Switch checked={wrapValue} size="sm" onChange={toggle} />{' '}
-      </span>
-    </Fragment>
-  );
-}
-
-function SortableHeader({
-  fieldName,
-  label,
-  sort,
-  tooltip,
-  alignment,
-  enableToggle,
-}: HeaderParams) {
-  // TODO: refactor once API is done to use either or useLocation/useSearchParams
+function SortableHeader({fieldName, label, sort, tooltip, alignment}: HeaderParams) {
   const location = useLocation();
 
   const arrowDirection = sort?.kind === 'asc' ? 'up' : 'down';
@@ -81,27 +47,22 @@ function SortableHeader({
       >
         {label} {sort?.field === fieldName && sortArrow}
       </StyledLink>
-      {enableToggle ? <WrapToggle /> : null}
       {tooltip ? (
-        <span>
-          <QuestionTooltip size="xs" title={tooltip} isHoverable />
-        </span>
+        <StyledQuestionTooltip size="xs" position="top" title={tooltip} isHoverable />
       ) : null}
     </HeaderCell>
   );
 }
 
 const HeaderCell = styled('div')<{alignment: string}>`
-  display: flex;
-  align-items: center;
-  gap: ${space(1)};
+  display: block;
   width: 100%;
-  justify-content: ${p => (p.alignment === 'left' ? 'flex-start' : 'flex-end')};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  text-align: ${p => (p.alignment === 'left' ? 'left' : 'right')};
 `;
 
 const StyledLink = styled(Link)`
   color: inherit;
+  text-transform: capitalize;
 
   :hover {
     color: inherit;
@@ -112,7 +73,7 @@ const StyledLink = styled(Link)`
   }
 `;
 
-const WrapText = styled('span')`
+const StyledQuestionTooltip = styled(QuestionTooltip)`
   margin-left: ${space(0.5)};
 `;
 

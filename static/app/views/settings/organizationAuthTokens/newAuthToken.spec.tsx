@@ -1,9 +1,4 @@
-import {
-  render,
-  renderGlobalModal,
-  screen,
-  userEvent,
-} from 'sentry-test/reactTestingLibrary';
+import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
 
 import * as indicators from 'sentry/actionCreators/indicator';
 import type {OrgAuthToken} from 'sentry/types/user';
@@ -14,7 +9,6 @@ describe('OrganizationAuthTokensNewAuthToken', function () {
 
   it('can create token', async function () {
     render(<OrganizationAuthTokensNewAuthToken />);
-    renderGlobalModal();
 
     const generatedToken: OrgAuthToken & {token: string} = {
       id: '1',
@@ -34,9 +28,10 @@ describe('OrganizationAuthTokensNewAuthToken', function () {
     expect(screen.queryByLabelText('Generated token')).not.toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText('Name'), 'My Token');
-    await userEvent.click(screen.getByRole('button', {name: 'Create Token'}));
+    await userEvent.click(screen.getByRole('button', {name: 'Create Auth Token'}));
 
-    expect(await screen.findByLabelText('Generated token')).toHaveValue('sntrys_XXXXXXX');
+    expect(screen.getByLabelText('Generated token')).toHaveValue('sntrys_XXXXXXX');
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
 
     expect(mock).toHaveBeenCalledWith(
       ENDPOINT,
@@ -63,12 +58,12 @@ describe('OrganizationAuthTokensNewAuthToken', function () {
     expect(screen.queryByLabelText('Generated token')).not.toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText('Name'), 'My Token');
-    await userEvent.click(screen.getByRole('button', {name: 'Create Token'}));
+    await userEvent.click(screen.getByRole('button', {name: 'Create Auth Token'}));
 
     expect(screen.queryByLabelText('Generated token')).not.toBeInTheDocument();
 
     expect(indicators.addErrorMessage).toHaveBeenCalledWith(
-      'Failed to create a new organization token.'
+      'Failed to create a new auth token.'
     );
 
     expect(mock).toHaveBeenCalledWith(
@@ -96,7 +91,7 @@ describe('OrganizationAuthTokensNewAuthToken', function () {
     expect(screen.queryByLabelText('Generated token')).not.toBeInTheDocument();
 
     await userEvent.type(screen.getByLabelText('Name'), 'My Token');
-    await userEvent.click(screen.getByRole('button', {name: 'Create Token'}));
+    await userEvent.click(screen.getByRole('button', {name: 'Create Auth Token'}));
 
     expect(screen.queryByLabelText('Generated token')).not.toBeInTheDocument();
 

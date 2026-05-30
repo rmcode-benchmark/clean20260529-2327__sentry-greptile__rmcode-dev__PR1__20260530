@@ -33,12 +33,7 @@ export function BreadCrumbs({
 
   return (
     <ResponsiveBreadcrumbWrapper>
-      <Breadcrumbs
-        data={matchingEntry.data}
-        event={event}
-        organization={organization}
-        disableCollapsePersistence
-      />
+      <Breadcrumbs data={matchingEntry.data} event={event} organization={organization} />
     </ResponsiveBreadcrumbWrapper>
   );
 }

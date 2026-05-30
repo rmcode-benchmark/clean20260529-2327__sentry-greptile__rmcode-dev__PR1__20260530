@@ -4,9 +4,8 @@ import styled from '@emotion/styled';
 import FeedbackConfigToggle from 'sentry/components/feedback/feedbackOnboarding/feedbackConfigToggle';
 import {AuthTokenGeneratorProvider} from 'sentry/components/onboarding/gettingStartedDoc/authTokenGenerator';
 import type {OnboardingLayoutProps} from 'sentry/components/onboarding/gettingStartedDoc/onboardingLayout';
-import {Step} from 'sentry/components/onboarding/gettingStartedDoc/step';
+import {Step, StepType} from 'sentry/components/onboarding/gettingStartedDoc/step';
 import type {DocsParams} from 'sentry/components/onboarding/gettingStartedDoc/types';
-import {StepType} from 'sentry/components/onboarding/gettingStartedDoc/types';
 import {useSourcePackageRegistries} from 'sentry/components/onboarding/gettingStartedDoc/useSourcePackageRegistries';
 import {useUrlPlatformOptions} from 'sentry/components/onboarding/platformOptionsControl';
 import ConfigStore from 'sentry/stores/configStore';
@@ -91,10 +90,6 @@ export function FeedbackOnboardingLayout({
     projectKeyId,
   ]);
 
-  const hideFeedbackConfigTogglePlatforms = ['flutter'];
-  const hideFeedbackConfigToggle =
-    hideFeedbackConfigTogglePlatforms.includes(platformKey);
-
   return (
     <AuthTokenGeneratorProvider projectSlug={projectSlug}>
       <Wrapper>
@@ -106,7 +101,7 @@ export function FeedbackOnboardingLayout({
                 key={step.title ?? step.type}
                 {...{
                   ...step,
-                  codeHeader: !hideFeedbackConfigToggle && (
+                  codeHeader: (
                     <FeedbackConfigToggle
                       emailToggle={email}
                       nameToggle={name}

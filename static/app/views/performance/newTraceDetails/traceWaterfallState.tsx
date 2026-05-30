@@ -71,7 +71,7 @@ const LoadingContainer = styled('div')<{animate: boolean; error?: boolean}>`
   top: 50%;
   position: absolute;
   height: auto;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   color: ${p => p.theme.subText};
   z-index: 30;
   padding: 24px;

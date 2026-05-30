@@ -3,7 +3,6 @@ import styled from '@emotion/styled';
 import type {LocationDescriptor} from 'history';
 
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
-import {makeFeatureFlagSearchKey} from 'sentry/components/events/featureFlags/utils';
 import {IconEllipsis} from 'sentry/icons/iconEllipsis';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
@@ -61,7 +60,7 @@ export default function FlagActionDropdown({
           key: 'view-issues',
           label: t('Search issues for this flag value'),
           to: generateAction({
-            key: makeFeatureFlagSearchKey(flag),
+            key: `flags["${flag}"]`,
             value: result.toString(),
           }),
         },

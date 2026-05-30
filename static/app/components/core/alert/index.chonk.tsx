@@ -128,31 +128,31 @@ export const TrailingItems = chonkStyled('div')<ChonkAlertProps>`
   grid-auto-columns: max-content;
   grid-template-rows: 100%;
   gap: ${p => p.theme.space.md};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
+  padding-top: ${p => p.theme.space.md};
   grid-row: 2;
   grid-column: 1 / -1;
   justify-items: start;
-  min-height: 28px;
-  padding-block: ${p => p.theme.space['2xs']};
+  margin-top: -2px;
 
   > svg {
     width: 16px;
     height: 16px;
     display: flex;
     align-items: center;
-    align-self: center;
   }
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
-    grid-area: auto;
-    align-items: start;
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
+    grid-row: auto;
+    grid-column: auto;
+    align-items: flex-start;
   }
 `;
 
 export const Message = chonkStyled('div')`
   line-height: ${p => p.theme.text.lineHeightBody};
   place-content: center;
-  padding-block: ${p => p.theme.space.xs};
+  padding-block: ${p => p.theme.space.mini};
 `;
 
 export const IconWrapper = chonkStyled('div')<{type: AlertProps['type']}>`
@@ -184,7 +184,7 @@ export const ExpandContainer = chonkStyled('div')<{
   align-self: flex-start;
   cursor: auto;
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     grid-row: 2;
   }
 `;

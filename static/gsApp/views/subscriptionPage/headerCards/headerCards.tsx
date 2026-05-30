@@ -6,7 +6,6 @@ import {space} from 'sentry/styles/space';
 import type {Organization} from 'sentry/types/organization';
 
 import type {Subscription} from 'getsentry/types';
-import SeerAutomationAlert from 'getsentry/views/subscriptionPage/seerAutomationAlert';
 
 import {SubscriptionCard} from './subscriptionCard';
 import {UsageCard} from './usageCard';
@@ -19,7 +18,6 @@ interface HeaderCardsProps {
 export function HeaderCards({organization, subscription}: HeaderCardsProps) {
   return (
     <ErrorBoundary mini>
-      <SeerAutomationAlert organization={organization} />
       <HeaderCardWrapper>
         <SubscriptionCard organization={organization} subscription={subscription} />
         <UsageCard organization={organization} subscription={subscription} />
@@ -32,7 +30,7 @@ const HeaderCardWrapper = styled(Panel)`
   display: grid;
   margin-bottom: ${space(2)};
 
-  @media (min-width: ${p => p.theme.breakpoints.lg}) {
+  @media (min-width: ${p => p.theme.breakpoints.large}) {
     grid-template-columns: auto minmax(0, 600px);
     gap: ${space(2)};
   }

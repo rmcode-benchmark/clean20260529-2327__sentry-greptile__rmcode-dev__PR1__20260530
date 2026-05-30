@@ -574,13 +574,11 @@ def get_sources_for_project(project):
                 if other_source.get("type") == "alias":
                     yield from resolve_alias(other_source, organization)
                 else:
-                    yield fetch_token_for_gcp_source_if_necessary(other_source, organization)
+                    yield fetch_token_for_gcp_source(other_source, organization)
 
-    def fetch_token_for_gcp_source_if_necessary(source, organization):
-        if source.get("type") == "gcs":
-            if "client_email" in source and "private_key" in source:
-                return source
-            else:
+    def fetch_token_for_gcp_source(source, organization):
+        if features.has("organizations:gcp-bearer-token-authentication", organization):
+            if source.get("type") == "gcs":
                 client_email = source.get("client_email")
                 token = get_gcp_token(client_email)
                 # if target_credentials.token is None it means that the
@@ -611,7 +609,7 @@ def get_sources_for_project(project):
         if source.get("type") == "alias":
             sources.extend(resolve_alias(source, organization))
         else:
-            sources.append(fetch_token_for_gcp_source_if_necessary(source, organization))
+            sources.append(fetch_token_for_gcp_source(source, organization))
 
     return sources
 

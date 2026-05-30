@@ -222,7 +222,6 @@ function GlobalModal({onClose}: Props) {
   return createPortal(
     <Fragment>
       <Backdrop
-        data-overlay
         style={backdrop && visible ? {opacity: 0.5, pointerEvents: 'auto'} : {}}
         css={options?.backdropCss}
       />
@@ -300,7 +299,7 @@ const Modal = styled(motion.div)`
   margin-top: 64px;
   padding: ${space(2)} ${space(1.5)};
 
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     margin-top: 50px;
     padding: ${space(4)} ${space(2)};
   }
@@ -315,7 +314,7 @@ const Content = styled('div')`
   position: relative;
   padding: ${space(4)} ${space(3)};
 
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     padding: ${space(4)};
   }
 `;

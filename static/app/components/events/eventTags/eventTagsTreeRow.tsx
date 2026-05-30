@@ -4,11 +4,12 @@ import * as qs from 'query-string';
 
 import {openNavigateToExternalLinkModal} from 'sentry/actionCreators/modal';
 import {hasEveryAccess} from 'sentry/components/acl/access';
-import {ExternalLink, Link} from 'sentry/components/core/link';
 import {DropdownMenu, type MenuItemProps} from 'sentry/components/dropdownMenu';
 import type {TagTreeContent} from 'sentry/components/events/eventTags/eventTagsTree';
 import EventTagsValue from 'sentry/components/events/eventTags/eventTagsValue';
 import {AnnotatedTextErrors} from 'sentry/components/events/meta/annotatedText/annotatedTextErrors';
+import ExternalLink from 'sentry/components/links/externalLink';
+import Link from 'sentry/components/links/link';
 import Version from 'sentry/components/version';
 import VersionHoverCard from 'sentry/components/versionHoverCard';
 import {IconEllipsis} from 'sentry/icons';
@@ -160,22 +161,24 @@ function EventTagsTreeRowDropdown({
     project,
   });
   const isIssueDetailsRoute = location.pathname.includes(`issues/${event.groupID}/`);
-  const isFeedback = Boolean(event.contexts.feedback);
 
   const items: MenuItemProps[] = [
-    {
-      key: 'tag-details',
-      label: t('Tag breakdown'),
-      hidden: !isIssueDetailsRoute,
-      to: {
-        pathname: `/organizations/${organization.slug}/issues/${event.groupID}/${TabPaths[Tab.DISTRIBUTIONS]}${encodeURIComponent(originalTag.key)}/`,
-        query: location.query,
-      },
-    },
+    ...(isIssueDetailsRoute
+      ? [
+          {
+            key: 'tag-details',
+            label: t('Tag breakdown'),
+            to: {
+              pathname: `/organizations/${organization.slug}/issues/${event.groupID}/${TabPaths[Tab.DISTRIBUTIONS]}${encodeURIComponent(originalTag.key)}/`,
+              query: location.query,
+            },
+          },
+        ]
+      : []),
     {
       key: 'view-events',
       label: t('View other events with this tag value'),
-      hidden: !event.groupID || isFeedback,
+      hidden: !event.groupID,
       to: {
         pathname: `/organizations/${organization.slug}/issues/${event.groupID}/events/`,
         query,
@@ -184,25 +187,17 @@ function EventTagsTreeRowDropdown({
     {
       key: 'view-issues',
       label: t('Search issues with this tag value'),
-      hidden: isFeedback,
       to: {
         pathname: `/organizations/${organization.slug}/issues/`,
         query,
       },
     },
-    {
-      key: 'view-feedback',
-      label: t('Search feedbacks with this tag value'),
-      hidden: !isFeedback,
-      to: {
-        pathname: `/organizations/${organization.slug}/feedback/`,
-        query,
-      },
-    },
-    {
+  ];
+
+  if (hasExploreEnabled) {
+    items.push({
       key: 'view-traces',
       label: t('Find more samples with this value'),
-      hidden: !hasExploreEnabled || isFeedback,
       to: getSearchInExploreTarget(
         organization,
         location,
@@ -220,7 +215,10 @@ function EventTagsTreeRowDropdown({
           'drawer'
         );
       },
-    },
+    });
+  }
+
+  items.push(
     {
       key: 'copy-value',
       label: t('Copy tag value to clipboard'),
@@ -229,7 +227,7 @@ function EventTagsTreeRowDropdown({
     {
       key: 'add-to-highlights',
       label: t('Add to event highlights'),
-      hidden: hideAddHighlightsOption || !isProjectAdmin || isFeedback,
+      hidden: hideAddHighlightsOption || !isProjectAdmin,
       onAction: () => {
         saveTag({
           highlightTags: [...(project?.highlightTags ?? []), originalTag.key],
@@ -286,8 +284,8 @@ function EventTagsTreeRowDropdown({
       onAction: () => {
         openNavigateToExternalLinkModal({linkText: content.value});
       },
-    },
-  ];
+    }
+  );
 
   return (
     <TreeValueDropdown
@@ -468,7 +466,7 @@ const TreeValue = styled('div')<{hasErrors?: boolean}>`
   padding: ${space(0.25)} 0;
   align-self: start;
   font-family: ${p => p.theme.text.familyMono};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   word-break: break-word;
   grid-column: span 1;
   color: ${p => (p.hasErrors ? 'inherit' : p.theme.textColor)};

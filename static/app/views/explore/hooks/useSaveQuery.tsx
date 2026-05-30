@@ -5,10 +5,6 @@ import useApi from 'sentry/utils/useApi';
 import useOrganization from 'sentry/utils/useOrganization';
 import usePageFilters from 'sentry/utils/usePageFilters';
 import {useExplorePageParams} from 'sentry/views/explore/contexts/pageParamsContext';
-import {
-  isGroupBy,
-  isVisualize,
-} from 'sentry/views/explore/contexts/pageParamsContext/aggregateFields';
 import {useChartInterval} from 'sentry/views/explore/hooks/useChartInterval';
 import {
   type SavedQuery,
@@ -19,7 +15,7 @@ import {
 const TRACE_EXPLORER_DATASET = 'spans';
 
 export function useSaveQuery() {
-  const {aggregateFields, sortBys, fields, query, mode, id, title} =
+  const {groupBys, sortBys, visualizes, fields, query, mode, id, title} =
     useExplorePageParams();
   const {selection} = usePageFilters();
   const {datetime, projects, environments} = selection;
@@ -30,6 +26,8 @@ export function useSaveQuery() {
   const organization = useOrganization();
   const invalidateSavedQueries = useInvalidateSavedQueries();
   const invalidateSavedQuery = useInvalidateSavedQuery(id);
+
+  const visualize = visualizes.map(v => v.toJSON());
 
   const data = useMemo(() => {
     return {
@@ -43,28 +41,19 @@ export function useSaveQuery() {
       environment: environments,
       query: [
         {
-          aggregateField: aggregateFields
-            .filter(aggregateField => {
-              if (isGroupBy(aggregateField)) {
-                return aggregateField.groupBy !== '';
-              }
-              return true;
-            })
-            .map(aggregateField => {
-              return isVisualize(aggregateField)
-                ? aggregateField.toJSON()
-                : aggregateField;
-            }),
           fields,
           orderby: sortBys[0] ? encodeSort(sortBys[0]) : undefined,
+          groupby: groupBys.filter(groupBy => groupBy !== ''),
           query: query ?? '',
+          visualize,
           mode,
         },
       ],
     };
   }, [
-    aggregateFields,
+    groupBys,
     sortBys,
+    visualize,
     fields,
     query,
     mode,

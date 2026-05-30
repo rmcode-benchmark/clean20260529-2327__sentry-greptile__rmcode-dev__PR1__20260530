@@ -8,7 +8,7 @@ import {findSuggestedColumns, viewSamplesTarget} from 'sentry/views/explore/util
 describe('viewSamplesTarget', function () {
   const project = ProjectFixture();
   const projects = [project];
-  const visualize = new Visualize('count(span.duration)');
+  const visualize = new Visualize(['count(span.duration)']);
   const sort = {
     field: 'count(span.duration)',
     kind: 'desc' as const,
@@ -19,7 +19,6 @@ describe('viewSamplesTarget', function () {
     const target = viewSamplesTarget({
       location,
       query: '',
-      fields: ['foo'],
       groupBys: [],
       visualizes: [visualize],
       sorts: [sort],
@@ -28,7 +27,7 @@ describe('viewSamplesTarget', function () {
     });
     expect(target).toMatchObject({
       query: {
-        field: ['foo', 'span.duration'],
+        field: ['span.duration'],
         mode: 'samples',
         query: '',
         sort: ['-span.duration'],
@@ -41,18 +40,17 @@ describe('viewSamplesTarget', function () {
     const target = viewSamplesTarget({
       location,
       query: '',
-      fields: ['foo'],
-      groupBys: ['bar'],
+      groupBys: ['foo'],
       visualizes: [visualize],
       sorts: [sort],
-      row: {bar: 'bar', 'count(span.duration)': 10},
+      row: {foo: 'foo', 'count(span.duration)': 10},
       projects,
     });
     expect(target).toMatchObject({
       query: {
         field: ['foo', 'span.duration'],
         mode: 'samples',
-        query: 'bar:bar',
+        query: 'foo:foo',
         sort: ['-span.duration'],
       },
     });
@@ -63,11 +61,11 @@ describe('viewSamplesTarget', function () {
     const target = viewSamplesTarget({
       location,
       query: '',
-      fields: ['foo'],
-      groupBys: ['bar', 'baz'],
+      groupBys: ['foo', 'bar', 'baz'],
       visualizes: [visualize],
       sorts: [sort],
       row: {
+        foo: 'foo',
         bar: 'bar',
         baz: 'baz',
         'count(span.duration)': 10,
@@ -76,9 +74,9 @@ describe('viewSamplesTarget', function () {
     });
     expect(target).toMatchObject({
       query: {
-        field: ['foo', 'span.duration'],
+        field: ['foo', 'bar', 'baz', 'span.duration'],
         mode: 'samples',
-        query: 'bar:bar baz:baz',
+        query: 'foo:foo bar:bar baz:baz',
         sort: ['-span.duration'],
       },
     });
@@ -89,7 +87,6 @@ describe('viewSamplesTarget', function () {
     const target = viewSamplesTarget({
       location,
       query: '',
-      fields: ['foo'],
       groupBys: ['environment'],
       visualizes: [visualize],
       sorts: [sort],
@@ -101,7 +98,7 @@ describe('viewSamplesTarget', function () {
     });
     expect(target).toMatchObject({
       query: {
-        field: ['foo', 'span.duration'],
+        field: ['environment', 'span.duration'],
         mode: 'samples',
         query: '',
         environment: 'prod',
@@ -115,7 +112,6 @@ describe('viewSamplesTarget', function () {
     const target = viewSamplesTarget({
       location,
       query: '',
-      fields: ['foo'],
       groupBys: ['project.id'],
       visualizes: [visualize],
       sorts: [sort],
@@ -127,7 +123,7 @@ describe('viewSamplesTarget', function () {
     });
     expect(target).toMatchObject({
       query: {
-        field: ['foo', 'span.duration'],
+        field: ['project.id', 'span.duration'],
         mode: 'samples',
         query: '',
         project: '1',
@@ -141,7 +137,6 @@ describe('viewSamplesTarget', function () {
     const target = viewSamplesTarget({
       location,
       query: '',
-      fields: ['foo'],
       groupBys: ['project'],
       visualizes: [visualize],
       sorts: [sort],
@@ -153,7 +148,7 @@ describe('viewSamplesTarget', function () {
     });
     expect(target).toMatchObject({
       query: {
-        field: ['foo', 'span.duration'],
+        field: ['project', 'span.duration'],
         mode: 'samples',
         query: '',
         project: String(project.id),

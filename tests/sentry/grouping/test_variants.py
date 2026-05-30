@@ -2,20 +2,19 @@ from __future__ import annotations
 
 from typing import cast
 from unittest import mock
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sentry.conf.server import DEFAULT_GROUPING_CONFIG
 from sentry.eventstore.models import Event
 from sentry.grouping.fingerprinting import FingerprintRuleJSON
 from sentry.grouping.strategies.configurations import CONFIGURATIONS
 from sentry.grouping.variants import CustomFingerprintVariant, expose_fingerprint_dict
 from sentry.models.project import Project
+from sentry.projectoptions.defaults import DEFAULT_GROUPING_CONFIG
+from sentry.testutils.helpers.options import override_options
 from sentry.testutils.pytest.fixtures import InstaSnapshotter, django_db_all
 from tests.sentry.grouping import (
     GROUPING_INPUTS_DIR,
-    NO_MSG_PARAM_CONFIG,
     GroupingInput,
     dump_variant,
     get_snapshot_path,
@@ -25,34 +24,28 @@ from tests.sentry.grouping import (
 
 @django_db_all
 @with_grouping_inputs("grouping_input", GROUPING_INPUTS_DIR)
+@override_options({"grouping.experiments.parameterization.uniq_id": 0})
 @pytest.mark.parametrize(
     "config_name",
-    # The default config is tested below, and NO_MSG_PARAM_CONFIG is only meant for use in unit tests
-    set(CONFIGURATIONS.keys()) - {DEFAULT_GROUPING_CONFIG, NO_MSG_PARAM_CONFIG},
+    set(CONFIGURATIONS.keys()) - {DEFAULT_GROUPING_CONFIG},
     ids=lambda config_name: config_name.replace("-", "_"),
 )
-@patch("sentry.grouping.strategies.newstyle.logging.exception")
-def test_variants_with_older_configs(
-    mock_exception_logger: MagicMock,
-    config_name: str,
-    grouping_input: GroupingInput,
-    insta_snapshot: InstaSnapshotter,
+def test_variants_with_legacy_configs(
+    config_name: str, grouping_input: GroupingInput, insta_snapshot: InstaSnapshotter
 ) -> None:
     """
     Run the variant snapshot tests using a minimal (and much more performant) save process.
 
     Because manually cherry-picking only certain parts of the save process to run makes us much more
-    likely to fall out of sync with reality, for safety we only do this when testing older grouping
-    configs.
+    likely to fall out of sync with reality, for safety we only do this when testing legacy,
+    inactive grouping configs.
     """
     event = grouping_input.create_event(config_name, use_full_ingest_pipeline=False)
 
     # This ensures we won't try to touch the DB when getting event variants
     event.project = mock.Mock(id=11211231)
 
-    _assert_and_snapshot_results(
-        event, config_name, grouping_input.filename, insta_snapshot, mock_exception_logger
-    )
+    _assert_and_snapshot_results(event, config_name, grouping_input.filename, insta_snapshot)
 
 
 @django_db_all
@@ -61,13 +54,11 @@ def test_variants_with_older_configs(
     "config_name",
     # Technically we don't need to parameterize this since there's only one option, but doing it
     # this way makes snapshots from this test organize themselves neatly alongside snapshots from
-    # the test of the older configs above
+    # the test of the legacy configs above
     {DEFAULT_GROUPING_CONFIG},
     ids=lambda config_name: config_name.replace("-", "_"),
 )
-@patch("sentry.grouping.strategies.newstyle.logging.exception")
 def test_variants_with_current_default_config(
-    mock_exception_logger: MagicMock,
     config_name: str,
     grouping_input: GroupingInput,
     insta_snapshot: InstaSnapshotter,
@@ -87,32 +78,19 @@ def test_variants_with_current_default_config(
     )
 
     _assert_and_snapshot_results(
-        event,
-        DEFAULT_GROUPING_CONFIG,
-        grouping_input.filename,
-        insta_snapshot,
-        mock_exception_logger,
+        event, DEFAULT_GROUPING_CONFIG, grouping_input.filename, insta_snapshot
     )
 
 
 def _assert_and_snapshot_results(
-    event: Event,
-    config_name: str,
-    input_file: str,
-    insta_snapshot: InstaSnapshotter,
-    mock_exception_logger: MagicMock,
+    event: Event, config_name: str, input_file: str, insta_snapshot: InstaSnapshotter
 ) -> None:
-    grouping_variants = event.get_grouping_variants()
-
     # Make sure the event was annotated with the grouping config
     assert event.get_grouping_config()["id"] == config_name
 
-    # Check that we didn't end up with a caught but unexpected error in any of our strategies
-    assert mock_exception_logger.call_count == 0
-
     lines: list[str] = []
 
-    for variant_name, variant in sorted(grouping_variants.items()):
+    for variant_name, variant in sorted(event.get_grouping_variants().items()):
         if lines:
             lines.append("-" * 74)
         lines.append("%s:" % variant_name)

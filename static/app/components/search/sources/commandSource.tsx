@@ -8,7 +8,6 @@ import {NODE_ENV, USING_CUSTOMER_DOMAIN} from 'sentry/constants';
 import {t, toggleLocaleDebug} from 'sentry/locale';
 import ConfigStore from 'sentry/stores/configStore';
 import type {ProjectKey} from 'sentry/types/project';
-import type {User} from 'sentry/types/user';
 import type {Fuse} from 'sentry/utils/fuzzySearch';
 import {createFuzzySearch} from 'sentry/utils/fuzzySearch';
 import {removeBodyTheme} from 'sentry/utils/removeBodyTheme';
@@ -50,24 +49,11 @@ const ACTIONS: Action[] = [
 
   {
     title: t('Toggle dark mode'),
-    description: t('Toggle dark mode'),
+    description: t('Toggle dark mode (superuser only atm)'),
     requiresSuperuser: false,
-    action: async () => {
+    action: () => {
       removeBodyTheme();
       ConfigStore.set('theme', ConfigStore.get('theme') === 'dark' ? 'light' : 'dark');
-      const api = new Client();
-      await api
-        .requestPromise('/users/me/', {
-          method: 'PUT',
-          data: {options: {theme: ConfigStore.get('theme')}},
-        })
-        .then((u: User) => {
-          ConfigStore.set('user', u);
-          addSuccessMessage(t('Theme updated successfully'));
-        })
-        .catch(() => {
-          addErrorMessage(t('Failed to update theme'));
-        });
     },
   },
 

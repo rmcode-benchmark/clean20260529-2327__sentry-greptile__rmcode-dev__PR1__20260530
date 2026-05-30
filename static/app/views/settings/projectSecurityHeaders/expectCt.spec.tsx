@@ -7,13 +7,6 @@ describe('ProjectExpectCtReports', function () {
   const {organization, project} = initializeOrg();
   const keysUrl = `/projects/${organization.slug}/${project.slug}/keys/`;
 
-  const initialRouterConfig = {
-    location: {
-      pathname: `/settings/${organization.slug}/projects/${project.slug}/settings/security-headers/expect-ct/`,
-    },
-    route: '/settings/:orgId/projects/:projectId/settings/security-headers/expect-ct/',
-  };
-
   beforeEach(function () {
     MockApiClient.clearMockResponses();
     MockApiClient.addMockResponse({
@@ -26,8 +19,11 @@ describe('ProjectExpectCtReports', function () {
   it('renders', async function () {
     render(<ProjectExpectCtReports />, {
       organization,
-      initialRouterConfig,
+      deprecatedRouterMocks: true,
     });
+
+    // Renders the loading indication initially
+    expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
 
     // Heading
     expect(
@@ -44,7 +40,7 @@ describe('ProjectExpectCtReports', function () {
     });
     render(<ProjectExpectCtReports />, {
       organization,
-      initialRouterConfig,
+      deprecatedRouterMocks: true,
     });
 
     expect(

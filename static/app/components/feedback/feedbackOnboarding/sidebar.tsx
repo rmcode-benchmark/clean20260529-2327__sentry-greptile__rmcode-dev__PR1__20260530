@@ -39,9 +39,9 @@ import {space} from 'sentry/styles/space';
 import type {SelectValue} from 'sentry/types/core';
 import type {PlatformKey, Project} from 'sentry/types/project';
 import {trackAnalytics} from 'sentry/utils/analytics';
-import useUrlParams from 'sentry/utils/url/useUrlParams';
 import {useLocation} from 'sentry/utils/useLocation';
 import useOrganization from 'sentry/utils/useOrganization';
+import useUrlParams from 'sentry/utils/useUrlParams';
 
 export function useFeedbackOnboardingDrawer() {
   const organization = useOrganization();
@@ -271,9 +271,6 @@ function OnboardingContent({currentProject}: {currentProject: Project}) {
     return <FeedbackOnboardingWebApiBanner />;
   }
 
-  const excludedPlatformOptions = ['react-native', 'flutter'];
-  const isExcluded = excludedPlatformOptions.includes(currentPlatform.id);
-
   const radioButtons = (
     <Header>
       {showRadioButtons ? (
@@ -287,7 +284,6 @@ function OnboardingContent({currentProject}: {currentProject: Project}) {
                   {tct('I use [platformSelect]', {
                     platformSelect: (
                       <CompactSelect
-                        size="xs"
                         triggerLabel={jsFramework.label}
                         value={jsFramework.value}
                         onChange={setJsFramework}
@@ -318,7 +314,6 @@ function OnboardingContent({currentProject}: {currentProject: Project}) {
       ) : (
         newDocs?.platformOptions &&
         widgetPlatform &&
-        !isExcluded &&
         !crashReportOnboarding &&
         !isLoading && (
           <PlatformSelect>
@@ -433,9 +428,9 @@ const TaskList = styled('div')`
 const Heading = styled('div')`
   display: flex;
   color: ${p => p.theme.activeText};
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
   text-transform: uppercase;
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
   line-height: 1;
   margin-top: ${space(3)};
 `;

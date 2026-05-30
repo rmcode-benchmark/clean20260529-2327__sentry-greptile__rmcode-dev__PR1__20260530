@@ -5,7 +5,6 @@ from uuid import uuid4
 from django.urls import reverse
 from rest_framework.exceptions import ErrorDetail
 
-from sentry.api.endpoints.organization_trace_item_attributes import TraceItemAttributeKey
 from sentry.exceptions import InvalidSearchQuery
 from sentry.search.eap.types import SupportedTraceItemType
 from sentry.testutils.cases import (
@@ -159,7 +158,7 @@ class OrganizationTraceItemAttributesEndpointLogsTest(
 
         assert response.status_code == 200, response.content
         keys = {item["key"] for item in response.data}
-        assert keys == {"severity", "message", "project", "tags[message,string]"}
+        assert keys == {"severity", "message", "project"}
 
     def test_disallowed_attributes(self):
         logs = [
@@ -180,29 +179,6 @@ class OrganizationTraceItemAttributesEndpointLogsTest(
         assert response.status_code == 200, response.content
         keys = {item["key"] for item in response.data}
         assert keys == {"severity", "message", "project", "sentry.item_type2"}
-
-    def test_attribute_collision(self):
-        logs = [
-            self.create_ourlog(
-                organization=self.organization,
-                project=self.project,
-                attributes={"timestamp": "bar", "severity": "baz"},
-            ),
-        ]
-
-        self.store_ourlogs(logs)
-
-        response = self.do_request()
-
-        assert response.status_code == 200, response.content
-        keys = {item["key"] for item in response.data}
-        assert keys == {
-            "message",
-            "project",
-            "severity",
-            "tags[severity,string]",
-            "tags[timestamp,string]",
-        }
 
 
 class OrganizationTraceItemAttributesEndpointSpansTest(
@@ -252,23 +228,18 @@ class OrganizationTraceItemAttributesEndpointSpansTest(
             }
         )
         assert response.status_code == 200, response.data
-        expected: list[TraceItemAttributeKey] = [
-            {"key": "bar", "name": "bar"},
-            {"key": "baz", "name": "baz"},
-            {"key": "foo", "name": "foo"},
-            {
-                "key": "span.description",
-                "name": "span.description",
-                "secondaryAliases": ["description", "message"],
-            },
-            {"key": "transaction", "name": "transaction"},
-            {"key": "project", "name": "project"},
-        ]
         assert sorted(
             response.data,
             key=itemgetter("key"),
         ) == sorted(
-            expected,
+            [
+                {"key": "bar", "name": "bar"},
+                {"key": "baz", "name": "baz"},
+                {"key": "foo", "name": "foo"},
+                {"key": "span.description", "name": "span.description"},
+                {"key": "transaction", "name": "transaction"},
+                {"key": "project", "name": "project"},
+            ],
             key=itemgetter("key"),
         )
 
@@ -350,24 +321,17 @@ class OrganizationTraceItemAttributesEndpointSpansTest(
             }
         )
         assert response.status_code == 200, response.data
-
-        expected: list[TraceItemAttributeKey] = [
-            {"key": "bar", "name": "bar"},
-            {"key": "baz", "name": "baz"},
-            {"key": "foo", "name": "foo"},
-            {
-                "key": "span.description",
-                "name": "span.description",
-                "secondaryAliases": ["description", "message"],
-            },
-            {"key": "project", "name": "project"},
-        ]
-
         assert sorted(
             response.data,
             key=itemgetter("key"),
         ) == sorted(
-            expected,
+            [
+                {"key": "bar", "name": "bar"},
+                {"key": "baz", "name": "baz"},
+                {"key": "foo", "name": "foo"},
+                {"key": "span.description", "name": "span.description"},
+                {"key": "project", "name": "project"},
+            ],
             key=itemgetter("key"),
         )
 
@@ -383,21 +347,15 @@ class OrganizationTraceItemAttributesEndpointSpansTest(
         with self.feature(self.feature_flags):
             response = self.client.get(links["next"]["href"], format="json")
         assert response.status_code == 200, response.content
-
-        expected_2: list[TraceItemAttributeKey] = [
-            {
-                "key": "span.description",
-                "name": "span.description",
-                "secondaryAliases": ["description", "message"],
-            },
-            {"key": "transaction", "name": "transaction"},
-            {"key": "project", "name": "project"},
-        ]
         assert sorted(
             response.data,
             key=itemgetter("key"),
         ) == sorted(
-            expected_2,
+            [
+                {"key": "span.description", "name": "span.description"},
+                {"key": "transaction", "name": "transaction"},
+                {"key": "project", "name": "project"},
+            ],
             key=itemgetter("key"),
         )
 
@@ -413,23 +371,17 @@ class OrganizationTraceItemAttributesEndpointSpansTest(
         with self.feature(self.feature_flags):
             response = self.client.get(links["previous"]["href"], format="json")
         assert response.status_code == 200, response.content
-
-        expected_3: list[TraceItemAttributeKey] = [
-            {"key": "bar", "name": "bar"},
-            {"key": "baz", "name": "baz"},
-            {"key": "foo", "name": "foo"},
-            {
-                "key": "span.description",
-                "name": "span.description",
-                "secondaryAliases": ["description", "message"],
-            },
-            {"key": "project", "name": "project"},
-        ]
         assert sorted(
             response.data,
             key=itemgetter("key"),
         ) == sorted(
-            expected_3,
+            [
+                {"key": "bar", "name": "bar"},
+                {"key": "baz", "name": "baz"},
+                {"key": "foo", "name": "foo"},
+                {"key": "span.description", "name": "span.description"},
+                {"key": "project", "name": "project"},
+            ],
             key=itemgetter("key"),
         )
 
@@ -487,39 +439,6 @@ class OrganizationTraceItemAttributesEndpointSpansTest(
             ],
             key=itemgetter("key"),
         )
-
-    def test_attribute_collision(self):
-        self.store_segment(
-            self.project.id,
-            uuid4().hex,
-            uuid4().hex,
-            span_id=uuid4().hex[:16],
-            organization_id=self.organization.id,
-            parent_span_id=None,
-            timestamp=before_now(days=0, minutes=10).replace(microsecond=0),
-            transaction="foo",
-            duration=100,
-            exclusive_time=100,
-            tags={
-                "span.op": "foo",
-                "span.duration": "bar",
-            },
-            is_eap=True,
-        )
-
-        response = self.do_request()
-        assert response.status_code == 200, response.data
-        assert response.data == [
-            {
-                "key": "span.description",
-                "name": "span.description",
-                "secondaryAliases": ["description", "message"],
-            },
-            {"key": "project", "name": "project"},
-            {"key": "transaction", "name": "transaction"},
-            {"key": "tags[span.duration,string]", "name": "tags[span.duration,string]"},
-            {"key": "tags[span.op,string]", "name": "tags[span.op,string]"},
-        ]
 
 
 class OrganizationTraceItemAttributeValuesEndpointBaseTest(APITestCase, SnubaTestCase):
@@ -1500,12 +1419,3 @@ class OrganizationTraceItemAttributeValuesEndpointSpansTest(
             }
             for version in ["121", "122"]
         ]
-
-    def test_autocomplete_timestamp(self):
-        self.store_spans(
-            [self.create_span(start_ts=before_now(days=0, minutes=10))],
-            is_eap=True,
-        )
-        response = self.do_request(key="timestamp", query={"substringMatch": "20"})
-        assert response.status_code == 200
-        assert response.data == []

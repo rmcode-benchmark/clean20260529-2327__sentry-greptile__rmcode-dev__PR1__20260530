@@ -143,7 +143,8 @@ class OrganizationProjectsExperimentEndpoint(OrganizationEndpoint):
                 )
                 project = Project.objects.create(
                     name=project_name,
-                    # slug is *not* set so we get an automatic one
+                    # slug is set to None to avoid a duplicate slug error
+                    slug=None,
                     organization=organization,
                     platform=result.get("platform"),
                 )

@@ -57,15 +57,6 @@ function getInitialOrgId(organizations: Organization[]) {
   return null;
 }
 
-function errorIsHasNoDsnError(e: unknown): boolean | undefined {
-  try {
-    const response = (e as {responseJSON?: {error?: string}}).responseJSON;
-    return response?.error === 'No DSN found for this project';
-  } catch {
-    return false;
-  }
-}
-
 export function WizardProjectSelection({
   hash,
   organizations = [],
@@ -97,6 +88,9 @@ export function WizardProjectSelection({
   const selectableTeams = useMemo(() => {
     if (orgDetailsRequest.data?.access.includes('org:admin')) {
       return teamsRequest.data;
+    }
+    if (orgDetailsRequest.data?.allowMemberProjectCreation) {
+      return teamsRequest.data?.filter(team => team.isMember);
     }
     return teamsRequest.data?.filter(team => team.teamRole === 'admin');
   }, [orgDetailsRequest.data, teamsRequest.data]);
@@ -221,14 +215,8 @@ export function WizardProjectSelection({
           organizationId: selectedOrg.id,
           projectId,
         });
-      } catch (e) {
-        const errorMessage = errorIsHasNoDsnError(e)
-          ? t(
-              'The selected project has no active DSN. Please add an active DSN to the project.'
-            )
-          : t('Something went wrong! Please try again.');
-
-        addErrorMessage(errorMessage);
+      } catch {
+        addErrorMessage(t('Something went wrong! Please try again.'));
       }
     },
     [
@@ -407,7 +395,7 @@ const Columns = styled('div')`
   grid-template-columns: 1fr 1fr;
   gap: ${space(2)};
 
-  @media (max-width: ${p => p.theme.breakpoints.xs}) {
+  @media (max-width: ${p => p.theme.breakpoints.xsmall}) {
     grid-template-columns: 1fr;
   }
 `;

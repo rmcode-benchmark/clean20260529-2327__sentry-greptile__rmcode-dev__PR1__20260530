@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from typing import Generic, TypeVar
 
 
 class AlreadyRegisteredError(ValueError):
@@ -11,18 +11,21 @@ class NoRegistrationExistsError(ValueError):
     pass
 
 
-class Registry[T]:
+T = TypeVar("T")
+
+
+class Registry(Generic[T]):
     """
     A simple generic registry that allows for registering and retrieving items by key. Reverse lookup by value is enabled by default.
     If you have duplicate values, you may want to disable reverse lookup.
     """
 
-    def __init__(self, enable_reverse_lookup: bool = True) -> None:
+    def __init__(self, enable_reverse_lookup=True):
         self.registrations: dict[str, T] = {}
         self.reverse_lookup: dict[T, str] = {}
         self.enable_reverse_lookup = enable_reverse_lookup
 
-    def register(self, key: str) -> Callable[[T], T]:
+    def register(self, key: str):
         def inner(item: T) -> T:
             if key in self.registrations:
                 raise AlreadyRegisteredError(

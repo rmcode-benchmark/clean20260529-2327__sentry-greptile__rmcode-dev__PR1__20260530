@@ -1,8 +1,8 @@
-import {OrganizationFixture} from 'sentry-fixture/organization';
 import {ProjectFixture} from 'sentry-fixture/project';
 import {TeamFixture} from 'sentry-fixture/team';
 
 import {SubscriptionFixture} from 'getsentry-test/fixtures/subscription';
+import {initializeOrg} from 'sentry-test/initializeOrg';
 import {
   render,
   renderGlobalModal,
@@ -11,6 +11,7 @@ import {
 } from 'sentry-test/reactTestingLibrary';
 
 import type {Organization} from 'sentry/types/organization';
+import {browserHistory} from 'sentry/utils/browserHistory';
 
 import {openUpsellModal} from 'getsentry/actionCreators/modal';
 import UpsellProvider from 'getsentry/components/upsellProvider';
@@ -30,12 +31,10 @@ const createRenderer = () => {
 describe('UpsellProvider', function () {
   let org!: Organization;
   let sub!: Subscription;
+  let router: any;
 
-  const populateOrg = (
-    orgProps: Partial<Organization> = {},
-    subProps: Partial<Subscription> = {}
-  ) => {
-    org = OrganizationFixture(orgProps);
+  const populateOrg = (orgProps = {}, subProps = {}) => {
+    ({router, organization: org} = initializeOrg({organization: orgProps}));
     sub = SubscriptionFixture({organization: org, ...subProps});
     SubscriptionStore.set(org.slug, sub);
 
@@ -65,6 +64,7 @@ describe('UpsellProvider', function () {
 
   beforeEach(function () {
     MockApiClient.clearMockResponses();
+    (browserHistory.push as jest.Mock).mockClear();
   });
 
   it('with billing scope starts a trial if available', async function () {
@@ -82,7 +82,9 @@ describe('UpsellProvider', function () {
         {renderer}
       </UpsellProvider>,
       {
+        router,
         organization: org,
+        deprecatedRouterMocks: true,
       }
     );
 
@@ -106,25 +108,19 @@ describe('UpsellProvider', function () {
     populateOrg({access: ['org:billing']}, {canTrial: false});
     const renderer = createRenderer();
 
-    const {router} = render(
-      <UpsellProvider source="test-abc">{renderer}</UpsellProvider>,
-      {
-        organization: org,
-      }
-    );
+    render(<UpsellProvider source="test-abc">{renderer}</UpsellProvider>, {
+      router,
+      organization: org,
+      deprecatedRouterMocks: true,
+    });
 
     expect(screen.getByText('Upgrade Plan')).toBeInTheDocument();
     expect(renderer).toHaveBeenCalled();
 
     await userEvent.click(screen.getByTestId('test-render'));
 
-    expect(router.location).toEqual(
-      expect.objectContaining({
-        pathname: `/settings/${org.slug}/billing/checkout/`,
-        query: {
-          referrer: 'upsell-test-abc',
-        },
-      })
+    expect(browserHistory.push).toHaveBeenCalledWith(
+      `/settings/${org.slug}/billing/checkout/?referrer=upsell-test-abc`
     );
   });
 
@@ -134,6 +130,7 @@ describe('UpsellProvider', function () {
 
     render(<UpsellProvider source="test-abc">{renderer}</UpsellProvider>, {
       organization: org,
+      deprecatedRouterMocks: true,
     });
     expect(screen.getByText('Start Trial')).toBeInTheDocument();
 
@@ -156,7 +153,9 @@ describe('UpsellProvider', function () {
         {renderer}
       </UpsellProvider>,
       {
+        router,
         organization: org,
+        deprecatedRouterMocks: true,
       }
     );
     expect(screen.getByText('Request Trial')).toBeInTheDocument();
@@ -179,7 +178,9 @@ describe('UpsellProvider', function () {
         {renderer}
       </UpsellProvider>,
       {
+        router,
         organization: org,
+        deprecatedRouterMocks: true,
       }
     );
 
@@ -215,7 +216,9 @@ describe('UpsellProvider', function () {
         {renderer}
       </UpsellProvider>,
       {
+        router,
         organization: org,
+        deprecatedRouterMocks: true,
       }
     );
     await userEvent.click(screen.getByTestId('test-render'));
@@ -236,7 +239,7 @@ describe('UpsellProvider', function () {
   });
 
   it('render nothing if non-self serve for non-billing with triggering member requests', function () {
-    populateOrg(undefined, {canSelfServe: false});
+    populateOrg({}, {canSelfServe: false});
     const renderer = createRenderer();
 
     MockApiClient.addMockResponse({
@@ -248,7 +251,11 @@ describe('UpsellProvider', function () {
       <UpsellProvider source="test-abc" triggerMemberRequests>
         {renderer}
       </UpsellProvider>,
-      {organization: org}
+      {
+        router,
+        organization: org,
+        deprecatedRouterMocks: true,
+      }
     );
     expect(container).toBeEmptyDOMElement();
   });

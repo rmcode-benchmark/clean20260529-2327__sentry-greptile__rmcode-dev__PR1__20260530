@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from datetime import datetime, timedelta
 
-import sentry_sdk
 from django.db import IntegrityError
 from django.db.models import F, Q
 from rest_framework.exceptions import ParseError
@@ -12,7 +11,6 @@ from rest_framework.response import Response
 from rest_framework.serializers import ListField
 
 from sentry import analytics, release_health
-from sentry.analytics.events.release_created import ReleaseCreatedEvent
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import ReleaseAnalyticsMixin, region_silo_endpoint
 from sentry.api.bases import NoProjects
@@ -48,9 +46,8 @@ from sentry.search.utils import get_latest_release
 from sentry.signals import release_created
 from sentry.snuba.sessions import STATS_PERIODS
 from sentry.types.activity import ActivityType
-from sentry.types.ratelimit import RateLimit, RateLimitCategory
 from sentry.utils.cache import cache
-from sentry.utils.sdk import bind_organization_context
+from sentry.utils.sdk import Scope, bind_organization_context
 
 ERR_INVALID_STATS_PERIOD = "Invalid %s. Valid choices are %s"
 
@@ -235,20 +232,6 @@ class OrganizationReleasesEndpoint(OrganizationReleasesBaseEndpoint, ReleaseAnal
         "GET": ApiPublishStatus.UNKNOWN,
         "POST": ApiPublishStatus.UNKNOWN,
     }
-
-    rate_limits = {
-        "GET": {
-            RateLimitCategory.IP: RateLimit(limit=40, window=1),
-            RateLimitCategory.USER: RateLimit(limit=40, window=1),
-            RateLimitCategory.ORGANIZATION: RateLimit(limit=40, window=1),
-        },
-        "POST": {
-            RateLimitCategory.IP: RateLimit(limit=40, window=1),
-            RateLimitCategory.USER: RateLimit(limit=40, window=1),
-            RateLimitCategory.ORGANIZATION: RateLimit(limit=40, window=1),
-        },
-    }
-
     SESSION_SORTS = frozenset(
         [
             "crash_free_sessions",
@@ -493,7 +476,7 @@ class OrganizationReleasesEndpoint(OrganizationReleasesBaseEndpoint, ReleaseAnal
             data=request.data, context={"organization": organization}
         )
 
-        scope = sentry_sdk.get_isolation_scope()
+        scope = Scope.get_isolation_scope()
         if serializer.is_valid():
             result = serializer.validated_data
             scope.set_tag("version", result["version"])
@@ -501,12 +484,12 @@ class OrganizationReleasesEndpoint(OrganizationReleasesBaseEndpoint, ReleaseAnal
             # Get all projects that are available to the user/token
             # Note: Does not use the "projects" data param from the request
             projects_from_request = self.get_projects(request, organization)
-            allowed_projects: dict[object, Project] = {}
+            allowed_projects = {}
             for project in projects_from_request:
                 allowed_projects[project.slug] = project
                 allowed_projects[project.id] = project
 
-            projects: list[Project] = []
+            projects = []
             for id_or_slug in result["projects"]:
                 if id_or_slug not in allowed_projects:
                     return Response({"projects": ["Invalid project ids or slugs"]}, status=400)
@@ -624,14 +607,13 @@ class OrganizationReleasesEndpoint(OrganizationReleasesBaseEndpoint, ReleaseAnal
                 status = 201
 
             analytics.record(
-                ReleaseCreatedEvent(
-                    user_id=request.user.id if request.user and request.user.id else None,
-                    organization_id=organization.id,
-                    project_ids=[project.id for project in projects],
-                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
-                    created_status=status,
-                    auth_type=get_auth_api_token_type(request.auth),
-                )
+                "release.created",
+                user_id=request.user.id if request.user and request.user.id else None,
+                organization_id=organization.id,
+                project_ids=[project.id for project in projects],
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                created_status=status,
+                auth_type=get_auth_api_token_type(request.auth),
             )
 
             if is_org_auth_token_auth(request.auth):

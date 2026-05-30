@@ -30,18 +30,16 @@ import useOrganization from 'sentry/utils/useOrganization';
 import useProjects from 'sentry/utils/useProjects';
 import {useProfileGroup} from 'sentry/views/profiling/profileGroupProvider';
 
+import type {SpanType} from './types';
+
 const MAX_STACK_DEPTH = 8;
 const MAX_TOP_NODES = 5;
 const MIN_TOP_NODES = 3;
 const TOP_NODE_MIN_COUNT = 3;
 
-export interface SpanProfileDetailsProps {
+interface SpanProfileDetailsProps {
   event: Readonly<EventTransaction>;
-  span: Readonly<{
-    end_timestamp: number;
-    span_id: string;
-    start_timestamp: number;
-  }>;
+  span: Readonly<SpanType>;
   onNoProfileFound?: () => void;
 }
 
@@ -49,7 +47,7 @@ export function useSpanProfileDetails(
   organization: Organization,
   project: Project | undefined,
   event: Readonly<EventTransaction>,
-  span: SpanProfileDetailsProps['span']
+  span: Readonly<SpanType>
 ) {
   const profileGroup = useProfileGroup();
 
@@ -99,7 +97,7 @@ export function useSpanProfileDetails(
       profile.unit
     );
     const relativeStopTimestamp = formatTo(
-      span.end_timestamp - startTimestamp,
+      span.timestamp - startTimestamp,
       'second',
       profile.unit
     );
@@ -253,7 +251,7 @@ export function SpanProfileDetails({
           )}
         />
         <SpanDetailsItem>
-          <ButtonBar merged gap="none">
+          <ButtonBar merged>
             <Button
               icon={<IconChevron direction="left" />}
               aria-label={t('Previous')}
@@ -474,5 +472,5 @@ const SpanDetailsItem = styled('span')<{grow?: boolean}>`
 
 const SectionSubtext = styled('span')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;

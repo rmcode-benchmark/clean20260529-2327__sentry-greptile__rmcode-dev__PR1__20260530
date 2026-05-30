@@ -8,24 +8,18 @@ import {initializeSdk} from 'sentry/bootstrap/initializeSdk';
 import ConfigStore from 'sentry/stores/configStore';
 import type {Config} from 'sentry/types/system';
 import {DANGEROUS_SET_REACT_ROUTER_6_HISTORY} from 'sentry/utils/browserHistory';
-import {
-  DEFAULT_QUERY_CLIENT_CONFIG,
-  QueryClient,
-  QueryClientProvider,
-} from 'sentry/utils/queryClient';
+import {QueryClient, QueryClientProvider} from 'sentry/utils/queryClient';
 
 import {routes6} from 'admin/routes';
 
 export function init(config: Config) {
-  initializeSdk(config);
-
-  // Initialize the config store after the SDK, so we can log errors to Sentry during config initialization if needed
   commonInitialization(config);
+  initializeSdk(config);
 
   ConfigStore.set('getsentry.sendgridApiKey', window.__sendGridApiKey);
 }
 
-const queryClient = new QueryClient(DEFAULT_QUERY_CLIENT_CONFIG);
+const queryClient = new QueryClient();
 
 const sentryCreateBrowserRouter = wrapCreateBrowserRouterV6(createBrowserRouter);
 const router = sentryCreateBrowserRouter(routes6);

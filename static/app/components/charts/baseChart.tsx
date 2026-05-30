@@ -97,7 +97,7 @@ type Truncateable = {
   truncate?: number | boolean;
 };
 
-export interface TooltipOption
+interface TooltipOption
   extends Omit<TooltipComponentOption, 'valueFormatter'>,
     Truncateable {
   filter?: (value: number, seriesParam: TooltipComponentOption['formatter']) => boolean;
@@ -402,7 +402,7 @@ function BaseChart({
     resolveColors ||
     (series.length
       ? theme.chart.getColorPalette(series.length)
-      : theme.chart.getColorPalette(theme.chart.colors.length));
+      : theme.chart.getColorPalette(theme.chart.colors.length - 1));
 
   const resolvedSeries = useMemo(() => {
     const previousPeriodColors =
@@ -500,7 +500,7 @@ function BaseChart({
 
     const bucketSize = seriesData ? seriesData[1][0] - seriesData[0][0] : undefined;
     const tooltipOrNone =
-      tooltip === undefined
+      tooltip === null
         ? undefined
         : computeChartTooltip(
             {
@@ -711,8 +711,6 @@ export const getTooltipStyles = (p: {theme: Theme}) => css`
     font-variant-numeric: tabular-nums;
     padding: ${space(1)} ${space(2)};
     border-radius: ${p.theme.borderRadius} ${p.theme.borderRadius} 0 0;
-    cursor: pointer;
-    font-size: ${p.theme.fontSize.sm};
   }
   .tooltip-release.tooltip-series > div,
   .tooltip-release.tooltip-footer {
@@ -722,7 +720,7 @@ export const getTooltipStyles = (p: {theme: Theme}) => css`
     color: ${p.theme.textColor};
   }
   .tooltip-release-timerange {
-    font-size: ${p.theme.fontSize.xs};
+    font-size: ${p.theme.fontSizeExtraSmall};
     color: ${p.theme.textColor};
   }
   .tooltip-series {
@@ -737,7 +735,7 @@ export const getTooltipStyles = (p: {theme: Theme}) => css`
     ${p.theme.overflowEllipsis};
   }
   .tooltip-label strong {
-    font-weight: ${p.theme.fontWeight.normal};
+    font-weight: ${p.theme.fontWeightNormal};
     color: ${p.theme.textColor};
   }
   .tooltip-label-value {
@@ -820,8 +818,8 @@ export const getTooltipStyles = (p: {theme: Theme}) => css`
     opacity: 0.9;
     padding: 5px 10px;
     position: relative;
-    font-weight: ${p.theme.fontWeight.bold};
-    font-size: ${p.theme.fontSize.sm};
+    font-weight: ${p.theme.fontWeightBold};
+    font-size: ${p.theme.fontSizeSmall};
     line-height: 1.4;
     font-family: ${p.theme.text.family};
     max-width: 230px;

@@ -56,10 +56,7 @@ import {makeDefaultCta} from 'sentry/views/alerts/rules/metric/metricRulePresets
 import type {MetricRule} from 'sentry/views/alerts/rules/metric/types';
 import {AlertRuleTriggerType, Dataset} from 'sentry/views/alerts/rules/metric/types';
 import {isCrashFreeAlert} from 'sentry/views/alerts/rules/metric/utils/isCrashFreeAlert';
-import {
-  isEapAlertType,
-  shouldUseErrorsDiscoverDataset,
-} from 'sentry/views/alerts/rules/utils';
+import {shouldUseErrorsDiscoverDataset} from 'sentry/views/alerts/rules/utils';
 import type {Anomaly, Incident} from 'sentry/views/alerts/types';
 import {
   alertDetailsLink,
@@ -68,10 +65,7 @@ import {
 } from 'sentry/views/alerts/utils';
 import {getChangeStatus} from 'sentry/views/alerts/utils/getChangeStatus';
 import {AlertWizardAlertNames} from 'sentry/views/alerts/wizard/options';
-import {
-  getAlertTypeFromAggregateDataset,
-  getTraceItemTypeForDatasetAndEventType,
-} from 'sentry/views/alerts/wizard/utils';
+import {getAlertTypeFromAggregateDataset} from 'sentry/views/alerts/wizard/utils';
 import {hasDatasetSelector} from 'sentry/views/dashboards/utils';
 import {SAMPLING_MODE} from 'sentry/views/explore/hooks/useProgressiveQuery';
 import {useMetricEventStats} from 'sentry/views/issueDetails/metricIssues/useMetricEventStats';
@@ -161,11 +155,6 @@ export default function MetricChart({
   const organization = useOrganization();
   const shouldUseSessionsStats = isCrashFreeAlert(rule.dataset);
 
-  const traceItemType = getTraceItemTypeForDatasetAndEventType(
-    rule.dataset,
-    rule.eventTypes
-  );
-
   const handleZoom = useCallback(
     (start: DateString, end: DateString) => {
       navigate({
@@ -241,7 +230,6 @@ export default function MetricChart({
         query,
         dataset,
         openInDiscoverDataset,
-        traceItemType,
       });
 
       const resolvedPercent =
@@ -296,13 +284,7 @@ export default function MetricChart({
             </Fragment>
           </StyledInlineContainer>
           {!isSessionAggregate(rule.aggregate) &&
-            (isEapAlertType(
-              getAlertTypeFromAggregateDataset({
-                ...rule,
-                eventTypes: rule.eventTypes,
-                organization,
-              })
-            ) ? (
+            (getAlertTypeFromAggregateDataset(rule) === 'eap_metrics' ? (
               <Feature features="visibility-explore-view">
                 <LinkButton size="sm" {...props}>
                   {buttonText}
@@ -318,7 +300,7 @@ export default function MetricChart({
         </StyledChartControls>
       );
     },
-    [query, rule, organization, project, timePeriod, traceItemType]
+    [rule, organization, project, timePeriod, query]
   );
 
   const renderChart = useCallback(
@@ -392,14 +374,7 @@ export default function MetricChart({
           <StyledPanelBody withPadding>
             <ChartHeader>
               <HeaderTitleLegend>
-                {
-                  AlertWizardAlertNames[
-                    getAlertTypeFromAggregateDataset({
-                      ...rule,
-                      organization,
-                    })
-                  ]
-                }
+                {AlertWizardAlertNames[getAlertTypeFromAggregateDataset(rule)]}
               </HeaderTitleLegend>
             </ChartHeader>
             <ChartFilters>
@@ -648,7 +623,7 @@ const StyledCircleIndicator = styled(CircleIndicator)`
 `;
 
 const ChartFilters = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   font-family: ${p => p.theme.text.family};
   color: ${p => p.theme.textColor};
   display: inline-grid;

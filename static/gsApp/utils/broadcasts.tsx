@@ -1,4 +1,4 @@
-import {getCategoryList} from 'sentry/data/platformPickerCategories';
+import platformCategories from 'sentry/data/platformPickerCategories';
 import platforms from 'sentry/data/platforms';
 
 export const REGIONCHOICES = [
@@ -14,7 +14,7 @@ const exposedPlatformCategoriesSet = new Set([
   'serverless',
 ]);
 
-export const platformOptions = getCategoryList()
+export const platformOptions = platformCategories
   .filter(({id}) => exposedPlatformCategoriesSet.has(id))
   .map(({name, platforms: platformKeys}) => ({
     label: name,
@@ -31,6 +31,7 @@ export const PLATFORMCHOICES = platformOptions
   .flatMap(platformChoice => platformChoice.options)
   .map(option => [option.value, option.label]);
 
+// TODO(data categories): check if this should be updated with new categories or to parse from a const
 export const PRODUCTCHOICES = [
   ['errors', 'Errors'],
   ['spans', 'Spans'],

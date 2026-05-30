@@ -1,8 +1,6 @@
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
-import {Flex} from 'sentry/components/core/layout';
-import TextOverflow from 'sentry/components/textOverflow';
 import TimeSince from 'sentry/components/timeSince';
 import {IconClock} from 'sentry/icons';
 import {t} from 'sentry/locale';
@@ -21,28 +19,20 @@ type Props = {
 function Times({lastSeen, firstSeen}: Props) {
   return (
     <Container>
-      <Flex align="center">
+      <FlexWrapper>
         {lastSeen && (
           <Fragment>
-            <StyledIconClock size="xs" />
-            <TextOverflow>
-              <TimeSince date={lastSeen} suffix={t('ago')} />
-            </TextOverflow>
+            <StyledIconClock legacySize="11px" />
+            <TimeSince date={lastSeen} suffix={t('ago')} />
           </Fragment>
         )}
         {firstSeen && lastSeen && (
           <span className="hidden-xs hidden-sm">&nbsp;—&nbsp;</span>
         )}
         {firstSeen && (
-          <TextOverflow>
-            <TimeSince
-              date={firstSeen}
-              suffix={t('old')}
-              className="hidden-xs hidden-sm"
-            />
-          </TextOverflow>
+          <TimeSince date={firstSeen} suffix={t('old')} className="hidden-xs hidden-sm" />
         )}
-      </Flex>
+      </FlexWrapper>
     </Container>
   );
 }
@@ -52,11 +42,18 @@ const Container = styled('div')`
   min-width: 0; /* flex-hack for overflow-ellipsised children */
 `;
 
+const FlexWrapper = styled('div')`
+  ${p => p.theme.overflowEllipsis}
+
+  /* The following aligns the icon with the text, fixes bug in Firefox */
+  display: flex;
+  align-items: center;
+`;
+
 const StyledIconClock = styled(IconClock)`
   /* this is solely for optics, since TimeSince always begins
   with a number, and numbers do not have descenders */
   margin-right: ${space(0.5)};
-  min-width: 12px;
 `;
 
 export default Times;

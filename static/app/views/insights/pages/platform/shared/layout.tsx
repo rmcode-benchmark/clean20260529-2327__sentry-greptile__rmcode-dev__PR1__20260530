@@ -1,3 +1,4 @@
+import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
 import Feature from 'sentry/components/acl/feature';
@@ -6,18 +7,20 @@ import {NoAccess} from 'sentry/components/noAccess';
 import {DatePageFilter} from 'sentry/components/organizations/datePageFilter';
 import {EnvironmentPageFilter} from 'sentry/components/organizations/environmentPageFilter';
 import PageFilterBar from 'sentry/components/organizations/pageFilterBar';
+import {ProjectPageFilter} from 'sentry/components/organizations/projectPageFilter';
 import TransactionNameSearchBar from 'sentry/components/performance/searchBar';
 import {MutableSearch} from 'sentry/utils/tokenizeSearch';
 import {useLocation} from 'sentry/utils/useLocation';
 import useOrganization from 'sentry/utils/useOrganization';
+import {limitMaxPickableDays} from 'sentry/views/explore/utils';
 import * as ModuleLayout from 'sentry/views/insights/common/components/moduleLayout';
-import {InsightsProjectSelector} from 'sentry/views/insights/common/components/projectSelector';
 import {ToolRibbon} from 'sentry/views/insights/common/components/ribbon';
 import {useOnboardingProject} from 'sentry/views/insights/common/queries/useOnboardingProject';
 import {BackendHeader} from 'sentry/views/insights/pages/backend/backendPageHeader';
 import {BACKEND_LANDING_TITLE} from 'sentry/views/insights/pages/backend/settings';
 import {FrontendHeader} from 'sentry/views/insights/pages/frontend/frontendPageHeader';
 import {FRONTEND_LANDING_TITLE} from 'sentry/views/insights/pages/frontend/settings';
+import {NewNextJsExperienceButton} from 'sentry/views/insights/pages/platform/nextjs/newNextjsExperienceToggle';
 import {useTransactionNameQuery} from 'sentry/views/insights/pages/platform/shared/useTransactionNameQuery';
 import {LegacyOnboarding} from 'sentry/views/performance/onboarding';
 import {getTransactionSearchQuery} from 'sentry/views/performance/utils';
@@ -46,6 +49,7 @@ export function PlatformLandingPageLayout({
   const location = useLocation();
   const organization = useOrganization();
   const onboardingProject = useOnboardingProject();
+  const datePageFilterProps = limitMaxPickableDays(organization);
 
   const showOnboarding = onboardingProject !== undefined;
 
@@ -59,9 +63,23 @@ export function PlatformLandingPageLayout({
       renderDisabled={NoAccess}
     >
       {performanceType === 'backend' ? (
-        <BackendHeader headerTitle={BACKEND_LANDING_TITLE} />
+        <BackendHeader
+          headerTitle={BACKEND_LANDING_TITLE}
+          headerActions={
+            <Fragment>
+              <NewNextJsExperienceButton />
+            </Fragment>
+          }
+        />
       ) : (
-        <FrontendHeader headerTitle={FRONTEND_LANDING_TITLE} />
+        <FrontendHeader
+          headerTitle={FRONTEND_LANDING_TITLE}
+          headerActions={
+            <Fragment>
+              <NewNextJsExperienceButton />
+            </Fragment>
+          }
+        />
       )}
       <Layout.Body>
         <Layout.Main fullWidth>
@@ -69,9 +87,9 @@ export function PlatformLandingPageLayout({
             <ModuleLayout.Full>
               <ToolRibbon>
                 <PageFilterBar condensed>
-                  <InsightsProjectSelector />
+                  <ProjectPageFilter resetParamsOnChange={['starred']} />
                   <EnvironmentPageFilter />
-                  <DatePageFilter />
+                  <DatePageFilter {...datePageFilterProps} />
                 </PageFilterBar>
                 {!showOnboarding && (
                   <StyledTransactionNameSearchBar

@@ -4,6 +4,7 @@ from sentry.search.eap import constants
 from sentry.search.eap.columns import (
     ResolvedAttribute,
     VirtualColumnDefinition,
+    datetime_processor,
     project_context_constructor,
     project_term_resolver,
     simple_sentry_field,
@@ -36,8 +37,13 @@ OURLOG_ATTRIBUTE_DEFINITIONS = {
             search_type="string",
             validator=is_event_id_or_list,
         ),
+        ResolvedAttribute(
+            public_alias="timestamp",
+            internal_name="sentry.timestamp",
+            search_type="string",
+            processor=datetime_processor,
+        ),
         simple_sentry_field("browser.name"),
-        simple_sentry_field("browser.version"),
         simple_sentry_field("environment"),
         simple_sentry_field("message.template"),
         simple_sentry_field("release"),
@@ -107,9 +113,6 @@ LOGS_PRIVATE_ATTRIBUTES: set[str] = {
     if definition.private
 }
 
-# For dynamic internal attributes (eg. meta information for attributes) we match by the beginning of the key.
-LOGS_PRIVATE_ATTRIBUTE_PREFIXES: set[str] = {constants.META_PREFIX}
-
 LOGS_REPLACEMENT_ATTRIBUTES: set[str] = {
     definition.replacement
     for definition in OURLOG_ATTRIBUTE_DEFINITIONS.values()
@@ -121,15 +124,3 @@ LOGS_REPLACEMENT_MAP: dict[str, str] = {
     for definition in OURLOG_ATTRIBUTE_DEFINITIONS.values()
     if definition.replacement
 }
-
-LOGS_INTERNAL_TO_SECONDARY_ALIASES_MAPPING: dict[str, set[str]] = {}
-
-for definition in OURLOG_ATTRIBUTE_DEFINITIONS.values():
-    if not definition.secondary_alias:
-        continue
-
-    secondary_aliases = LOGS_INTERNAL_TO_SECONDARY_ALIASES_MAPPING.get(
-        definition.internal_name, set()
-    )
-    secondary_aliases.add(definition.public_alias)
-    LOGS_INTERNAL_TO_SECONDARY_ALIASES_MAPPING[definition.internal_name] = secondary_aliases

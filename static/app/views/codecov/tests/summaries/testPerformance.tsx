@@ -32,7 +32,7 @@ function AverageFlakeTooltip() {
     <Fragment>
       <p>
         <ToolTipTitle>Impact:</ToolTipTitle>
-        The average flake rate on your default branch.
+        The average flake rate on your <strong>main branch</strong>.
       </p>
       <p>
         <ToolTipTitle>What is it:</ToolTipTitle>
@@ -48,7 +48,7 @@ function CumulativeFailuresTooltip() {
     <Fragment>
       <p>
         <ToolTipTitle>Impact:</ToolTipTitle>
-        The number of test failures on your default branch.
+        The number of test failures on your main branch.
       </p>
       <p>
         <ToolTipTitle>What is it:</ToolTipTitle>
@@ -74,14 +74,14 @@ const ToolTipTitle = styled('strong')`
 `;
 
 interface TestPerformanceBodyProps {
-  averageFlakeRate?: number;
-  averageFlakeRateChange?: number | null;
-  cumulativeFailures?: number;
-  cumulativeFailuresChange?: number | null;
-  flakyTests?: number;
-  flakyTestsChange?: number | null;
-  skippedTests?: number;
-  skippedTestsChange?: number | null;
+  averageFlakeRate: number;
+  averageFlakeRateChange: number;
+  cumulativeFailures: number;
+  cumulativeFailuresChange: number;
+  flakyTests: number;
+  flakyTestsChange: number;
+  skippedTests: number;
+  skippedTestsChange: number;
 }
 
 function TestPerformanceBody({
@@ -100,79 +100,66 @@ function TestPerformanceBody({
         <SummaryEntryLabel showUnderline body={<FlakyTestsTooltip />}>
           {t('Flaky Tests')}
         </SummaryEntryLabel>
-        {flakyTests === undefined ? (
-          <SummaryEntryValue>-</SummaryEntryValue>
-        ) : (
-          <SummaryEntryValue>
-            <SummaryEntryValueLink filterBy="flakyTests">
-              {flakyTests}
-            </SummaryEntryValueLink>
-            {typeof flakyTestsChange === 'number' && flakyTestsChange !== 0 && (
-              <Tag type={flakyTestsChange > 0 ? 'error' : 'success'}>
-                {formatPercentRate(flakyTestsChange)}
-              </Tag>
-            )}
-          </SummaryEntryValue>
-        )}
+        <SummaryEntryValue>
+          <SummaryEntryValueLink filterBy="flaky_tests">
+            {flakyTests}
+          </SummaryEntryValueLink>
+          <Tag type={flakyTestsChange > 0 ? 'error' : 'success'}>
+            {formatPercentRate(flakyTestsChange)}
+          </Tag>
+        </SummaryEntryValue>
       </SummaryEntry>
       <SummaryEntry>
         <SummaryEntryLabel showUnderline body={<AverageFlakeTooltip />}>
           {t('Avg. Flake Rate')}
         </SummaryEntryLabel>
         <SummaryEntryValue>
-          {averageFlakeRate === undefined ? '-' : `${averageFlakeRate?.toFixed(2)}%`}
-          {typeof averageFlakeRateChange === 'number' && averageFlakeRateChange !== 0 && (
-            <Tag type={averageFlakeRateChange > 0 ? 'error' : 'success'}>
-              {formatPercentRate(averageFlakeRateChange)}
-            </Tag>
-          )}
+          {`${averageFlakeRate}%`}
+          <Tag type={averageFlakeRateChange > 0 ? 'error' : 'success'}>
+            {formatPercentRate(averageFlakeRateChange)}
+          </Tag>
         </SummaryEntryValue>
       </SummaryEntry>
       <SummaryEntry>
         <SummaryEntryLabel showUnderline body={<CumulativeFailuresTooltip />}>
           {t('Cumulative Failures')}
         </SummaryEntryLabel>
-        {cumulativeFailures === undefined ? (
-          <SummaryEntryValue>-</SummaryEntryValue>
-        ) : (
-          <SummaryEntryValue>
-            <SummaryEntryValueLink filterBy="failedTests">
-              {cumulativeFailures}
-            </SummaryEntryValueLink>
-            {typeof cumulativeFailuresChange === 'number' &&
-              cumulativeFailuresChange !== 0 && (
-                <Tag type={cumulativeFailuresChange > 0 ? 'error' : 'success'}>
-                  {formatPercentRate(cumulativeFailuresChange)}
-                </Tag>
-              )}
-          </SummaryEntryValue>
-        )}
+        <SummaryEntryValue>
+          <SummaryEntryValueLink filterBy="cumulative_failures">
+            {cumulativeFailures}
+          </SummaryEntryValueLink>
+          <Tag type={cumulativeFailuresChange > 0 ? 'error' : 'success'}>
+            {formatPercentRate(cumulativeFailuresChange)}
+          </Tag>
+        </SummaryEntryValue>
       </SummaryEntry>
       <SummaryEntry>
         <SummaryEntryLabel showUnderline body={<SkippedTestsTooltip />}>
           {t('Skipped Tests')}
         </SummaryEntryLabel>
-        {skippedTests === undefined ? (
-          <SummaryEntryValue>-</SummaryEntryValue>
-        ) : (
-          <SummaryEntryValue>
-            <SummaryEntryValueLink filterBy="skippedTests">
-              {skippedTests}
-            </SummaryEntryValueLink>
-            {typeof skippedTestsChange === 'number' && skippedTestsChange !== 0 && (
-              <Tag type={skippedTestsChange > 0 ? 'error' : 'success'}>
-                {formatPercentRate(skippedTestsChange)}
-              </Tag>
-            )}
-          </SummaryEntryValue>
-        )}
+        <SummaryEntryValue>
+          <SummaryEntryValueLink filterBy="skipped_tests">
+            {skippedTests}
+          </SummaryEntryValueLink>
+          <Tag type={skippedTestsChange > 0 ? 'error' : 'success'}>
+            {formatPercentRate(skippedTestsChange)}
+          </Tag>
+        </SummaryEntryValue>
       </SummaryEntry>
     </SummaryEntries>
   );
 }
 
-interface TestPerformanceProps extends TestPerformanceBodyProps {
+interface TestPerformanceProps {
+  averageFlakeRate: number;
+  averageFlakeRateChange: number;
+  cumulativeFailures: number;
+  cumulativeFailuresChange: number;
+  flakyTests: number;
+  flakyTestsChange: number;
   isLoading: boolean;
+  skippedTests: number;
+  skippedTestsChange: number;
 }
 
 export function TestPerformance({isLoading, ...bodyProps}: TestPerformanceProps) {
@@ -189,7 +176,7 @@ export function TestPerformance({isLoading, ...bodyProps}: TestPerformanceProps)
 const TestPerformancePanel = styled(Panel)`
   grid-column: span 24;
 
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     grid-column: span 16;
   }
 `;

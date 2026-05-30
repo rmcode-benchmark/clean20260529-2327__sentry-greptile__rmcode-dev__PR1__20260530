@@ -4,10 +4,13 @@ import {
   addSuccessMessage,
 } from 'sentry/actionCreators/indicator';
 import {LinkButton} from 'sentry/components/core/button/linkButton';
-import {ExternalLink} from 'sentry/components/core/link';
+import EmptyMessage from 'sentry/components/emptyMessage';
+import ExternalLink from 'sentry/components/links/externalLink';
 import LoadingError from 'sentry/components/loadingError';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
-import {PanelTable} from 'sentry/components/panels/panelTable';
+import Panel from 'sentry/components/panels/panel';
+import PanelBody from 'sentry/components/panels/panelBody';
+import PanelHeader from 'sentry/components/panels/panelHeader';
 import SentryDocumentTitle from 'sentry/components/sentryDocumentTitle';
 import {t, tct} from 'sentry/locale';
 import type {InternalAppApiToken} from 'sentry/types/user';
@@ -24,7 +27,7 @@ import ApiTokenRow from 'sentry/views/settings/account/apiTokenRow';
 import SettingsPageHeader from 'sentry/views/settings/components/settingsPageHeader';
 import TextBlock from 'sentry/views/settings/components/text/textBlock';
 
-const PAGE_TITLE = t('Personal Tokens');
+const PAGE_TITLE = t('User Auth Tokens');
 const API_TOKEN_QUERY_KEY = ['/api-tokens/'] as const;
 
 function ApiTokens() {
@@ -111,7 +114,7 @@ function ApiTokens() {
       <SettingsPageHeader title={PAGE_TITLE} action={action} />
       <TextBlock>
         {t(
-          "Personal tokens allow you to perform actions against the Sentry API on behalf of your account. They're the easiest way to get started using the API."
+          "Authentication tokens allow you to perform actions against the Sentry API on behalf of your account. They're the easiest way to get started using the API."
         )}
       </TextBlock>
       <TextBlock>
@@ -122,15 +125,21 @@ function ApiTokens() {
           }
         )}
       </TextBlock>
-      <PanelTable
-        headers={[t('Token'), t('Created On'), t('Scopes'), '']}
-        isEmpty={isEmpty}
-        emptyMessage={t("You haven't created any authentication tokens yet.")}
-      >
-        {tokenList?.map(token => (
-          <ApiTokenRow key={token.id} token={token} onRemove={deleteToken} canEdit />
-        ))}
-      </PanelTable>
+      <Panel>
+        <PanelHeader>{t('Auth Token')}</PanelHeader>
+
+        <PanelBody>
+          {isEmpty && (
+            <EmptyMessage>
+              {t("You haven't created any authentication tokens yet.")}
+            </EmptyMessage>
+          )}
+
+          {tokenList?.map(token => (
+            <ApiTokenRow key={token.id} token={token} onRemove={deleteToken} canEdit />
+          ))}
+        </PanelBody>
+      </Panel>
     </SentryDocumentTitle>
   );
 }

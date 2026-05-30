@@ -6,6 +6,7 @@ import {OnDemandWarningIcon} from 'sentry/components/alerts/onDemandMetricAlert'
 import {SectionHeading} from 'sentry/components/charts/styles';
 import {ActorAvatar} from 'sentry/components/core/avatar/actorAvatar';
 import {AlertBadge} from 'sentry/components/core/badge/alertBadge';
+import {FeatureBadge} from 'sentry/components/core/badge/featureBadge';
 import {Button} from 'sentry/components/core/button';
 import {DateTime} from 'sentry/components/dateTime';
 import Duration from 'sentry/components/duration';
@@ -20,7 +21,6 @@ import {getSearchFilters, isOnDemandSearchKey} from 'sentry/utils/onDemandMetric
 import {capitalize} from 'sentry/utils/string/capitalize';
 import {isChonkTheme} from 'sentry/utils/theme/withChonk';
 import {useFeedbackForm} from 'sentry/utils/useFeedbackForm';
-import useOrganization from 'sentry/utils/useOrganization';
 import {COMPARISON_DELTA_OPTIONS} from 'sentry/views/alerts/rules/metric/constants';
 import type {Action, MetricRule} from 'sentry/views/alerts/rules/metric/types';
 import {
@@ -48,7 +48,6 @@ function TriggerDescription({
   rule: MetricRule;
   threshold: number;
 }) {
-  const organization = useOrganization();
   const status =
     label === AlertRuleTriggerType.CRITICAL
       ? t('Critical')
@@ -72,7 +71,7 @@ function TriggerDescription({
       : t('below');
   const timeWindow = <Duration seconds={rule.timeWindow * 60} />;
   const metricName = capitalize(
-    AlertWizardAlertNames[getAlertTypeFromAggregateDataset({...rule, organization})]
+    AlertWizardAlertNames[getAlertTypeFromAggregateDataset(rule)]
   );
 
   const thresholdText = rule.comparisonDelta
@@ -115,7 +114,20 @@ function TriggerDescription({
       <TriggerStep>
         <TriggerTitleText>{t('When')}</TriggerTitleText>
         <TriggerActions>
-          <TriggerText>{thresholdText}</TriggerText>
+          <TriggerText>
+            {thresholdText}
+            {rule.detectionType === AlertRuleComparisonType.DYNAMIC ? (
+              <StyledFeatureBadge
+                type="beta"
+                tooltipProps={{
+                  title: t(
+                    'Anomaly detection is in beta and may produce unexpected results'
+                  ),
+                  isHoverable: true,
+                }}
+              />
+            ) : null}
+          </TriggerText>
         </TriggerActions>
       </TriggerStep>
       <TriggerStep>
@@ -385,7 +397,7 @@ const Status = styled('div')`
   display: grid;
   grid-template-columns: auto auto auto;
   gap: ${space(0.5)};
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
 `;
 
 const StatusContainer = styled('div')`
@@ -417,7 +429,7 @@ const TriggerTitle = styled('div')`
 
 const TriggerTitleText = styled('h4')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   margin: 0;
   line-height: 24px;
   min-width: 40px;
@@ -442,7 +454,12 @@ const TriggerText = styled('span')`
   padding: ${space(0.25)} ${space(0.75)};
   border-radius: ${p => p.theme.borderRadius};
   color: ${p => p.theme.textColor};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   width: 100%;
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-weight: ${p => p.theme.fontWeightNormal};
+`;
+
+const StyledFeatureBadge = styled(FeatureBadge)`
+  margin-left: ${space(0.25)};
+  padding-bottom: ${space(0.25)};
 `;

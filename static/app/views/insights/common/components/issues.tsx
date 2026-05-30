@@ -137,9 +137,7 @@ export default function InsightIssuesList({
   return (
     <StyledPanel>
       <IssueListHeader issues={issues} />
-      {issues?.map(issue => (
-        <Issue data={issue} key={issue.id} />
-      ))}
+      {issues?.map(issue => <Issue data={issue} key={issue.id} />)}
     </StyledPanel>
   );
 }
@@ -150,7 +148,7 @@ const Heading = styled('h6')`
   margin: 0 ${space(2)};
   width: 60px;
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const IssueHeading = styled(Heading)`
@@ -158,7 +156,7 @@ const IssueHeading = styled(Heading)`
   width: 66.66%;
   margin: 0;
 
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     width: 50%;
   }
 `;
@@ -212,7 +210,7 @@ const IssueSummaryWrapper = styled('div')`
   flex: 1;
   width: 66.66%;
 
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     width: 50%;
   }
 `;
@@ -253,7 +251,7 @@ const ChartWrapper = styled('div')`
 `;
 
 const PrimaryCount = styled(Count)`
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   font-variant-numeric: tabular-nums;
 `;
 

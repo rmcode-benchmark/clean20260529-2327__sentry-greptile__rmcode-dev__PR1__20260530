@@ -51,18 +51,16 @@ const mockReplay = ReplayReader.factory({
 
 mockUseLoadReplayReader.mockImplementation(() => {
   return {
-    attachmentError: undefined,
     attachments: [],
     errors: [],
     fetchError: undefined,
-    isError: false,
-    isPending: false,
+    attachmentError: undefined,
+    fetching: false,
     onRetry: jest.fn(),
     projectSlug: ProjectFixture().slug,
     replay: mockReplay,
     replayId: REPLAY_ID_1,
     replayRecord: ReplayRecordFixture({id: REPLAY_ID_1}),
-    status: 'success' as const,
   };
 });
 
@@ -177,41 +175,23 @@ describe('GroupReplays', () => {
         mockReplayUrl,
         expect.objectContaining({
           query: expect.objectContaining({
-            cursor: undefined,
-            dataset: undefined,
             environment: [],
-            field: expect.arrayContaining([
+            field: [
               'activity',
               'browser',
               'count_dead_clicks',
               'count_errors',
-              'count_infos',
               'count_rage_clicks',
-              'count_segments',
-              'count_urls',
-              'count_warnings',
-              'device',
-              'dist',
               'duration',
-              'environment',
-              'error_ids',
               'finished_at',
               'has_viewed',
               'id',
-              'info_ids',
               'is_archived',
               'os',
-              'platform',
               'project_id',
-              'releases',
-              'sdk',
               'started_at',
-              'tags',
-              'trace_ids',
-              'urls',
               'user',
-              'warning_ids',
-            ]),
+            ],
             per_page: 50,
             project: -1,
             queryReferrer: 'issueReplays',
@@ -246,7 +226,9 @@ describe('GroupReplays', () => {
         deprecatedRouterMocks: true,
       });
 
-      expect(await screen.findByText('No replays found')).toBeInTheDocument();
+      expect(
+        await screen.findByText('There are no items to display')
+      ).toBeInTheDocument();
       expect(mockReplayCountApi).toHaveBeenCalled();
       expect(mockReplayApi).toHaveBeenCalledTimes(1);
     });
@@ -427,21 +409,13 @@ describe('GroupReplays', () => {
         'query=&referrer=%2Forganizations%2F%3AorgId%2Fissues%2F%3AgroupId%2Freplays%2F&statsPeriod=14d&yAxis=count%28%29';
 
       // Expect the first row to have the correct href
-      expect(
-        screen.getByRole('link', {
-          name: 'T testDisplayName project-slug 346789a7 14 days ago',
-        })
-      ).toHaveAttribute(
+      expect(screen.getAllByRole('link', {name: 'testDisplayName'})[0]).toHaveAttribute(
         'href',
         `/organizations/org-slug/replays/${REPLAY_ID_1}/?${expectedQuery}`
       );
 
       // Expect the second row to have the correct href
-      expect(
-        screen.getByRole('link', {
-          name: 'T testDisplayName project-slug b05dae9b 7 days ago',
-        })
-      ).toHaveAttribute(
+      expect(screen.getAllByRole('link', {name: 'testDisplayName'})[1]).toHaveAttribute(
         'href',
         `/organizations/org-slug/replays/${REPLAY_ID_2}/?${expectedQuery}`
       );
@@ -453,14 +427,14 @@ describe('GroupReplays', () => {
       expect(screen.getByText('06:40')).toBeInTheDocument();
 
       // Expect the first row to have the correct errors
-      expect(
-        screen.getAllByTestId('replay-table-column-count-errors')[0]
-      ).toHaveTextContent('1');
+      expect(screen.getAllByTestId('replay-table-count-errors')[0]).toHaveTextContent(
+        '1'
+      );
 
       // Expect the second row to have the correct errors
-      expect(
-        screen.getAllByTestId('replay-table-column-count-errors')[1]
-      ).toHaveTextContent('4');
+      expect(screen.getAllByTestId('replay-table-count-errors')[1]).toHaveTextContent(
+        '4'
+      );
 
       // Expect the first row to have the correct date
       expect(screen.getByText('14 days ago')).toBeInTheDocument();

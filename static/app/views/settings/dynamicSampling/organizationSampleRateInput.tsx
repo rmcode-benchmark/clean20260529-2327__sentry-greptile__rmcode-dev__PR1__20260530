@@ -3,7 +3,6 @@ import {useEffect, useRef} from 'react';
 import styled from '@emotion/styled';
 
 import {Button} from 'sentry/components/core/button';
-import {Flex} from 'sentry/components/core/layout';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import {IconEdit} from 'sentry/icons';
 import {t} from 'sentry/locale';
@@ -48,13 +47,13 @@ export function OrganizationSampleRateInput({
 
   const showBulkEditButton = hasAccess && isBulkEditEnabled && !isBulkEditActive;
   return (
-    <SampleRateRow>
+    <Wrapper>
       <Description>
         <Label>{label}</Label>
         <HelpText>{help}</HelpText>
       </Description>
       <InputWrapper>
-        <Flex gap="md">
+        <FlexRow>
           {showBulkEditButton && (
             <Button
               title={t('Proportionally scale project rates')}
@@ -85,7 +84,7 @@ export function OrganizationSampleRateInput({
               onChange={event => onChange(event.target.value)}
             />
           </Tooltip>
-        </Flex>
+        </FlexRow>
         {error ? (
           <ErrorMessage>{error}</ErrorMessage>
         ) : showPreviousValue ? (
@@ -94,12 +93,16 @@ export function OrganizationSampleRateInput({
           <AllDataStoredMessage>{t('All spans are stored')}</AllDataStoredMessage>
         ) : null}
       </InputWrapper>
-    </SampleRateRow>
+    </Wrapper>
   );
 }
 
-const SampleRateRow = styled('div')`
+const FlexRow = styled('div')`
   display: flex;
+  gap: ${space(1)};
+`;
+
+const Wrapper = styled(FlexRow)`
   padding: ${space(1.5)} ${space(2)} ${space(1)};
   border-bottom: 1px solid ${p => p.theme.innerBorder};
   gap: ${space(4)};
@@ -118,22 +121,22 @@ const Label = styled('label')`
 `;
 
 const HelpText = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
 `;
 
 const PreviousValue = styled('span')`
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
   color: ${p => p.theme.subText};
 `;
 
 const ErrorMessage = styled('span')`
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
   color: ${p => p.theme.error};
 `;
 
 const AllDataStoredMessage = styled('span')`
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
   color: ${p => p.theme.success};
 `;
 

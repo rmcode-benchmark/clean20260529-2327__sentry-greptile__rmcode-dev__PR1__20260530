@@ -349,7 +349,9 @@ urlpatterns = [
 ]
 
 
-@override_settings(ROOT_URLCONF=__name__, SENTRY_SELF_HOSTED=False)
+@override_settings(
+    ROOT_URLCONF="tests.sentry.middleware.test_ratelimit_middleware", SENTRY_SELF_HOSTED=False
+)
 class TestRatelimitHeader(APITestCase):
     endpoint = "ratelimit-header-endpoint"
 
@@ -409,7 +411,9 @@ class TestRatelimitHeader(APITestCase):
         assert int(response["X-Sentry-Rate-Limit-Limit"]) == 2
 
 
-@override_settings(ROOT_URLCONF=__name__, SENTRY_SELF_HOSTED=False)
+@override_settings(
+    ROOT_URLCONF="tests.sentry.middleware.test_ratelimit_middleware", SENTRY_SELF_HOSTED=False
+)
 class TestConcurrentRateLimiter(APITestCase):
     endpoint = "concurrent-endpoint"
 
@@ -459,7 +463,9 @@ class TestConcurrentRateLimiter(APITestCase):
             )
 
 
-@override_settings(ROOT_URLCONF=__name__, SENTRY_SELF_HOSTED=False)
+@override_settings(
+    ROOT_URLCONF="tests.sentry.middleware.test_ratelimit_middleware", SENTRY_SELF_HOSTED=False
+)
 class TestCallableRateLimitConfig(APITestCase):
     endpoint = "callable-config-endpoint"
 

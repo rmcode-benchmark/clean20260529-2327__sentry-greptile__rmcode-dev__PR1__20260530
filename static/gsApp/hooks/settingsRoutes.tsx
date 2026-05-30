@@ -1,10 +1,13 @@
 import {Fragment} from 'react';
 
 import {IndexRedirect, IndexRoute, Redirect, Route} from 'sentry/components/route';
-import {makeLazyloadComponent as make} from 'sentry/makeLazyloadComponent';
+import {makeLazyloadComponent} from 'sentry/routes';
 import errorHandler from 'sentry/utils/errorHandler';
 
 import SubscriptionContext from 'getsentry/components/subscriptionContext';
+
+// Shorthand to avoid extra line wrapping
+const make = makeLazyloadComponent;
 
 const settingsRoutes = () =>
   (
@@ -68,14 +71,11 @@ const settingsRoutes = () =>
         name="Spike Protection"
         component={make(() => import('../views/spikeProtection'))}
       />
-      <Route path="seer/" name="Seer Automation">
-        <IndexRoute component={make(() => import('../views/seerAutomation'))} />
-        <Route
-          path="onboarding/"
-          name="Configure Seer for All Projects"
-          component={make(() => import('../views/seerAutomation/onboarding'))}
-        />
-      </Route>
+      <Route
+        path="seer/"
+        name="Seer Automation"
+        component={make(() => import('../views/seerAutomation'))}
+      />
 
       <Route
         path="subscription/spend-allocations/"

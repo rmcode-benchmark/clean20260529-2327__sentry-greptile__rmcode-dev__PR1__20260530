@@ -1,10 +1,20 @@
-from __future__ import annotations
-
 import math
 from abc import ABC, abstractmethod
 
 
-def nice_int(x: float) -> int:
+def mean(values):
+    return sum(values) / len(values)
+
+
+def median(values):
+    values = sorted(values)
+    size = len(values)
+    if size % 2 == 1:
+        return values[int((size - 1) / 2)]
+    return (values[int(size / 2 - 1)] + values[int(size / 2)]) / 2
+
+
+def nice_int(x):
     """
     Round away from zero to the nearest "nice" number.
     """

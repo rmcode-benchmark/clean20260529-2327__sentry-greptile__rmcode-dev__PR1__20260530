@@ -3,12 +3,9 @@ import styled from '@emotion/styled';
 
 import {addSuccessMessage} from 'sentry/actionCreators/indicator';
 import {openModal} from 'sentry/actionCreators/modal';
-import Feature from 'sentry/components/acl/feature';
-import FeatureDisabled from 'sentry/components/acl/featureDisabled';
 import {Button} from 'sentry/components/core/button';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
-import {Hovercard} from 'sentry/components/hovercard';
 import {IconChevron} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
@@ -50,6 +47,7 @@ function SegmentedIssueViewSaveButton({
   const canEdit = view
     ? canEditIssueView({user, groupSearchView: view, organization})
     : false;
+
   const discardUnsavedChanges = () => {
     if (view) {
       trackAnalytics('issue_views.reset.clicked', {organization});
@@ -79,77 +77,52 @@ function SegmentedIssueViewSaveButton({
   };
 
   return (
-    <Feature
-      features={'organizations:issue-views'}
-      hookName="feature-disabled:issue-views"
-      renderDisabled={props => (
-        <Hovercard
-          body={
-            <FeatureDisabled
-              features={props.features}
-              hideHelpToggle
-              featureName={t('Issue Views')}
-            />
+    <ButtonBar merged>
+      <PrimarySaveButton
+        priority={buttonPriority}
+        data-test-id={hasUnsavedChanges ? 'save-button-unsaved' : 'save-button'}
+        onClick={() => {
+          if (canEdit) {
+            saveView();
+          } else {
+            openCreateIssueViewModal();
           }
-        >
-          {typeof props.children === 'function' ? props.children(props) : props.children}
-        </Hovercard>
-      )}
-    >
-      {({hasFeature}) => (
-        <ButtonBar merged gap="none">
-          <PrimarySaveButton
+        }}
+        disabled={isSaving}
+      >
+        {canEdit ? t('Save') : t('Save As')}
+      </PrimarySaveButton>
+      <DropdownMenu
+        items={[
+          {
+            key: 'reset',
+            label: t('Reset'),
+            disabled: !hasUnsavedChanges,
+            onAction: () => {
+              discardUnsavedChanges();
+            },
+          },
+          {
+            key: 'save-as',
+            label: t('Save as new view'),
+            onAction: () => {
+              openCreateIssueViewModal();
+            },
+            hidden: !canEdit,
+          },
+        ]}
+        trigger={props => (
+          <DropdownTrigger
+            {...props}
+            disabled={isSaving}
+            icon={<IconChevron direction="down" />}
+            aria-label={t('More save options')}
             priority={buttonPriority}
-            data-test-id={hasUnsavedChanges ? 'save-button-unsaved' : 'save-button'}
-            onClick={() => {
-              if (canEdit) {
-                saveView();
-              } else {
-                openCreateIssueViewModal();
-              }
-            }}
-            disabled={isSaving || !hasFeature}
-          >
-            {canEdit ? t('Save') : t('Save As')}
-          </PrimarySaveButton>
-          <DropdownMenu
-            items={[
-              {
-                key: 'reset',
-                label: t('Reset'),
-                disabled: !hasUnsavedChanges,
-                onAction: () => {
-                  discardUnsavedChanges();
-                },
-              },
-              {
-                key: 'save-as',
-                label: t('Save as new view'),
-                onAction: () => {
-                  openCreateIssueViewModal();
-                },
-                hidden: !canEdit,
-              },
-            ]}
-            trigger={props => (
-              <DropdownTrigger
-                {...props}
-                disabled={!hasFeature || isSaving}
-                icon={
-                  <IconChevron
-                    direction="down"
-                    color={buttonPriority === 'primary' ? undefined : 'subText'}
-                  />
-                }
-                aria-label={t('More save options')}
-                priority={buttonPriority}
-              />
-            )}
-            position="bottom-end"
           />
-        </ButtonBar>
-      )}
-    </Feature>
+        )}
+        position="bottom-end"
+      />
+    </ButtonBar>
   );
 }
 
@@ -177,35 +150,9 @@ export function IssueViewSaveButton({query, sort}: IssueViewSaveButtonProps) {
 
   if (!viewId) {
     return (
-      <Feature
-        features={'organizations:issue-views'}
-        hookName="feature-disabled:issue-views"
-        renderDisabled={props => (
-          <Hovercard
-            body={
-              <FeatureDisabled
-                features={props.features}
-                hideHelpToggle
-                featureName={t('Issue Views')}
-              />
-            }
-          >
-            {typeof props.children === 'function'
-              ? props.children(props)
-              : props.children}
-          </Hovercard>
-        )}
-      >
-        {({hasFeature}) => (
-          <Button
-            priority="primary"
-            onClick={openCreateIssueViewModal}
-            disabled={!hasFeature}
-          >
-            {t('Save As')}
-          </Button>
-        )}
-      </Feature>
+      <Button priority="primary" onClick={openCreateIssueViewModal}>
+        {t('Save As')}
+      </Button>
     );
   }
 

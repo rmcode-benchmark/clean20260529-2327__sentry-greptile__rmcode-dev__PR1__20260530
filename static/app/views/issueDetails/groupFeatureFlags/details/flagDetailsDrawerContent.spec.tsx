@@ -1,5 +1,3 @@
-import {GroupFixture} from 'sentry-fixture/group';
-
 import {
   render,
   screen,
@@ -38,7 +36,7 @@ describe('FlagDetailsDrawerContent', () => {
   });
 
   it('renders a list of tag values', async () => {
-    render(<FlagDetailsDrawerContent group={GroupFixture()} />);
+    render(<FlagDetailsDrawerContent />);
 
     await waitForElementToBeRemoved(() => screen.queryByTestId('loading-indicator'));
 
@@ -76,7 +74,7 @@ describe('FlagDetailsDrawerContent', () => {
       statusCode: 500,
     });
 
-    render(<FlagDetailsDrawerContent group={GroupFixture()} />);
+    render(<FlagDetailsDrawerContent />);
 
     expect(
       await screen.findByText('There was an error loading feature flag details.')
@@ -89,7 +87,7 @@ describe('FlagDetailsDrawerContent', () => {
       body: {data: []},
     });
 
-    render(<FlagDetailsDrawerContent group={GroupFixture()} />);
+    render(<FlagDetailsDrawerContent />);
 
     expect(
       await screen.findByText('No audit logs were found for this feature flag.')

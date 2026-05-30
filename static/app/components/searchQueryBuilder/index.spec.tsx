@@ -1,7 +1,5 @@
 import type {ComponentProps} from 'react';
 import {destroyAnnouncer} from '@react-aria/live-announcer';
-import {AutofixSetupFixture} from 'sentry-fixture/autofixSetupFixture';
-import {OrganizationFixture} from 'sentry-fixture/organization';
 
 import {
   act,
@@ -91,12 +89,10 @@ const FILTER_KEYS: TagCollection = {
   'tags[foo,string]': {
     key: 'tags[foo,string]',
     name: 'foo',
-    kind: FieldKind.TAG,
   },
   'tags[bar,number]': {
     key: 'tags[bar,number]',
     name: 'bar',
-    kind: FieldKind.MEASUREMENT,
   },
 };
 
@@ -136,11 +132,6 @@ describe('SearchQueryBuilder', function () {
     destroyAnnouncer();
 
     MockApiClient.clearMockResponses();
-
-    MockApiClient.addMockResponse({
-      url: '/organizations/org-slug/recent-searches/',
-      method: 'POST',
-    });
   });
 
   afterEach(function () {
@@ -180,10 +171,6 @@ describe('SearchQueryBuilder', function () {
       );
 
       await userEvent.click(getLastInput());
-
-      expect(mockOnChange).not.toHaveBeenCalled();
-      expect(mockOnSearch).not.toHaveBeenCalled();
-
       await userEvent.keyboard('b{enter}');
 
       const expectedQueryState = expect.objectContaining({
@@ -438,8 +425,7 @@ describe('SearchQueryBuilder', function () {
         expect(recentFilterKeys[1]).toHaveTextContent('browser');
         expect(recentFilterKeys[2]).toHaveTextContent('is');
 
-        await userEvent.hover(recentFilterKeys[0]!);
-        await userEvent.keyboard('{enter}{enter}');
+        await userEvent.click(recentFilterKeys[0]!);
 
         expect(await screen.findByRole('row', {name: 'assigned:""'})).toBeInTheDocument();
       });
@@ -891,14 +877,14 @@ describe('SearchQueryBuilder', function () {
       await userEvent.click(screen.getByRole('option', {name: 'browser.name'}));
 
       // New token should be added with the correct key and default value
-      expect(screen.getByRole('row', {name: 'browser.name:""'})).toBeInTheDocument();
+      expect(screen.getByLabelText('browser.name:""')).toBeInTheDocument();
       // onChange should not be called until exiting edit mode
       expect(mockOnChange).not.toHaveBeenCalled();
 
-      await userEvent.click(await screen.findByRole('option', {name: 'Firefox'}));
+      await userEvent.click(await screen.findByLabelText('Firefox'));
 
       // New token should have a value
-      expect(screen.getByRole('row', {name: 'browser.name:Firefox'})).toBeInTheDocument();
+      expect(screen.getByLabelText('browser.name:Firefox')).toBeInTheDocument();
 
       // Now we call onChange
       expect(mockOnChange).toHaveBeenCalledTimes(1);
@@ -946,7 +932,7 @@ describe('SearchQueryBuilder', function () {
       ).toBeInTheDocument();
 
       // Should have a filter token "browser.name:foo"
-      expect(screen.getByRole('row', {name: 'browser.name:foo'})).toBeInTheDocument();
+      expect(screen.getByLabelText('browser.name:foo')).toBeInTheDocument();
     });
 
     it('can add parens by typing', async function () {
@@ -1035,9 +1021,7 @@ describe('SearchQueryBuilder', function () {
 
       // Clicking it should add the filter and put focus at the end
       await userEvent.click(suggestionItem);
-      expect(
-        await screen.findByRole('row', {name: 'browser.name:Firefox'})
-      ).toBeInTheDocument();
+      expect(screen.getByRole('row', {name: 'browser.name:Firefox'})).toBeInTheDocument();
       expect(getLastInput()).toHaveFocus();
     });
 
@@ -1553,38 +1537,6 @@ describe('SearchQueryBuilder', function () {
         await screen.findByRole('row', {name: 'browser.name:firefox'})
       ).toBeInTheDocument();
     });
-
-    it('selects the value when pressing enter after typing it in', async function () {
-      render(
-        <SearchQueryBuilder {...defaultProps} initialQuery="browser.name:Firefox" />
-      );
-
-      // Click into filter value (button to edit will no longer exist)
-      await userEvent.click(
-        screen.getByRole('button', {name: 'Edit value for filter: browser.name'})
-      );
-      expect(
-        screen.queryByRole('button', {name: 'Edit value for filter: browser.name'})
-      ).not.toBeInTheDocument();
-
-      await userEvent.type(screen.getByRole('combobox'), 'randomValue');
-
-      const listBox = screen.getByRole('checkbox', {name: 'Toggle randomValue'});
-      expect(listBox).not.toBeChecked();
-
-      await userEvent.keyboard('{arrowdown}{enter}');
-
-      // Re-open filter value
-      await userEvent.click(
-        screen.getByRole('button', {name: 'Edit value for filter: browser.name'})
-      );
-      expect(
-        screen.queryByRole('button', {name: 'Edit value for filter: browser.name'})
-      ).not.toBeInTheDocument();
-
-      const updatedListBox = screen.getByRole('checkbox', {name: 'Toggle randomValue'});
-      expect(updatedListBox).toBeChecked();
-    });
   });
 
   describe('token values', function () {
@@ -1638,72 +1590,6 @@ describe('SearchQueryBuilder', function () {
         await screen.findByRole('row', {name: 'custom_tag_name:tag_value_one'})
       ).toBeInTheDocument();
     });
-
-    it('sets the value as not selected when no comma is present', async function () {
-      render(
-        <SearchQueryBuilder {...defaultProps} initialQuery="browser.name:Firefox" />
-      );
-
-      // Click into filter value (button to edit will no longer exist)
-      await userEvent.click(
-        screen.getByRole('button', {name: 'Edit value for filter: browser.name'})
-      );
-      expect(
-        screen.queryByRole('button', {name: 'Edit value for filter: browser.name'})
-      ).not.toBeInTheDocument();
-
-      await userEvent.type(screen.getByRole('combobox'), 'randomValue');
-
-      const listBox = screen.getByRole('checkbox', {name: 'Toggle randomValue'});
-      expect(listBox).not.toBeChecked();
-    });
-
-    it('sets the value as selected when a trailing comma is present', async function () {
-      render(
-        <SearchQueryBuilder {...defaultProps} initialQuery="browser.name:Firefox" />
-      );
-
-      // Click into filter value (button to edit will no longer exist)
-      await userEvent.click(
-        screen.getByRole('button', {name: 'Edit value for filter: browser.name'})
-      );
-      expect(
-        screen.queryByRole('button', {name: 'Edit value for filter: browser.name'})
-      ).not.toBeInTheDocument();
-
-      await userEvent.type(screen.getByRole('combobox'), 'randomValue,');
-
-      const listBox = screen.getByRole('checkbox', {name: 'Toggle randomValue'});
-      expect(listBox).toBeChecked();
-    });
-
-    it('strips multiple wildcards into a single wildcard', async function () {
-      const mockOnChange = jest.fn();
-      render(
-        <SearchQueryBuilder
-          {...defaultProps}
-          onChange={mockOnChange}
-          initialQuery="browser.name:Firefox"
-        />
-      );
-
-      // Click into filter value (button to edit will no longer exist)
-      await userEvent.click(
-        screen.getByRole('button', {name: 'Edit value for filter: browser.name'})
-      );
-      expect(
-        screen.queryByRole('button', {name: 'Edit value for filter: browser.name'})
-      ).not.toBeInTheDocument();
-
-      await userEvent.type(
-        screen.getByRole('combobox'),
-        '****random****Value*****{enter}'
-      );
-      expect(mockOnChange).toHaveBeenCalledWith(
-        'browser.name:[Firefox,*random*Value*]',
-        expect.anything()
-      );
-    });
   });
 
   describe('filter types', function () {
@@ -1750,16 +1636,6 @@ describe('SearchQueryBuilder', function () {
         // Should be is:unresolved
         expect(
           await screen.findByRole('row', {name: 'is:unresolved'})
-        ).toBeInTheDocument();
-      });
-
-      it('shows tooltip with field description when hovering over operator label', async function () {
-        render(<SearchQueryBuilder {...defaultProps} initialQuery="assigned:me" />);
-
-        await userEvent.hover(screen.getByText('assigned'));
-
-        expect(
-          await screen.findByText('Assignee of the issue as a user ID')
         ).toBeInTheDocument();
       });
     });
@@ -2278,25 +2154,6 @@ describe('SearchQueryBuilder', function () {
           await screen.findByRole('row', {name: 'release.version:>1.0'})
         ).toBeInTheDocument();
       });
-
-      it('string filters have the correct operator options', async function () {
-        render(
-          <SearchQueryBuilder {...defaultProps} initialQuery="browser.name:firefox" />,
-          {organization: {features: ['search-query-builder-wildcard-operators']}}
-        );
-        await userEvent.click(
-          screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-        );
-
-        expect(await screen.findByRole('option', {name: 'is'})).toBeInTheDocument();
-        expect(screen.getByRole('option', {name: 'is not'})).toBeInTheDocument();
-        expect(screen.getByRole('option', {name: 'contains'})).toBeInTheDocument();
-        expect(
-          screen.getByRole('option', {name: 'does not contain'})
-        ).toBeInTheDocument();
-        expect(screen.getByRole('option', {name: 'starts with'})).toBeInTheDocument();
-        expect(screen.getByRole('option', {name: 'ends with'})).toBeInTheDocument();
-      });
     });
 
     describe('numeric', function () {
@@ -2393,9 +2250,7 @@ describe('SearchQueryBuilder', function () {
         await userEvent.click(screen.getByRole('option', {name: 'duration'}));
 
         // Should start with the > operator and a value of 10ms
-        expect(
-          await screen.findByRole('row', {name: 'duration:>10ms'})
-        ).toBeInTheDocument();
+        expect(await screen.findByLabelText('duration:>10ms')).toBeInTheDocument();
       });
 
       it('duration filters have the correct operator options', async function () {
@@ -2530,9 +2385,7 @@ describe('SearchQueryBuilder', function () {
         await userEvent.click(screen.getByRole('option', {name: 'size'}));
 
         // Should start with the > operator and a value of 10ms
-        expect(
-          await screen.findByRole('row', {name: 'size:>10bytes'})
-        ).toBeInTheDocument();
+        expect(await screen.findByLabelText('size:>10bytes')).toBeInTheDocument();
       });
 
       it('size filters have the correct operator options', async function () {
@@ -2665,7 +2518,7 @@ describe('SearchQueryBuilder', function () {
         await userEvent.click(screen.getByRole('option', {name: 'rate'}));
 
         // Should start with the > operator and a value of 50%
-        expect(await screen.findByRole('row', {name: 'rate:>0.5'})).toBeInTheDocument();
+        expect(await screen.findByLabelText('rate:>0.5')).toBeInTheDocument();
       });
 
       it('percentage filters have the correct operator options', async function () {
@@ -3166,9 +3019,9 @@ describe('SearchQueryBuilder', function () {
         await userEvent.click(screen.getByRole('option', {name: 'count_if(...)'}));
 
         expect(
-          await screen.findByRole('row', {
-            name: 'count_if(transaction.duration,greater,300ms):>100',
-          })
+          await screen.findByLabelText(
+            'count_if(transaction.duration,greater,300ms):>100'
+          )
         ).toBeInTheDocument();
       });
 
@@ -3313,57 +3166,6 @@ describe('SearchQueryBuilder', function () {
             within(descriptionTooltip).getByTestId('focused-param')
           ).toHaveTextContent('operator: string');
         });
-      });
-
-      it('focuses on the filter value when user selects an aggregate filter with no arguments', async function () {
-        render(<SearchQueryBuilder {...aggregateDefaultProps} />);
-
-        await userEvent.click(getLastInput());
-        await userEvent.keyboard('count');
-        await userEvent.click(screen.getByRole('option', {name: 'count()'}));
-        expect(screen.getByLabelText('count():>100')).toBeInTheDocument();
-        expect(screen.getByLabelText('Edit filter value')).toHaveFocus();
-      });
-
-      it('focuses on the filter value when user input looks like an aggregate filter with no arguments', async function () {
-        render(<SearchQueryBuilder {...aggregateDefaultProps} />);
-
-        await userEvent.click(getLastInput());
-        await userEvent.keyboard('count(');
-        expect(screen.getByLabelText('count():>100')).toBeInTheDocument();
-        expect(screen.getByLabelText('Edit filter value')).toHaveFocus();
-      });
-
-      it('focuses on the filter value after only argument is specified', async function () {
-        render(<SearchQueryBuilder {...aggregateDefaultProps} />);
-
-        await userEvent.click(getLastInput());
-        await userEvent.keyboard('p95(');
-        expect(
-          screen.getByLabelText('p95(transaction.duration):>300ms')
-        ).toBeInTheDocument();
-        expect(screen.getByLabelText('Edit function parameters')).toHaveFocus();
-        await userEvent.keyboard('transaction');
-        await userEvent.click(screen.getByRole('option', {name: 'transaction.duration'}));
-        expect(screen.getByLabelText('Edit filter value')).toHaveFocus();
-      });
-
-      it('focuses on the filter value after all arguments is specified', async function () {
-        render(<SearchQueryBuilder {...aggregateDefaultProps} />);
-
-        await userEvent.click(getLastInput());
-        await userEvent.keyboard('count_if(');
-        expect(
-          screen.getByLabelText('count_if(transaction.duration,greater,300ms):>100')
-        ).toBeInTheDocument();
-        expect(screen.getByLabelText('Edit function parameters')).toHaveFocus();
-        await userEvent.keyboard('transaction');
-        await userEvent.click(screen.getByRole('option', {name: 'transaction.duration'}));
-        expect(screen.getByLabelText('Edit function parameters')).toHaveFocus();
-        await userEvent.keyboard(',');
-        await userEvent.click(screen.getByRole('option', {name: 'greater'}));
-        await userEvent.keyboard(',100{Enter}');
-        expect(screen.getByLabelText('Edit filter value')).toHaveFocus();
       });
     });
   });
@@ -3516,30 +3318,6 @@ describe('SearchQueryBuilder', function () {
         await screen.findByText('Invalid key. "foo" is not a supported search key.')
       ).toBeInTheDocument();
     });
-
-    describe('secondary aliases provided', function () {
-      it('should not mark secondary aliases as invalid', async function () {
-        render(
-          <SearchQueryBuilder
-            {...defaultProps}
-            disallowUnsupportedFilters
-            initialQuery="foo:bar"
-            filterKeyAliases={{foo: {key: 'foo', name: 'foo'}}}
-          />
-        );
-
-        expect(screen.getByRole('row', {name: 'foo:bar'})).toHaveAttribute(
-          'aria-invalid',
-          'false'
-        );
-
-        await userEvent.click(getLastInput());
-        await userEvent.keyboard('{ArrowLeft}');
-        expect(
-          screen.queryByText('Invalid key. "foo" is not a supported search key.')
-        ).not.toBeInTheDocument();
-      });
-    });
   });
 
   describe('invalidMessages', function () {
@@ -3602,15 +3380,9 @@ describe('SearchQueryBuilder', function () {
   });
 
   describe('explicitly typed tags', function () {
-    const builderProps = {
-      ...defaultProps,
-      fieldDefinitionGetter: (key: string) =>
-        getFieldDefinition(key, 'span', defaultProps.filterKeys[key]?.kind),
-    };
-
     it('renders explicit string tag filter', async function () {
       render(
-        <SearchQueryBuilder {...builderProps} initialQuery="tags[foo,string]:foo" />
+        <SearchQueryBuilder {...defaultProps} initialQuery="tags[foo,string]:foo" />
       );
 
       expect(
@@ -3630,7 +3402,7 @@ describe('SearchQueryBuilder', function () {
 
     it('renders explicit number tag filter', async function () {
       render(
-        <SearchQueryBuilder {...builderProps} initialQuery="tags[bar,number]:<=100" />
+        <SearchQueryBuilder {...defaultProps} initialQuery="tags[bar,number]:<=100" />
       );
 
       expect(
@@ -3650,7 +3422,7 @@ describe('SearchQueryBuilder', function () {
 
     it('renders has explicit string tag filter', async function () {
       render(
-        <SearchQueryBuilder {...builderProps} initialQuery="has:tags[foo,string]" />
+        <SearchQueryBuilder {...defaultProps} initialQuery="has:tags[foo,string]" />
       );
 
       expect(
@@ -3669,7 +3441,7 @@ describe('SearchQueryBuilder', function () {
 
     it('renders has explicit number tag filter', async function () {
       render(
-        <SearchQueryBuilder {...builderProps} initialQuery="has:tags[bar,number]" />
+        <SearchQueryBuilder {...defaultProps} initialQuery="has:tags[bar,number]" />
       );
 
       expect(
@@ -3684,49 +3456,6 @@ describe('SearchQueryBuilder', function () {
       const option = screen.getByRole('option', {name: 'bar'});
       expect(option).toBeInTheDocument();
       expect(option).toHaveTextContent('bar');
-    });
-
-    it('renders aggregate filter with explicit string tag', async function () {
-      render(
-        <SearchQueryBuilder
-          {...builderProps}
-          initialQuery="count_unique(tags[foo,string]):5"
-        />
-      );
-
-      expect(
-        screen.getByRole('button', {name: 'Edit parameters for filter: count_unique'})
-      ).toHaveTextContent('foo');
-
-      await userEvent.click(
-        screen.getByRole('button', {name: 'Edit parameters for filter: count_unique'})
-      );
-
-      const input = screen.getByPlaceholderText('foo');
-      expect(input).toBeInTheDocument();
-      expect(input).toHaveFocus();
-      await userEvent.keyboard('foo');
-      expect(screen.getByRole('option', {name: 'foo'})).toBeInTheDocument();
-    });
-
-    it('renders aggregate filter with explicit number tag', async function () {
-      render(
-        <SearchQueryBuilder {...builderProps} initialQuery="p95(tags[bar,number]):5" />
-      );
-
-      expect(
-        screen.getByRole('button', {name: 'Edit parameters for filter: p95'})
-      ).toHaveTextContent('bar');
-
-      await userEvent.click(
-        screen.getByRole('button', {name: 'Edit parameters for filter: p95'})
-      );
-
-      const input = screen.getByPlaceholderText('bar');
-      expect(input).toBeInTheDocument();
-      expect(input).toHaveFocus();
-      await userEvent.keyboard('bar');
-      expect(screen.getByRole('option', {name: 'bar'})).toBeInTheDocument();
     });
   });
 
@@ -3743,15 +3472,13 @@ describe('SearchQueryBuilder', function () {
       return key;
     }
 
-    const builderProps = {
-      ...defaultProps,
-      fieldDefinitionGetter: (key: string) =>
-        getFieldDefinition(key, 'span', defaultProps.filterKeys[key]?.kind),
-      getSuggestedFilterKey,
-    };
-
     it('replace string key with suggestion when autocompleting', async function () {
-      render(<SearchQueryBuilder {...builderProps} />);
+      render(
+        <SearchQueryBuilder
+          {...defaultProps}
+          getSuggestedFilterKey={getSuggestedFilterKey}
+        />
+      );
 
       await userEvent.click(getLastInput());
       await userEvent.keyboard('foo:{Escape}');
@@ -3762,7 +3489,12 @@ describe('SearchQueryBuilder', function () {
     });
 
     it('replace number key with suggestion when autocompleting', async function () {
-      render(<SearchQueryBuilder {...builderProps} />);
+      render(
+        <SearchQueryBuilder
+          {...defaultProps}
+          getSuggestedFilterKey={getSuggestedFilterKey}
+        />
+      );
 
       await userEvent.click(getLastInput());
       await userEvent.keyboard('bar:{Escape}');
@@ -3774,7 +3506,11 @@ describe('SearchQueryBuilder', function () {
 
     it('replaces string key with suggestion on enter', async function () {
       render(
-        <SearchQueryBuilder {...builderProps} initialQuery="browser.name:firefox" />
+        <SearchQueryBuilder
+          {...defaultProps}
+          initialQuery="browser.name:firefox"
+          getSuggestedFilterKey={getSuggestedFilterKey}
+        />
       );
 
       await userEvent.click(
@@ -3789,7 +3525,11 @@ describe('SearchQueryBuilder', function () {
 
     it('replaces number key with suggestion on enter', async function () {
       render(
-        <SearchQueryBuilder {...builderProps} initialQuery="browser.name:firefox" />
+        <SearchQueryBuilder
+          {...defaultProps}
+          initialQuery="browser.name:firefox"
+          getSuggestedFilterKey={getSuggestedFilterKey}
+        />
       );
 
       await userEvent.click(
@@ -3803,7 +3543,12 @@ describe('SearchQueryBuilder', function () {
     });
 
     it('replaces string key in has with suggestion on enter', async function () {
-      render(<SearchQueryBuilder {...builderProps} />);
+      render(
+        <SearchQueryBuilder
+          {...defaultProps}
+          getSuggestedFilterKey={getSuggestedFilterKey}
+        />
+      );
 
       await userEvent.click(getLastInput());
       await userEvent.keyboard('has:foo{Enter}{Escape}');
@@ -3815,7 +3560,12 @@ describe('SearchQueryBuilder', function () {
     });
 
     it('replaces number key in has with suggestion on enter', async function () {
-      render(<SearchQueryBuilder {...builderProps} />);
+      render(
+        <SearchQueryBuilder
+          {...defaultProps}
+          getSuggestedFilterKey={getSuggestedFilterKey}
+        />
+      );
 
       await userEvent.click(getLastInput());
       await userEvent.keyboard('has:bar{Enter}{Escape}');
@@ -3827,7 +3577,12 @@ describe('SearchQueryBuilder', function () {
     });
 
     it('replaces string key in has with suggestion on blur', async function () {
-      render(<SearchQueryBuilder {...builderProps} />);
+      render(
+        <SearchQueryBuilder
+          {...defaultProps}
+          getSuggestedFilterKey={getSuggestedFilterKey}
+        />
+      );
 
       await userEvent.click(getLastInput());
       await userEvent.keyboard('has:foo{Enter}');
@@ -3840,7 +3595,12 @@ describe('SearchQueryBuilder', function () {
     });
 
     it('replaces number key in has with suggestion on blur', async function () {
-      render(<SearchQueryBuilder {...builderProps} />);
+      render(
+        <SearchQueryBuilder
+          {...defaultProps}
+          getSuggestedFilterKey={getSuggestedFilterKey}
+        />
+      );
 
       await userEvent.click(getLastInput());
       await userEvent.keyboard('has:bar{Enter}');
@@ -3850,756 +3610,6 @@ describe('SearchQueryBuilder', function () {
         screen.getByRole('button', {name: 'Edit value for filter: has'})
       ).toHaveTextContent('bar');
       expect(screen.getByLabelText('has:tags[bar,number]')).toBeInTheDocument();
-    });
-
-    it('replaces aggregate param string key with suggestion on enter', async function () {
-      render(
-        <SearchQueryBuilder
-          {...builderProps}
-          initialQuery="count_unique(browser.name):>0"
-        />
-      );
-
-      await userEvent.click(
-        screen.getByRole('button', {name: 'Edit parameters for filter: count_unique'})
-      );
-      await userEvent.keyboard('foo{Enter}{Escape}');
-
-      expect(
-        screen.getByRole('button', {name: 'Edit parameters for filter: count_unique'})
-      ).toHaveTextContent('foo');
-      expect(
-        screen.getByLabelText('count_unique(tags[foo,string]):>0')
-      ).toBeInTheDocument();
-    });
-
-    it('replaces aggregate param number key with suggestion on enter', async function () {
-      render(
-        <SearchQueryBuilder {...builderProps} initialQuery="avg(span.duration):>0" />
-      );
-
-      await userEvent.click(
-        screen.getByRole('button', {name: 'Edit parameters for filter: avg'})
-      );
-      await userEvent.keyboard('bar{Enter}{Escape}');
-
-      expect(
-        screen.getByRole('button', {name: 'Edit parameters for filter: avg'})
-      ).toHaveTextContent('bar');
-
-      expect(screen.getByLabelText('avg(tags[bar,number]):>0')).toBeInTheDocument();
-    });
-  });
-
-  describe('wildcard operators', function () {
-    describe('selecting contains', function () {
-      describe('single value', function () {
-        it('wraps the value in wildcards', async function () {
-          const mockOnChange = jest.fn();
-          render(
-            <SearchQueryBuilder
-              {...defaultProps}
-              initialQuery="browser.name:firefox"
-              onChange={mockOnChange}
-            />,
-            {organization: {features: ['search-query-builder-wildcard-operators']}}
-          );
-
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('is')
-          ).toBeInTheDocument();
-
-          await userEvent.click(
-            screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-          );
-          await userEvent.click(screen.getByRole('option', {name: 'contains'}));
-
-          // Token should be wrapped in wildcards
-          expect(
-            screen.getByRole('row', {name: 'browser.name:*firefox*'})
-          ).toBeInTheDocument();
-
-          // Should now have "contains" label
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('contains')
-          ).toBeInTheDocument();
-
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalledWith(
-              'browser.name:*firefox*',
-              expect.anything()
-            );
-          });
-
-          expect(mockOnChange).toHaveBeenCalledTimes(1);
-        });
-      });
-
-      describe('multiple values', function () {
-        it('wraps the values in wildcards', async function () {
-          const mockOnChange = jest.fn();
-          render(
-            <SearchQueryBuilder
-              {...defaultProps}
-              initialQuery="browser.name:[firefox,chrome]"
-              onChange={mockOnChange}
-            />,
-            {organization: {features: ['search-query-builder-wildcard-operators']}}
-          );
-
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('is')
-          ).toBeInTheDocument();
-
-          await userEvent.click(
-            screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-          );
-          await userEvent.click(screen.getByRole('option', {name: 'contains'}));
-
-          // Token should be wrapped in wildcards
-          expect(
-            screen.getByRole('row', {name: 'browser.name:[*firefox*,*chrome*]'})
-          ).toBeInTheDocument();
-
-          // Should now have "contains" label
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('contains')
-          ).toBeInTheDocument();
-
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalledWith(
-              'browser.name:[*firefox*,*chrome*]',
-              expect.anything()
-            );
-          });
-
-          expect(mockOnChange).toHaveBeenCalledTimes(1);
-        });
-      });
-    });
-
-    describe('selecting does not contain', function () {
-      describe('single value', function () {
-        it('wraps the value in wildcards', async function () {
-          const mockOnChange = jest.fn();
-          render(
-            <SearchQueryBuilder
-              {...defaultProps}
-              initialQuery="browser.name:firefox"
-              onChange={mockOnChange}
-            />,
-            {organization: {features: ['search-query-builder-wildcard-operators']}}
-          );
-
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('is')
-          ).toBeInTheDocument();
-
-          await userEvent.click(
-            screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-          );
-          await userEvent.click(screen.getByRole('option', {name: 'does not contain'}));
-
-          // Token should be modified to be wrapped in wildcards and negated
-          expect(
-            screen.getByRole('row', {name: '!browser.name:*firefox*'})
-          ).toBeInTheDocument();
-
-          // Should now have "does not contain" label
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('does not contain')
-          ).toBeInTheDocument();
-
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalledWith(
-              '!browser.name:*firefox*',
-              expect.anything()
-            );
-          });
-
-          expect(mockOnChange).toHaveBeenCalledTimes(1);
-        });
-      });
-
-      describe('multiple values', function () {
-        it('wraps the values in wildcards', async function () {
-          const mockOnChange = jest.fn();
-          render(
-            <SearchQueryBuilder
-              {...defaultProps}
-              initialQuery="browser.name:[firefox,chrome]"
-              onChange={mockOnChange}
-            />,
-            {organization: {features: ['search-query-builder-wildcard-operators']}}
-          );
-
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('is')
-          ).toBeInTheDocument();
-
-          await userEvent.click(
-            screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-          );
-          await userEvent.click(screen.getByRole('option', {name: 'does not contain'}));
-
-          // Token should be wrapped in wildcards and negated
-          expect(
-            screen.getByRole('row', {name: '!browser.name:[*firefox*,*chrome*]'})
-          ).toBeInTheDocument();
-
-          // Should now have "does not contain" label
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('does not contain')
-          ).toBeInTheDocument();
-
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalledWith(
-              '!browser.name:[*firefox*,*chrome*]',
-              expect.anything()
-            );
-          });
-
-          expect(mockOnChange).toHaveBeenCalledTimes(1);
-        });
-      });
-    });
-
-    describe('selecting starts with', function () {
-      describe('single value', function () {
-        it('adds trailing wildcard', async function () {
-          const mockOnChange = jest.fn();
-          render(
-            <SearchQueryBuilder
-              {...defaultProps}
-              initialQuery="browser.name:firefox"
-              onChange={mockOnChange}
-            />,
-            {organization: {features: ['search-query-builder-wildcard-operators']}}
-          );
-
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('is')
-          ).toBeInTheDocument();
-
-          await userEvent.click(
-            screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-          );
-          await userEvent.click(screen.getByRole('option', {name: 'starts with'}));
-
-          // Token should have trailing wildcard
-          expect(
-            screen.getByRole('row', {name: 'browser.name:firefox*'})
-          ).toBeInTheDocument();
-
-          // Should now have "starts with" label
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('starts with')
-          ).toBeInTheDocument();
-
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalledWith(
-              'browser.name:firefox*',
-              expect.anything()
-            );
-          });
-
-          expect(mockOnChange).toHaveBeenCalledTimes(1);
-        });
-      });
-
-      describe('multiple values', function () {
-        it('adds trailing wildcard to each value', async function () {
-          const mockOnChange = jest.fn();
-          render(
-            <SearchQueryBuilder
-              {...defaultProps}
-              initialQuery="browser.name:[firefox,chrome]"
-              onChange={mockOnChange}
-            />,
-            {organization: {features: ['search-query-builder-wildcard-operators']}}
-          );
-
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('is')
-          ).toBeInTheDocument();
-
-          await userEvent.click(
-            screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-          );
-          await userEvent.click(screen.getByRole('option', {name: 'starts with'}));
-
-          // Token should have trailing wildcard on each value
-          expect(
-            screen.getByRole('row', {name: 'browser.name:[firefox*,chrome*]'})
-          ).toBeInTheDocument();
-
-          // Should now have "starts with" label
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('starts with')
-          ).toBeInTheDocument();
-
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalledWith(
-              'browser.name:[firefox*,chrome*]',
-              expect.anything()
-            );
-          });
-
-          expect(mockOnChange).toHaveBeenCalledTimes(1);
-        });
-      });
-    });
-
-    describe('selecting ends with', function () {
-      describe('single value', function () {
-        it('adds leading wildcard', async function () {
-          const mockOnChange = jest.fn();
-          render(
-            <SearchQueryBuilder
-              {...defaultProps}
-              initialQuery="browser.name:firefox"
-              onChange={mockOnChange}
-            />,
-            {organization: {features: ['search-query-builder-wildcard-operators']}}
-          );
-
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('is')
-          ).toBeInTheDocument();
-
-          await userEvent.click(
-            screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-          );
-          await userEvent.click(screen.getByRole('option', {name: 'ends with'}));
-
-          // Token should have leading wildcard
-          expect(
-            screen.getByRole('row', {name: 'browser.name:*firefox'})
-          ).toBeInTheDocument();
-
-          // Should now have "ends with" label
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('ends with')
-          ).toBeInTheDocument();
-
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalledWith(
-              'browser.name:*firefox',
-              expect.anything()
-            );
-          });
-
-          expect(mockOnChange).toHaveBeenCalledTimes(1);
-        });
-      });
-
-      describe('multiple values', function () {
-        it('adds leading wildcard to each value', async function () {
-          const mockOnChange = jest.fn();
-          render(
-            <SearchQueryBuilder
-              {...defaultProps}
-              initialQuery="browser.name:[firefox,chrome]"
-              onChange={mockOnChange}
-            />,
-            {organization: {features: ['search-query-builder-wildcard-operators']}}
-          );
-
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('is')
-          ).toBeInTheDocument();
-
-          await userEvent.click(
-            screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-          );
-          await userEvent.click(screen.getByRole('option', {name: 'ends with'}));
-
-          // Token should have leading wildcard on each value
-          expect(
-            screen.getByRole('row', {name: 'browser.name:[*firefox,*chrome]'})
-          ).toBeInTheDocument();
-
-          // Should now have "ends with" label
-          expect(
-            within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).getByText('ends with')
-          ).toBeInTheDocument();
-
-          await waitFor(() => {
-            expect(mockOnChange).toHaveBeenCalledWith(
-              'browser.name:[*firefox,*chrome]',
-              expect.anything()
-            );
-          });
-
-          expect(mockOnChange).toHaveBeenCalledTimes(1);
-        });
-      });
-    });
-
-    describe('rendering wildcarded values', function () {
-      describe('single value', function () {
-        it('renders content without asterisk', async function () {
-          const mockOnChange = jest.fn();
-          render(
-            <SearchQueryBuilder
-              {...defaultProps}
-              initialQuery="browser.name:*firefox*"
-              onChange={mockOnChange}
-            />,
-            {organization: {features: ['search-query-builder-wildcard-operators']}}
-          );
-
-          // ensure that we're rendering with wildcard value
-          // this is async because there's things going on in the background where some state updates are happening and RTL is complaining that we're not waiting for act's
-          expect(
-            await within(
-              screen.getByRole('button', {name: 'Edit operator for filter: browser.name'})
-            ).findByText('contains')
-          ).toBeInTheDocument();
-
-          expect(
-            within(screen.getByRole('row', {name: 'browser.name:*firefox*'})).getByText(
-              'firefox'
-            )
-          ).toBeInTheDocument();
-        });
-      });
-
-      describe('multiple values', function () {
-        describe('all values are wildcarded', function () {
-          it('renders content without asterisk', async function () {
-            const mockOnChange = jest.fn();
-            render(
-              <SearchQueryBuilder
-                {...defaultProps}
-                initialQuery="browser.name:[*firefox*,*chrome*,*random*value*]"
-                onChange={mockOnChange}
-              />,
-              {organization: {features: ['search-query-builder-wildcard-operators']}}
-            );
-
-            expect(
-              await within(
-                screen.getByRole('button', {
-                  name: 'Edit operator for filter: browser.name',
-                })
-              ).findByText('contains')
-            ).toBeInTheDocument();
-
-            expect(
-              within(
-                screen.getByRole('row', {
-                  name: 'browser.name:[*firefox*,*chrome*,*random*value*]',
-                })
-              ).getByText('firefox')
-            ).toBeInTheDocument();
-
-            expect(
-              within(
-                screen.getByRole('row', {
-                  name: 'browser.name:[*firefox*,*chrome*,*random*value*]',
-                })
-              ).getByText('chrome')
-            ).toBeInTheDocument();
-
-            expect(
-              within(
-                screen.getByRole('row', {
-                  name: 'browser.name:[*firefox*,*chrome*,*random*value*]',
-                })
-              ).getByText('random*value')
-            ).toBeInTheDocument();
-          });
-        });
-
-        describe('some values are wildcarded', function () {
-          it('renders content with asterisk', async function () {
-            const mockOnChange = jest.fn();
-            render(
-              <SearchQueryBuilder
-                {...defaultProps}
-                initialQuery="browser.name:[*firefox*,chrome]"
-                onChange={mockOnChange}
-              />,
-              {organization: {features: ['search-query-builder-wildcard-operators']}}
-            );
-
-            expect(
-              await within(
-                screen.getByRole('button', {
-                  name: 'Edit operator for filter: browser.name',
-                })
-              ).findByText('is')
-            ).toBeInTheDocument();
-
-            expect(
-              within(
-                screen.getByRole('row', {name: 'browser.name:[*firefox*,chrome]'})
-              ).getByText('*firefox*')
-            ).toBeInTheDocument();
-
-            expect(
-              within(
-                screen.getByRole('row', {name: 'browser.name:[*firefox*,chrome]'})
-              ).getByText('chrome')
-            ).toBeInTheDocument();
-          });
-        });
-      });
-    });
-  });
-
-  describe('replaceRawSearchKeys', function () {
-    it('should replace raw search keys with defined key:value', async function () {
-      render(
-        <SearchQueryBuilder
-          {...defaultProps}
-          initialQuery=""
-          replaceRawSearchKeys={['span.description']}
-        />,
-        {organization: {features: ['search-query-builder-raw-search-replacement']}}
-      );
-
-      await userEvent.type(screen.getByRole('textbox'), 'randomValue');
-
-      expect(
-        within(screen.getByRole('listbox')).getByText('span.description')
-      ).toBeInTheDocument();
-
-      await userEvent.click(
-        within(screen.getByRole('listbox')).getByText('span.description')
-      );
-
-      expect(
-        screen.getByRole('row', {name: 'span.description:randomValue'})
-      ).toBeInTheDocument();
-    });
-
-    it('can handle values with spaces', async function () {
-      render(
-        <SearchQueryBuilder
-          {...defaultProps}
-          initialQuery=""
-          replaceRawSearchKeys={['span.description']}
-        />,
-        {organization: {features: ['search-query-builder-raw-search-replacement']}}
-      );
-
-      await userEvent.type(screen.getByRole('textbox'), 'random value');
-
-      expect(
-        within(screen.getByRole('listbox')).getByText('span.description')
-      ).toBeInTheDocument();
-
-      await userEvent.click(
-        within(screen.getByRole('listbox')).getByText('span.description')
-      );
-
-      expect(
-        screen.getByRole('row', {name: 'span.description:"random value"'})
-      ).toBeInTheDocument();
-    });
-  });
-
-  describe('ask seer', function () {
-    it('renders ask seer button when user has given consent', async () => {
-      MockApiClient.addMockResponse({
-        url: '/organizations/org-slug/seer/setup-check/',
-        body: AutofixSetupFixture({
-          setupAcknowledgement: {
-            orgHasAcknowledged: true,
-            userHasAcknowledged: true,
-          },
-        }),
-      });
-
-      render(<SearchQueryBuilder {...defaultProps} enableAISearch />, {
-        organization: {
-          features: [
-            'gen-ai-features',
-            'gen-ai-explore-traces',
-            'gen-ai-explore-traces-consent-ui',
-          ],
-        },
-      });
-
-      await userEvent.click(getLastInput());
-
-      const askSeer = await screen.findByRole('option', {name: /Ask Seer/});
-      expect(askSeer).toBeInTheDocument();
-    });
-
-    it('renders enable ai button when user has not given consent', async () => {
-      MockApiClient.addMockResponse({
-        url: '/organizations/org-slug/seer/setup-check/',
-        body: AutofixSetupFixture({
-          setupAcknowledgement: {
-            orgHasAcknowledged: false,
-            userHasAcknowledged: false,
-          },
-        }),
-      });
-
-      render(<SearchQueryBuilder {...defaultProps} enableAISearch />, {
-        organization: {
-          features: [
-            'gen-ai-features',
-            'gen-ai-explore-traces',
-            'gen-ai-explore-traces-consent-ui',
-          ],
-        },
-      });
-
-      await userEvent.click(getLastInput());
-
-      const enableAi = await screen.findByText(/Enable Gen AI/);
-      expect(enableAi).toBeInTheDocument();
-    });
-
-    describe('user clicks on enable gen ai button', () => {
-      it('calls promptsUpdate', async () => {
-        const organization = OrganizationFixture({
-          slug: 'org-slug',
-          features: [
-            'gen-ai-features',
-            'gen-ai-explore-traces',
-            'gen-ai-explore-traces-consent-ui',
-          ],
-        });
-        const promptsUpdateMock = MockApiClient.addMockResponse({
-          url: `/organizations/${organization.slug}/prompts-activity/`,
-          method: 'PUT',
-        });
-        MockApiClient.addMockResponse({
-          url: `/organizations/${organization.slug}/seer/setup-check/`,
-          body: AutofixSetupFixture({
-            setupAcknowledgement: {
-              orgHasAcknowledged: false,
-              userHasAcknowledged: false,
-            },
-          }),
-        });
-
-        render(<SearchQueryBuilder {...defaultProps} enableAISearch />, {organization});
-
-        await userEvent.click(getLastInput());
-
-        const enableAi = await screen.findByRole('option', {name: /Enable Gen AI/});
-        expect(enableAi).toBeInTheDocument();
-
-        await userEvent.hover(enableAi);
-        await userEvent.keyboard('{enter}');
-
-        await waitFor(() => {
-          expect(promptsUpdateMock).toHaveBeenCalledWith(
-            expect.any(String),
-            expect.objectContaining({
-              data: {
-                feature: 'seer_autofix_setup_acknowledged',
-                organization_id: organization.id,
-                project_id: undefined,
-                status: 'dismissed',
-              },
-            })
-          );
-        });
-      });
-    });
-
-    describe('free text', function () {
-      it('displays ask seer button when searching free text', async function () {
-        const mockOnSearch = jest.fn();
-        MockApiClient.addMockResponse({
-          url: '/organizations/org-slug/seer/setup-check/',
-          body: AutofixSetupFixture({
-            setupAcknowledgement: {
-              orgHasAcknowledged: true,
-              userHasAcknowledged: true,
-            },
-          }),
-        });
-
-        render(
-          <SearchQueryBuilder {...defaultProps} enableAISearch onSearch={mockOnSearch} />,
-          {
-            organization: {
-              features: [
-                'gen-ai-features',
-                'gen-ai-explore-traces',
-                'gen-ai-explore-traces-consent-ui',
-              ],
-            },
-          }
-        );
-
-        await userEvent.click(getLastInput());
-        await userEvent.type(screen.getByRole('combobox'), 'some free text');
-
-        expect(screen.getByRole('option', {name: /Ask Seer/i})).toBeInTheDocument();
-      });
-    });
-
-    it('displays enable ai button when searching free text and user has not given consent', async function () {
-      const mockOnSearch = jest.fn();
-      MockApiClient.addMockResponse({
-        url: '/organizations/org-slug/seer/setup-check/',
-        body: AutofixSetupFixture({
-          setupAcknowledgement: {
-            orgHasAcknowledged: false,
-            userHasAcknowledged: false,
-          },
-        }),
-      });
-
-      render(
-        <SearchQueryBuilder {...defaultProps} enableAISearch onSearch={mockOnSearch} />,
-        {
-          organization: {
-            features: [
-              'gen-ai-features',
-              'gen-ai-explore-traces',
-              'gen-ai-explore-traces-consent-ui',
-            ],
-          },
-        }
-      );
-
-      await userEvent.click(getLastInput());
-      await userEvent.type(screen.getByRole('combobox'), 'some free text');
-
-      expect(screen.getByRole('option', {name: /Enable Gen AI/})).toBeInTheDocument();
     });
   });
 });

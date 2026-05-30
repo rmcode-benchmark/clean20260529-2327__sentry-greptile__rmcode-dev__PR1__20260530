@@ -25,11 +25,7 @@ import type {
 } from 'getsentry/types';
 import {PlanTier} from 'getsentry/types';
 import {hasAccessToSubscriptionOverview} from 'getsentry/utils/billing';
-import {
-  getCategoryInfoFromPlural,
-  isPartOfReservedBudget,
-  sortCategories,
-} from 'getsentry/utils/dataCategory';
+import {sortCategories} from 'getsentry/utils/dataCategory';
 import withPromotions from 'getsentry/utils/withPromotions';
 import ContactBillingMembers from 'getsentry/views/contactBillingMembers';
 import {openOnDemandBudgetEditModal} from 'getsentry/views/onDemandBudgets/editOnDemandButton';
@@ -202,30 +198,29 @@ function Overview({location, subscription, promotionData}: Props) {
         {sortCategories(subscription.categories)
           .filter(
             categoryHistory =>
-              !isPartOfReservedBudget(
-                categoryHistory.category,
-                subscription.reservedBudgets ?? []
-              )
+              !subscription.reservedBudgetCategories?.includes(categoryHistory.category)
           )
           .map(categoryHistory => {
             const category = categoryHistory.category;
-            const categoryInfo = getCategoryInfoFromPlural(category);
-
-            // The usageData does not include details for seat-based categories
+            // The usageData does not include details for seat-based categories.
+            // For now we will handle the monitor category specially
             let monitor_usage: number | undefined = 0;
-            if (categoryInfo?.tallyType === 'seat') {
-              monitor_usage = subscription.categories[category]?.usage;
+            if (category === DataCategory.MONITOR_SEATS) {
+              monitor_usage = subscription.categories.monitorSeats?.usage;
+            }
+            if (category === DataCategory.UPTIME) {
+              monitor_usage = subscription.categories.uptime?.usage;
             }
 
             if (
               category === DataCategory.SPANS_INDEXED &&
               !subscription.hadCustomDynamicSampling
             ) {
-              return null; // TODO(trial limits): DS enterprise trial should have a reserved budget too, but currently just has unlimited
+              return null; // TODO(data categories): DS enterprise trial should have a reserved budget too, but currently just has unlimited
             }
 
             const categoryTotals: BillingStatTotal =
-              categoryInfo?.tallyType === 'usage'
+              category !== DataCategory.MONITOR_SEATS && category !== DataCategory.UPTIME
                 ? usageData.totals[category]!
                 : {
                     accepted: monitor_usage ?? 0,
@@ -236,8 +231,9 @@ function Overview({location, subscription, promotionData}: Props) {
                     filtered: 0,
                     projected: 0,
                   };
+
             const eventTotals =
-              categoryInfo?.tallyType === 'usage'
+              category !== DataCategory.MONITOR_SEATS && category !== DataCategory.UPTIME
                 ? usageData.eventTotals?.[category]
                 : undefined;
 
@@ -259,7 +255,9 @@ function Overview({location, subscription, promotionData}: Props) {
                 trueForward={categoryHistory.trueForward}
                 softCapType={categoryHistory.softCapType}
                 disableTable={
-                  categoryInfo?.tallyType === 'seat' || displayMode === 'cost'
+                  category === DataCategory.MONITOR_SEATS ||
+                  category === DataCategory.UPTIME ||
+                  displayMode === 'cost'
                 }
                 subscription={subscription}
                 organization={organization}

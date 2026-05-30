@@ -1,17 +1,8 @@
-import {AutomationBuilderNumberInput} from 'sentry/components/workflowEngine/form/automationBuilderNumberInput';
-import {t, tct} from 'sentry/locale';
-import type {DataCondition} from 'sentry/types/workflowEngine/dataConditions';
-import {useAutomationBuilderErrorContext} from 'sentry/views/automations/components/automationBuilderErrorContext';
-import type {ValidateDataConditionProps} from 'sentry/views/automations/components/automationFormData';
+import AutomationBuilderNumberField from 'sentry/components/workflowEngine/form/automationBuilderNumberField';
+import {tct} from 'sentry/locale';
 import {useDataConditionNodeContext} from 'sentry/views/automations/components/dataConditionNodes';
 
-export function IssueOccurrencesDetails({condition}: {condition: DataCondition}) {
-  return tct('The issue has happened at least [value] times', {
-    value: condition.comparison.value,
-  });
-}
-
-export function IssueOccurrencesNode() {
+export default function IssueOccurrencesNode() {
   return tct('The issue has happened at least [value] times', {
     value: <ValueField />,
   });
@@ -19,28 +10,17 @@ export function IssueOccurrencesNode() {
 
 function ValueField() {
   const {condition, condition_id, onUpdate} = useDataConditionNodeContext();
-  const {removeError} = useAutomationBuilderErrorContext();
-
   return (
-    <AutomationBuilderNumberInput
+    <AutomationBuilderNumberField
       name={`${condition_id}.comparison.value`}
-      aria-label={t('Count')}
       value={condition.comparison.value}
       min={1}
       step={1}
-      onChange={(value: number) => {
-        onUpdate({comparison: {...condition.comparison, value}});
-        removeError(condition.id);
+      onChange={(value: string) => {
+        onUpdate({
+          value,
+        });
       }}
     />
   );
-}
-
-export function validateIssueOccurrencesCondition({
-  condition,
-}: ValidateDataConditionProps): string | undefined {
-  if (!condition.comparison.value) {
-    return t('You must specify a value.');
-  }
-  return undefined;
 }

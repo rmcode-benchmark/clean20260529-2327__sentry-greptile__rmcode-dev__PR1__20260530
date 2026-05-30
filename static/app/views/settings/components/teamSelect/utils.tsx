@@ -4,12 +4,12 @@ import debounce from 'lodash/debounce';
 
 import {openCreateTeamModal} from 'sentry/actionCreators/modal';
 import {hasEveryAccess} from 'sentry/components/acl/access';
-import {Link} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import DropdownAutoComplete from 'sentry/components/dropdownAutoComplete';
 import type {Item, ItemsBeforeFilter} from 'sentry/components/dropdownAutoComplete/types';
 import DropdownButton from 'sentry/components/dropdownButton';
 import {TeamBadge} from 'sentry/components/idBadge/teamBadge';
+import Link from 'sentry/components/links/link';
 import {DEFAULT_DEBOUNCE_DURATION} from 'sentry/constants';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
@@ -123,10 +123,10 @@ function getDropdownOption({
   const isIdpProvisioned = isAddingTeamToMember && team.flags['idp:provisioned'];
   const label = isIdpProvisioned ? (
     <Tooltip title={getButtonHelpText(isIdpProvisioned)}>
-      <DisabledTeam avatarSize={18} team={team} />
+      <DropdownTeamBadgeDisabled avatarSize={18} team={team} />
     </Tooltip>
   ) : (
-    <TeamBadge avatarSize={18} team={team} />
+    <DropdownTeamBadge avatarSize={18} team={team} />
   );
 
   return {
@@ -158,7 +158,7 @@ function renderDropdownHeader({
         title={t('You must be a Org Owner/Manager to create teams')}
         position="top"
       >
-        <CreateTeamLink
+        <StyledCreateTeamLink
           to="#create-team"
           disabled={!canCreateTeam}
           onClick={(e: React.MouseEvent) => {
@@ -173,13 +173,22 @@ function renderDropdownHeader({
           }}
         >
           {t('Create Team')}
-        </CreateTeamLink>
+        </StyledCreateTeamLink>
       </Tooltip>
     </StyledTeamsLabel>
   );
 }
 
-const DisabledTeam = styled(TeamBadge)`
+const DropdownTeamBadge = styled(TeamBadge)`
+  font-weight: ${p => p.theme.fontWeightNormal};
+  font-size: ${p => p.theme.fontSizeMedium};
+  text-transform: none;
+`;
+
+const DropdownTeamBadgeDisabled = styled(TeamBadge)`
+  font-weight: ${p => p.theme.fontWeightNormal};
+  font-size: ${p => p.theme.fontSizeMedium};
+  text-transform: none;
   filter: grayscale(1);
 `;
 
@@ -192,8 +201,9 @@ const StyledTeamsLabel = styled('div')`
   text-transform: uppercase;
 `;
 
-const CreateTeamLink = styled(Link)`
+const StyledCreateTeamLink = styled(Link)`
   float: right;
+  text-transform: none;
   ${p =>
     p.disabled &&
     css`

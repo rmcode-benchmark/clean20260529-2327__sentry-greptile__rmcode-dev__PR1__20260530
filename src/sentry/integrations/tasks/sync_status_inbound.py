@@ -193,10 +193,8 @@ def group_was_recently_resolved(group: Group) -> bool:
     default_retry_delay=60 * 5,
     max_retries=5,
     silo_mode=SiloMode.REGION,
-    processing_deadline_duration=150,
     taskworker_config=TaskworkerConfig(
         namespace=integrations_tasks,
-        processing_deadline_duration=30,
         retry=Retry(
             times=5,
             delay=60 * 5,
@@ -253,7 +251,7 @@ def sync_status_inbound(
         # which would override the in-app resolution
         resolvable_groups = []
         for group in affected_groups:
-            if not group_was_recently_resolved(group) and group.status == GroupStatus.UNRESOLVED:
+            if not group_was_recently_resolved(group):
                 resolvable_groups.append(group)
 
         if not resolvable_groups:

@@ -22,10 +22,10 @@ export const useLogsPageData = _useLogsPageData;
 export function LogsPageDataProvider({children}: {children: React.ReactNode}) {
   const organization = useOrganization();
   const feature = organization.features.includes('ourlogs-enabled');
-  const infiniteScroll = organization.features.includes('ourlogs-infinite-scroll');
-  const logsQueryResult = useLogsQuery({disabled: infiniteScroll || !feature});
+  const liveRefresh = organization.features.includes('ourlogs-live-refresh');
+  const logsQueryResult = useLogsQuery({disabled: liveRefresh || !feature});
   const infiniteLogsQueryResult = useInfiniteLogsQuery({
-    disabled: !infiniteScroll || !feature,
+    disabled: !liveRefresh || !feature,
   });
   const value = useMemo(() => {
     return {
@@ -37,9 +37,7 @@ export function LogsPageDataProvider({children}: {children: React.ReactNode}) {
 }
 
 export function useLogsPageDataQueryResult() {
-  const hasInfiniteFeature = useOrganization().features.includes(
-    'ourlogs-infinite-scroll'
-  );
+  const hasInfiniteFeature = useOrganization().features.includes('ourlogs-live-refresh');
   const pageData = useLogsPageData();
   return hasInfiniteFeature ? pageData.infiniteLogsQueryResult : pageData.logsQueryResult;
 }

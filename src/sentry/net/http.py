@@ -15,7 +15,6 @@ from urllib3.connectionpool import connection_from_url as _connection_from_url
 from urllib3.exceptions import ConnectTimeoutError, NewConnectionError
 from urllib3.poolmanager import PoolManager
 from urllib3.util.connection import _set_socket_options
-from urllib3.util.timeout import _DEFAULT_TIMEOUT
 
 from sentry import VERSION as SENTRY_VERSION
 from sentry.net.socket import safe_create_connection
@@ -236,7 +235,7 @@ class UnixHTTPConnection(HTTPConnection):
         # If provided, set socket level options before connecting.
         _set_socket_options(sock, self.socket_options)
 
-        if self.timeout is not _DEFAULT_TIMEOUT:
+        if self.timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:  # type: ignore[attr-defined]
             sock.settimeout(self.timeout)
         sock.connect(self.socket_path)
         return sock

@@ -135,17 +135,17 @@ const StyledTag = styled(Tag)`
 
 const Title = styled('label')`
   font-weight: 600;
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   margin: 0;
 `;
 
 const LargeTitle = styled(Title)`
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   line-height: normal;
 `;
 
 const Description = styled(TextBlock)`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   color: ${p => p.theme.subText};
   margin: 0;
 `;

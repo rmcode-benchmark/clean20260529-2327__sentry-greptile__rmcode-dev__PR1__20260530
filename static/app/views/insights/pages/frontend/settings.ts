@@ -2,13 +2,15 @@ import {frontend} from 'sentry/data/platformCategories';
 import {t} from 'sentry/locale';
 import type {PlatformKey} from 'sentry/types/project';
 import type {ValidSort} from 'sentry/views/insights/pages/frontend/frontendOverviewTable';
-import {ModuleName, type SpanProperty} from 'sentry/views/insights/types';
+import {type EAPSpanProperty, ModuleName} from 'sentry/views/insights/types';
 
 export const FRONTEND_LANDING_SUB_PATH = 'frontend';
 export const FRONTEND_LANDING_TITLE = t('Frontend');
 export const FRONTEND_SIDEBAR_LABEL = t('Frontend');
 
 export const EAP_OVERVIEW_PAGE_ALLOWED_OPS = [
+  'pageload',
+  'navigation',
   'ui.render',
   'interaction',
   'ui.interaction',
@@ -42,11 +44,6 @@ export const FRONTEND_PLATFORMS: PlatformKey[] = frontend.filter(
 );
 
 export const DEFAULT_SORT: ValidSort = {
-  field: 'sum_if(span.duration,is_transaction,true)' satisfies SpanProperty,
+  field: 'sum_if(span.duration,is_transaction,true)' satisfies EAPSpanProperty,
   kind: 'desc',
 };
-
-export const PAGE_SPAN_OPS = ['all', 'pageload', 'navigation'] as const;
-export type PageSpanOps = (typeof PAGE_SPAN_OPS)[number];
-export const DEFAULT_SPAN_OP_SELECTION: PageSpanOps = 'all';
-export const SPAN_OP_QUERY_PARAM = 'span.op';

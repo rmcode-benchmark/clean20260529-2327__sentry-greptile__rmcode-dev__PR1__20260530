@@ -2,11 +2,11 @@ import {lazy, Suspense, useMemo} from 'react';
 import styled from '@emotion/styled';
 
 import {TRACE_WATERFALL_PREFERENCES_KEY} from 'sentry/components/events/interfaces/performance/utils';
-import {getEventTimestampInSeconds} from 'sentry/components/events/interfaces/utils';
 import type {Event} from 'sentry/types/event';
 import type {Organization} from 'sentry/types/organization';
 import {useIssuesTraceTree} from 'sentry/views/performance/newTraceDetails/traceApi/useIssuesTraceTree';
 import {useTrace} from 'sentry/views/performance/newTraceDetails/traceApi/useTrace';
+import {useTraceMeta} from 'sentry/views/performance/newTraceDetails/traceApi/useTraceMeta';
 import {useTraceRootEvent} from 'sentry/views/performance/newTraceDetails/traceApi/useTraceRootEvent';
 import {
   getInitialTracePreferences,
@@ -30,6 +30,7 @@ const DEFAULT_ISSUE_DETAILS_TRACE_VIEW_PREFERENCES: TracePreferencesState = {
       'drawer left': 0.33,
       'drawer right': 0.33,
       'drawer bottom': 0.4,
+      'trace grid height': 150,
     },
     layoutOptions: [],
   },
@@ -75,14 +76,15 @@ function SpanEvidenceTraceViewImpl({
   organization,
   traceId,
 }: SpanEvidenceTraceViewProps) {
-  const timestamp = getEventTimestampInSeconds(event);
+  const timestamp = new Date(event.dateReceived).getTime() / 1e3;
 
   const trace = useTrace({
     timestamp,
     traceSlug: traceId,
     limit: 10000,
   });
-  const tree = useIssuesTraceTree({trace, replay: null});
+  const meta = useTraceMeta([{traceSlug: traceId, timestamp}]);
+  const tree = useIssuesTraceTree({trace, meta, replay: null});
 
   const rootEventResults = useTraceRootEvent({
     tree,
@@ -109,6 +111,7 @@ function SpanEvidenceTraceViewImpl({
           rootEventResults={rootEventResults}
           organization={organization}
           traceEventView={traceEventView}
+          meta={meta}
           source="issues"
           replay={null}
           event={event}

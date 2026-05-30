@@ -2,7 +2,6 @@ from functools import cached_property
 from unittest.mock import Mock, patch, sentinel
 
 from django.test import RequestFactory, override_settings
-from django.urls.base import resolve
 from rest_framework.permissions import AllowAny
 
 from sentry.api.base import Endpoint
@@ -33,7 +32,6 @@ class RequestTimingMiddlewareTest(TestCase):
     def test_records_default_api_metrics(self, incr):
         request = self.factory.get("/")
         request._view_path = "/"
-        request.resolver_match = resolve("/")
         response = Mock(status_code=200)
 
         self.middleware.process_response(request, response)
@@ -46,7 +44,6 @@ class RequestTimingMiddlewareTest(TestCase):
                 "status_code": 200,
                 "ui_request": False,
                 "rate_limit_type": None,
-                "url_name": "sentry",
             },
             skip_internal=False,
         )
@@ -58,7 +55,6 @@ class RequestTimingMiddlewareTest(TestCase):
         test_endpoint = RateLimitedEndpoint.as_view()
         request = self.factory.get("/")
         request._view_path = "/"
-        request.resolver_match = resolve("/")
         response = Mock(status_code=429)
 
         rate_limit_middleware.process_view(request, test_endpoint, [], {})
@@ -72,7 +68,6 @@ class RequestTimingMiddlewareTest(TestCase):
                 "status_code": 429,
                 "ui_request": False,
                 "rate_limit_type": "fixed_window",
-                "url_name": "sentry",
             },
             skip_internal=False,
         )
@@ -81,8 +76,6 @@ class RequestTimingMiddlewareTest(TestCase):
     def test_records_ui_request(self, incr):
         request = self.factory.get("/")
         request._view_path = "/"
-        # mypy says this is nullable so we test that path here too
-        # request.resolver_match = resolve("/")
         response = Mock(status_code=200)
         request.COOKIES = {"foo": "bar"}
         request.auth = None
@@ -92,12 +85,6 @@ class RequestTimingMiddlewareTest(TestCase):
         incr.assert_called_with(
             "view.response",
             instance=request._view_path,
-            tags={
-                "method": "GET",
-                "status_code": 200,
-                "ui_request": True,
-                "rate_limit_type": None,
-                "url_name": "unreachable-unknown",
-            },
+            tags={"method": "GET", "status_code": 200, "ui_request": True, "rate_limit_type": None},
             skip_internal=False,
         )

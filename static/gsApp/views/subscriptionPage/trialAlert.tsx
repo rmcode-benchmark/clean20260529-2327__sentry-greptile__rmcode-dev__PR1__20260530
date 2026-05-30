@@ -56,7 +56,7 @@ function TrialAlert({organization, subscription}: Props) {
         </TrialInfo>
 
         {subscription.canSelfServe && (
-          <ButtonWrapper gap="none">
+          <ButtonWrapper>
             <Button
               size="sm"
               data-test-id="trial-details-button"
@@ -85,7 +85,7 @@ const TrialHeader = styled('div')`
 
 const StyledHeading = styled('span')`
   font-weight: 400;
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
 `;
 
 const StyledSubText = styled(TextBlock)`

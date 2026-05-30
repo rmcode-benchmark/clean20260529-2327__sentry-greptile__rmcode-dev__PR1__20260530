@@ -1,13 +1,12 @@
 import {type ChangeEvent, useEffect, useState} from 'react';
 import styled from '@emotion/styled';
 
-import Confirm from 'sentry/components/confirm';
 import {Button} from 'sentry/components/core/button';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
 import {InputGroup} from 'sentry/components/core/input/inputGroup';
-import InteractionStateLayer from 'sentry/components/core/interactionStateLayer';
 import {TextArea} from 'sentry/components/core/textarea';
 import type {RepoSettings} from 'sentry/components/events/autofix/types';
+import InteractionStateLayer from 'sentry/components/interactionStateLayer';
 import QuestionTooltip from 'sentry/components/questionTooltip';
 import {
   IconChevron as IconExpandToggle,
@@ -15,7 +14,7 @@ import {
   IconCommit,
   IconDelete,
 } from 'sentry/icons';
-import {t, tct} from 'sentry/locale';
+import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {Repository} from 'sentry/types/integrations';
 
@@ -88,7 +87,7 @@ export function AutofixRepoItem({repo, onRemove, settings, onSettingsChange}: Pr
       <SelectedRepoHeader role="button" onClick={toggleExpanded}>
         <InteractionStateLayer />
         <RepoNameAndExpandToggle>
-          <StyledIconExpandToggle direction={isExpanded ? 'up' : 'down'} size="xs" />
+          <StyledIconExpandToggle direction={isExpanded ? 'down' : 'right'} size="xs" />
           <RepoInfoWrapper>
             <RepoName>{repo.name}</RepoName>
           </RepoInfoWrapper>
@@ -146,30 +145,23 @@ export function AutofixRepoItem({repo, onRemove, settings, onSettingsChange}: Pr
               </SettingsGroup>
 
               <SettingsGroup>
-                <BranchInputLabel>{t('Context for Seer')}</BranchInputLabel>
+                <BranchInputLabel>{t('Instructions for Seer')}</BranchInputLabel>
                 <StyledTextArea
                   value={instructionsValue}
                   onChange={handleInstructionsChange}
                   placeholder={t(
-                    'Add any general context or instructions to help Seer understand this repository...'
+                    'Any special instructions for Seer in this repository...'
                   )}
                   rows={3}
                 />
               </SettingsGroup>
             </div>
             <FormActions>
-              <Confirm
-                onConfirm={onRemove}
-                message={tct('Are you sure you want to remove [repo] from Seer?', {
-                  repo: <strong>{repo.name}</strong>,
-                })}
-              >
-                <Button size="sm" icon={<IconDelete />}>
-                  {t('Remove Repository')}
-                </Button>
-              </Confirm>
+              <Button size="sm" icon={<IconDelete />} onClick={onRemove}>
+                {t('Remove Repository')}
+              </Button>
               {isDirty && (
-                <ButtonBar gap="xs">
+                <ButtonBar gap={0.5}>
                   <Button size="sm" onClick={cancelChanges}>
                     {t('Cancel')}
                   </Button>
@@ -207,7 +199,7 @@ const RepoName = styled('div')`
 `;
 
 const RepoProvider = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
   margin-top: ${space(0.25)};
 `;
@@ -231,7 +223,7 @@ const SettingsGroup = styled('div')`
 const BranchInputLabel = styled('label')`
   display: flex;
   align-items: center;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   color: ${p => p.theme.gray500};
   margin-bottom: ${space(0.5)};
   gap: ${space(0.5)};
@@ -258,8 +250,23 @@ const FormActions = styled('div')`
 
 const StyledTextArea = styled(TextArea)`
   width: 100%;
+  padding: ${space(1)};
+  border: 1px solid ${p => p.theme.border};
+  border-radius: ${p => p.theme.borderRadius};
+  font-size: ${p => p.theme.fontSizeMedium};
+  background-color: ${p => p.theme.background};
   resize: vertical;
   min-height: 80px;
+
+  &:focus {
+    outline: none;
+    border-color: ${p => p.theme.focus};
+    box-shadow: ${p => p.theme.focusBorder};
+  }
+
+  &::placeholder {
+    color: ${p => p.theme.gray300};
+  }
 `;
 
 const ClearButton = styled(Button)`

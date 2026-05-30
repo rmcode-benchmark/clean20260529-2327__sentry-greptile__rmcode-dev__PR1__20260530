@@ -46,7 +46,6 @@ import {
 } from 'sentry/utils/discover/fields';
 import type {DiscoverDatasets} from 'sentry/utils/discover/types';
 import {decodeList, decodeScalar} from 'sentry/utils/queryString';
-import {ellipsize} from 'sentry/utils/string/ellipsize';
 
 import EventsRequest from './eventsRequest';
 
@@ -275,7 +274,7 @@ class Chart extends Component<ChartProps, State> {
     const chartColors = timeseriesData.length
       ? (colors?.slice(0, series.length) ??
         this.props.theme.chart
-          .getColorPalette(timeseriesData.length - 1 - (hasOther ? 1 : 0))
+          .getColorPalette(timeseriesData.length - 2 - (hasOther ? 1 : 0))
           .slice())
       : undefined;
     if (chartColors?.length && hasOther) {
@@ -554,8 +553,11 @@ class EventsChart extends Component<EventsChartProps> {
     const forceChartType = decodeScalar(location.query.forceChartType);
     const yAxisArray = decodeList(yAxis);
     const yAxisSeriesNames = yAxisArray.map(name => {
-      const yAxisLabel = name && isEquation(name) ? getEquation(name) : name;
-      return ellipsize(yAxisLabel, 60);
+      let yAxisLabel = name && isEquation(name) ? getEquation(name) : name;
+      if (yAxisLabel && yAxisLabel.length > 60) {
+        yAxisLabel = yAxisLabel.substring(0, 60) + '...';
+      }
+      return yAxisLabel;
     });
 
     const previousSeriesNames = previousName

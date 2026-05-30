@@ -130,7 +130,7 @@ function RepositoryProjectPathConfigForm({
   }
 
   const initialData = {
-    defaultBranch: 'main',
+    defaultBranch: 'master',
     stackRoot: '',
     sourceRoot: '',
     repositoryId: existingConfig?.repoId,

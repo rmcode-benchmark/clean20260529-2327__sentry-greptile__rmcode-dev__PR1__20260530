@@ -14,7 +14,7 @@ type Options = {
  */
 export function mentionStyle({theme, minHeight, streamlined}: Options) {
   const inputProps = {
-    fontSize: theme.fontSize.md,
+    fontSize: theme.fontSizeMedium,
     padding: `${space(1.5)} ${space(2)}`,
     outline: 0,
     border: 0,
@@ -23,7 +23,7 @@ export function mentionStyle({theme, minHeight, streamlined}: Options) {
   };
 
   const streamlinedInputProps = {
-    fontSize: theme.fontSize.md,
+    fontSize: theme.fontSizeMedium,
     padding: `${space(1)} ${space(1.5)}`,
     outline: 0,
     border: `1px solid ${theme.border}`,
@@ -79,7 +79,7 @@ export function mentionStyle({theme, minHeight, streamlined}: Options) {
         backgroundColor: `${theme.background}`,
         border: '1px solid rgba(0,0,0,0.15)',
         borderRadius: theme.borderRadius,
-        fontSize: theme.fontSize.sm,
+        fontSize: theme.fontSizeSmall,
         padding: space(0.5),
       },
 

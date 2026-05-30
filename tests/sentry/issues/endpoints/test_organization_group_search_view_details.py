@@ -114,6 +114,7 @@ class OrganizationGroupSearchViewsGetTest(BaseGSVTestCase):
             kwargs={"organization_id_or_slug": self.organization.slug, "view_id": self.view_id},
         )
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_get_view_success(self) -> None:
         response = self.client.get(self.url)
         assert response.status_code == 200
@@ -124,6 +125,7 @@ class OrganizationGroupSearchViewsGetTest(BaseGSVTestCase):
         assert response.data["name"] == view.name
         assert response.data["query"] == view.query
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_get_nonexistent_view(self) -> None:
         nonexistent_id = "37373"
         url = reverse(
@@ -134,6 +136,7 @@ class OrganizationGroupSearchViewsGetTest(BaseGSVTestCase):
         response = self.client.get(url)
         assert response.status_code == 404
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_get_view_from_another_user(self) -> None:
         # Get a view ID from user_two
         view_id = str(self.base_data["user_two_views"][0].id)
@@ -148,6 +151,10 @@ class OrganizationGroupSearchViewsGetTest(BaseGSVTestCase):
         assert response.data["id"] == view_id
         assert response.data["name"] == view.name
         assert response.data["query"] == view.query
+
+    def test_get_without_feature_flag(self) -> None:
+        response = self.client.get(self.url)
+        assert response.status_code == 404
 
 
 class OrganizationGroupSearchViewsDeleteTest(BaseGSVTestCase):
@@ -178,6 +185,7 @@ class OrganizationGroupSearchViewsDeleteTest(BaseGSVTestCase):
             },
         )
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_delete_view_success(self) -> None:
         response = self.client.delete(self.user_2_view_url)
         assert response.status_code == 204
@@ -191,6 +199,7 @@ class OrganizationGroupSearchViewsDeleteTest(BaseGSVTestCase):
         )
         assert remaining_views.count() == 1
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_delete_nonexistent_view(self) -> None:
         """Test that attempting to delete a nonexistent view returns 404."""
         nonexistent_id = "99999"
@@ -202,6 +211,7 @@ class OrganizationGroupSearchViewsDeleteTest(BaseGSVTestCase):
         response = self.client.delete(url)
         assert response.status_code == 404
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_delete_view_from_another_user(self) -> None:
         view_id = str(self.base_data["user_one_views"][0].id)
         url = reverse(
@@ -215,6 +225,7 @@ class OrganizationGroupSearchViewsDeleteTest(BaseGSVTestCase):
         # Verify the view still exists (this will error out if not)
         GroupSearchView.objects.get(id=view_id)
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_superuser_can_delete_view_from_another_user(self) -> None:
         # User 1 is a superuser
         self.login_as(user=self.user)
@@ -231,6 +242,7 @@ class OrganizationGroupSearchViewsDeleteTest(BaseGSVTestCase):
 
         assert not GroupSearchView.objects.filter(id=self.user_2_view_id).exists()
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_org_write_can_delete_view_from_another_user(self) -> None:
         self.admin_user = self.create_user()
         self.create_member(
@@ -245,6 +257,7 @@ class OrganizationGroupSearchViewsDeleteTest(BaseGSVTestCase):
 
         assert not GroupSearchView.objects.filter(id=self.user_1_view_id).exists()
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_delete_first_starred_view_decrements_succeeding_positions(self) -> None:
         # Delete the first view
         self.login_as(user=self.user)
@@ -274,6 +287,7 @@ class OrganizationGroupSearchViewsDeleteTest(BaseGSVTestCase):
             assert self.base_data["user_one_views"][idx + 1].id == gsv.group_search_view.id
             assert gsv.position == idx
 
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_delete_last_starred_view_does_not_decrement_positions(self) -> None:
         # Delete the last view
         self.login_as(user=self.user)
@@ -301,6 +315,12 @@ class OrganizationGroupSearchViewsDeleteTest(BaseGSVTestCase):
             )
         ):
             assert self.base_data["user_one_views"][idx].id == gsv.group_search_view.id
+
+    def test_delete_without_feature_flag(self) -> None:
+        response = self.client.delete(self.user_1_view_url)
+        assert response.status_code == 404
+
+        GroupSearchView.objects.get(id=self.user_2_view_id)
 
 
 class OrganizationGroupSearchViewsDeleteStarredAndLastVisitedTest(APITestCase):
@@ -361,7 +381,7 @@ class OrganizationGroupSearchViewsDeleteStarredAndLastVisitedTest(APITestCase):
             last_visited=timezone.now(),
         )
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_cannot_delete_other_users_view(self) -> None:
         self.login_as(user=self.user_2)
 
@@ -377,7 +397,7 @@ class OrganizationGroupSearchViewsDeleteStarredAndLastVisitedTest(APITestCase):
 
         assert response.status_code == 403
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_deleting_my_view_deletes_from_others_starred_views(self) -> None:
         self.login_as(user=self.user_1)
 
@@ -427,7 +447,9 @@ class OrganizationGroupSearchViewsPutTest(BaseGSVTestCase):
             kwargs={"organization_id_or_slug": self.organization.slug, "view_id": self.view_id},
         )
 
-    @with_feature({"organizations:issue-views": True, "organizations:global-views": True})
+    @with_feature(
+        {"organizations:issue-stream-custom-views": True, "organizations:global-views": True}
+    )
     def test_put_view_success(self) -> None:
         data = {
             "name": "Updated View Name",
@@ -452,7 +474,7 @@ class OrganizationGroupSearchViewsPutTest(BaseGSVTestCase):
         assert updated_view.environments == ["production"]
         assert updated_view.time_filters == {"period": "14d"}
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_put_update_projects(self) -> None:
         second_project = self.create_project(organization=self.organization)
@@ -476,7 +498,7 @@ class OrganizationGroupSearchViewsPutTest(BaseGSVTestCase):
             second_project.id,
         }
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     @with_feature({"organizations:global-views": True})
     def test_put_all_projects(self) -> None:
         data = {
@@ -496,7 +518,7 @@ class OrganizationGroupSearchViewsPutTest(BaseGSVTestCase):
         assert updated_view.is_all_projects is True
         assert updated_view.projects.count() == 0
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_put_nonexistent_view(self) -> None:
         nonexistent_id = "99999"
         url = reverse(
@@ -515,7 +537,7 @@ class OrganizationGroupSearchViewsPutTest(BaseGSVTestCase):
         response = self.client.put(url, data=data)
         assert response.status_code == 404
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_put_view_from_another_user(self) -> None:
         # Log in as user 3 (no access to user_two's views)
         self.login_as(user=self.user_3)
@@ -537,7 +559,7 @@ class OrganizationGroupSearchViewsPutTest(BaseGSVTestCase):
         response = self.client.put(url, data=data)
         assert response.status_code == 403
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_put_view_from_another_user_superuser(self) -> None:
         # User 1 is a superuser
         self.login_as(user=self.user)
@@ -563,7 +585,7 @@ class OrganizationGroupSearchViewsPutTest(BaseGSVTestCase):
         updated_view = GroupSearchView.objects.get(id=self.view_id)
         assert updated_view.name == "Updated View"
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_put_invalid_data(self) -> None:
         # Missing required timeFilters
         data = {
@@ -576,7 +598,7 @@ class OrganizationGroupSearchViewsPutTest(BaseGSVTestCase):
         response = self.client.put(self.url, data=data)
         assert response.status_code == 400
 
-    @with_feature({"organizations:issue-views": True})
+    @with_feature({"organizations:issue-stream-custom-views": True})
     def test_put_multi_project_without_global_views(self) -> None:
         second_project = self.create_project(organization=self.organization)
 

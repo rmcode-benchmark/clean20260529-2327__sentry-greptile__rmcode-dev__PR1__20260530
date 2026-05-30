@@ -16,11 +16,11 @@ import {BarChart, type BarChartSeries} from 'sentry/components/charts/barChart';
 import Legend from 'sentry/components/charts/components/legend';
 import {defaultFormatAxisLabel} from 'sentry/components/charts/components/tooltip';
 import {useChartZoom} from 'sentry/components/charts/useChartZoom';
+import {Flex} from 'sentry/components/container/flex';
 import {Alert} from 'sentry/components/core/alert';
 import {Button, type ButtonProps} from 'sentry/components/core/button';
-import {Flex} from 'sentry/components/core/layout';
 import {useFlagSeries} from 'sentry/components/featureFlags/hooks/useFlagSeries';
-import {useFlagsInEvent} from 'sentry/components/featureFlags/hooks/useFlagsInEvent';
+import {useIntersectionFlags} from 'sentry/components/featureFlags/hooks/useIntersectionFlags';
 import Placeholder from 'sentry/components/placeholder';
 import {t, tct, tn} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
@@ -159,7 +159,7 @@ export function EventGraph({
     },
   });
 
-  const shouldShowBubbles = showReleasesAs !== 'line';
+  const hasReleaseBubblesSeries = organization.features.includes('release-bubbles-ui');
 
   const noQueryEventView = eventView.clone();
   noQueryEventView.query = `issue:${group.shortId}`;
@@ -269,17 +269,14 @@ export function EventGraph({
       staleTime: 0,
     }
   );
-  const {flags} = useFlagsInEvent({
-    eventId: event?.id,
-    groupId: group.id,
-    group,
+
+  const {data: flags} = useIntersectionFlags({
     event,
     query: {
       start: eventView.start,
       end: eventView.end,
-      statsPeriod: eventView.statsPeriod,
+      period: eventView.statsPeriod,
     },
-    enabled: Boolean(event?.id && group.id),
   });
 
   const handleReleaseLineClick = useCallback(
@@ -297,13 +294,13 @@ export function EventGraph({
 
   const releaseSeries = useReleaseMarkLineSeries({
     group,
-    releases: shouldShowBubbles ? [] : releases,
+    releases: hasReleaseBubblesSeries && showReleasesAs !== 'line' ? [] : releases,
     onReleaseClick: handleReleaseLineClick,
   });
 
   const flagSeries = useFlagSeries({
     event,
-    flags: shouldShowBubbles ? [] : flags,
+    flags,
   });
 
   // Do some manipulation to make sure the release buckets match up to `eventSeries`
@@ -323,7 +320,6 @@ export function EventGraph({
     releaseBubbleGrid,
   } = useReleaseBubbles({
     chartId: EVENT_GRAPH_WIDGET_ID,
-    eventId: event?.id,
     alignInMiddle: true,
     legendSelected: legendSelected.Releases,
     desiredBuckets: eventSeries.length,
@@ -332,8 +328,7 @@ export function EventGraph({
       lastEventSeriesTimestamp && eventSeriesInterval
         ? lastEventSeriesTimestamp + eventSeriesInterval
         : undefined,
-    releases: shouldShowBubbles ? releases : [],
-    flags: shouldShowBubbles ? flags : [],
+    releases: hasReleaseBubblesSeries && showReleasesAs !== 'line' ? releases : [],
     projects: eventView.project,
     environments: eventView.environment,
     datetime: {
@@ -377,7 +372,7 @@ export function EventGraph({
         itemStyle: {
           borderRadius: [2, 2, 0, 0],
           borderColor: theme.translucentGray200,
-          color: isUnfilteredStatsEnabled ? theme.purple300 : translucentGray300,
+          color: theme.purple200,
         },
         data: userSeries,
         animation: false,
@@ -403,7 +398,7 @@ export function EventGraph({
         itemStyle: {
           borderRadius: [2, 2, 0, 0],
           borderColor: theme.translucentGray200,
-          color: isUnfilteredStatsEnabled ? theme.purple300 : translucentGray300,
+          color: isUnfilteredStatsEnabled ? theme.purple200 : translucentGray300,
         },
         data: eventSeries,
         animation: false,
@@ -467,7 +462,7 @@ export function EventGraph({
 
   if (error) {
     return (
-      <GraphAlert type="error" {...styleProps}>
+      <GraphAlert type="error" showIcon {...styleProps}>
         {tct('Graph Query Error: [message]', {message: error.message})}
       </GraphAlert>
     );
@@ -611,7 +606,7 @@ function GraphButton({
       aria-label={`${t('Toggle graph series')} - ${label}`}
       {...props}
     >
-      <Flex direction="column">
+      <Flex column>
         <Label isActive={isActive}>{label}</Label>
         <Count isActive={isActive}>{count ? formatAbbreviatedNumber(count) : '-'}</Count>
       </Flex>
@@ -631,7 +626,7 @@ const SummaryContainer = styled('div')`
   margin: ${space(1)} ${space(0.25)} ${space(1)} 0;
   border-radius: ${p => p.theme.borderRadius} 0 0 ${p => p.theme.borderRadius};
 
-  @media (min-width: ${p => p.theme.breakpoints.xl}) {
+  @media (min-width: ${p => p.theme.breakpoints.xlarge}) {
     margin: ${space(1)} ${space(1)} ${space(1)} 0;
   }
 `;
@@ -660,7 +655,7 @@ const CalloutButton = withChonk(
 
 const Label = styled('div')<{isActive: boolean}>`
   line-height: 1;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => (p.isActive ? p.theme.purple400 : p.theme.subText)};
 `;
 
@@ -668,7 +663,7 @@ const Count = styled('div')<{isActive: boolean}>`
   line-height: 1;
   margin-top: ${space(0.5)};
   font-size: 20px;
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-weight: ${p => p.theme.fontWeightNormal};
   color: ${p => (p.isActive ? p.theme.purple400 : p.theme.textColor)};
 `;
 
@@ -677,7 +672,7 @@ const ChartContainer = styled('div')`
   padding: ${space(0.75)} 0 ${space(0.75)} 0;
   margin-right: -2px;
 
-  @media (min-width: ${p => p.theme.breakpoints.xl}) {
+  @media (min-width: ${p => p.theme.breakpoints.xlarge}) {
     padding: ${space(0.75)} ${space(1)} ${space(0.75)} 0;
   }
 `;

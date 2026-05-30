@@ -1,3 +1,4 @@
+import {useEffect} from 'react';
 import styled from '@emotion/styled';
 
 import {Input} from 'sentry/components/core/input';
@@ -5,13 +6,13 @@ import {Select} from 'sentry/components/core/select';
 import RadioGroup from 'sentry/components/forms/controls/radioGroup';
 import {t, tct} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
-import type {IssueAlertRule} from 'sentry/types/alerts';
+import type {IssueAlertRuleAction} from 'sentry/types/alerts';
 import {IssueAlertActionType, IssueAlertConditionType} from 'sentry/types/alerts';
 import IssueAlertNotificationOptions, {
   type IssueAlertNotificationProps,
 } from 'sentry/views/projectInstall/issueAlertNotificationOptions';
 
-enum MetricValues {
+export enum MetricValues {
   ERRORS = 0,
   USERS = 1,
 }
@@ -60,35 +61,37 @@ const INTERVAL_CHOICES = [
   {value: '30d', label: t('30 days')},
 ];
 
-const DEFAULT_ISSUE_ALERT_OPTIONS_VALUES = {
-  alertSetting: RuleAction.DEFAULT_ALERT,
-  interval: '1m',
-  metric: MetricValues.ERRORS,
-  threshold: '10',
-};
-
-export type RequestDataFragment = Pick<
-  IssueAlertRule,
-  'actionMatch' | 'actions' | 'conditions' | 'frequency' | 'name'
-> & {
+export type RequestDataFragment = {
+  actionMatch: string;
+  actions: Array<Omit<IssueAlertRuleAction, 'label' | 'name' | 'prompt'>>;
+  conditions: Array<{id: string; interval: string; value: string}> | undefined;
   defaultRules: boolean;
+  frequency: number;
+  name: string;
   shouldCreateCustomRule: boolean;
   shouldCreateRule: boolean;
 };
 
-export interface AlertRuleOptions {
+export interface IssueAlertOptionsProps {
+  onChange: (updatedData: RequestDataFragment) => void;
+  alertSetting?: RuleAction;
+  interval?: string;
+  metric?: MetricValues;
+  notificationProps?: IssueAlertNotificationProps;
+  threshold?: string;
+}
+
+const getRequestDataFragment = ({
+  alertSetting,
+  interval,
+  metric,
+  threshold,
+}: {
   alertSetting: RuleAction;
   interval: string;
   metric: MetricValues;
   threshold: string;
-}
-
-export function getRequestDataFragment({
-  alertSetting = DEFAULT_ISSUE_ALERT_OPTIONS_VALUES.alertSetting,
-  interval = DEFAULT_ISSUE_ALERT_OPTIONS_VALUES.interval,
-  metric = DEFAULT_ISSUE_ALERT_OPTIONS_VALUES.metric,
-  threshold = DEFAULT_ISSUE_ALERT_OPTIONS_VALUES.threshold,
-}: Partial<AlertRuleOptions> = {}): RequestDataFragment {
+}): RequestDataFragment => {
   return {
     defaultRules: alertSetting === RuleAction.DEFAULT_ALERT,
     shouldCreateRule: alertSetting !== RuleAction.CREATE_ALERT_LATER,
@@ -103,7 +106,7 @@ export function getRequestDataFragment({
               value: threshold,
             },
           ]
-        : [],
+        : undefined,
     actions: [
       {
         id: IssueAlertActionType.NOTIFY_EMAIL,
@@ -114,24 +117,28 @@ export function getRequestDataFragment({
     actionMatch: 'all',
     frequency: 5,
   };
-}
-
-export interface IssueAlertOptionsProps extends Partial<AlertRuleOptions> {
-  onFieldChange: <K extends keyof AlertRuleOptions>(
-    key: K,
-    value: AlertRuleOptions[K]
-  ) => void;
-  notificationProps?: IssueAlertNotificationProps;
-}
+};
 
 export default function IssueAlertOptions({
-  alertSetting = DEFAULT_ISSUE_ALERT_OPTIONS_VALUES.alertSetting,
-  interval = DEFAULT_ISSUE_ALERT_OPTIONS_VALUES.interval,
-  metric = DEFAULT_ISSUE_ALERT_OPTIONS_VALUES.metric,
-  threshold = DEFAULT_ISSUE_ALERT_OPTIONS_VALUES.threshold,
+  onChange,
+  alertSetting = RuleAction.DEFAULT_ALERT,
+  interval = '1m',
+  metric = MetricValues.ERRORS,
   notificationProps,
-  onFieldChange,
+  threshold = '10',
 }: IssueAlertOptionsProps) {
+  useEffect(() => {
+    onChange(
+      getRequestDataFragment({
+        alertSetting,
+        interval,
+        metric,
+        threshold,
+      })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const issueAlertOptionsChoices: Array<[RuleAction, React.ReactNode]> = [
     [RuleAction.DEFAULT_ALERT, t('Alert me on high priority issues')],
     [
@@ -147,7 +154,14 @@ export default function IssueAlertOptions({
               placeholder="10"
               value={threshold}
               onChange={e => {
-                onFieldChange('threshold', e.target.value);
+                onChange(
+                  getRequestDataFragment({
+                    alertSetting,
+                    interval,
+                    metric,
+                    threshold: e.target.value,
+                  })
+                );
               }}
               data-test-id="range-input"
             />
@@ -159,7 +173,14 @@ export default function IssueAlertOptions({
               value={metric}
               options={METRIC_CHOICES}
               onChange={(option: (typeof METRIC_CHOICES)[number]) => {
-                onFieldChange('metric', option.value);
+                onChange(
+                  getRequestDataFragment({
+                    alertSetting,
+                    interval,
+                    metric: option.value,
+                    threshold,
+                  })
+                );
               }}
             />
           </div>
@@ -170,7 +191,14 @@ export default function IssueAlertOptions({
               value={interval}
               options={INTERVAL_CHOICES}
               onChange={(option: (typeof INTERVAL_CHOICES)[number]) => {
-                onFieldChange('interval', option.value);
+                onChange(
+                  getRequestDataFragment({
+                    alertSetting,
+                    interval: option.value,
+                    metric,
+                    threshold,
+                  })
+                );
               }}
             />
           </div>
@@ -190,7 +218,14 @@ export default function IssueAlertOptions({
         label={t('Options for creating an alert')}
         onChange={val => {
           const selectedAlertSetting = parseRuleAction(val);
-          onFieldChange('alertSetting', selectedAlertSetting);
+          onChange(
+            getRequestDataFragment({
+              alertSetting: selectedAlertSetting,
+              interval,
+              metric,
+              threshold,
+            })
+          );
         }}
         value={alertSetting.toString()}
       />

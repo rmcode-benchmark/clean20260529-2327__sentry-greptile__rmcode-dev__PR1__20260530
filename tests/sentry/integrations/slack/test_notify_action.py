@@ -279,8 +279,9 @@ class SlackNotifyActionTest(RuleTestCase):
 
             form = rule.get_form_instance()
             assert not form.is_valid()
-            assert "Slack: Slack channel name from ID does not match input channel name." in str(
-                form.errors.values()
+            assert (
+                "Received channel name my-channel does not match inputted channel name my-chanel."
+                in str(form.errors.values())
             )
 
     def test_invalid_workspace(self):

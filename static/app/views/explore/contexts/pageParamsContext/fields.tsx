@@ -1,20 +1,9 @@
 import type {Location} from 'history';
 
-import type {Organization} from 'sentry/types/organization';
 import {defined} from 'sentry/utils';
 import {decodeList} from 'sentry/utils/queryString';
-import {SpanFields} from 'sentry/views/insights/types';
 
-export function defaultFields(organization?: Organization): string[] {
-  if (organization?.features.includes('performance-otel-friendly-ui')) {
-    return [
-      SpanFields.ID,
-      SpanFields.NAME,
-      SpanFields.SPAN_DURATION,
-      SpanFields.TIMESTAMP,
-    ];
-  }
-
+export function defaultFields(): string[] {
   return [
     'id',
     'span.op',
@@ -25,17 +14,14 @@ export function defaultFields(organization?: Organization): string[] {
   ];
 }
 
-export function getFieldsFromLocation(
-  location: Location,
-  organization?: Organization
-): string[] {
+export function getFieldsFromLocation(location: Location): string[] {
   const fields = decodeList(location.query.field);
 
   if (fields.length) {
     return fields;
   }
 
-  return defaultFields(organization);
+  return defaultFields();
 }
 
 export function updateLocationWithFields(
@@ -47,8 +33,4 @@ export function updateLocationWithFields(
   } else if (fields === null) {
     delete location.query.field;
   }
-}
-
-export function isDefaultFields(location: Location): boolean {
-  return decodeList(location.query.field).length === 0;
 }

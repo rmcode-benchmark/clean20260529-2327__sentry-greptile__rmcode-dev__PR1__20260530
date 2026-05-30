@@ -1,6 +1,6 @@
 import type {ChildrenRenderFn} from 'sentry/components/acl/feature';
 import type {Guide} from 'sentry/components/assistant/types';
-import type {SelectKey} from 'sentry/components/core/compactSelect';
+import type {ButtonProps} from 'sentry/components/core/button';
 import type {FormPanelProps} from 'sentry/components/forms/formPanel';
 import type {JsonFormObject} from 'sentry/components/forms/types';
 import type {ProductSelectionProps} from 'sentry/components/onboarding/productSelection';
@@ -10,7 +10,7 @@ import type SelectorItems from 'sentry/components/timeRangeSelector/selectorItem
 import type {TitleableModuleNames} from 'sentry/views/insights/common/components/modulePageProviders';
 import type {OrganizationStatsProps} from 'sentry/views/organizationStats';
 import type {RouteAnalyticsContext} from 'sentry/views/routeAnalyticsContextProvider';
-import type {NavigationSection} from 'sentry/views/settings/types';
+import type {NavigationItem, NavigationSection} from 'sentry/views/settings/types';
 
 import type {Integration, IntegrationProvider} from './integrations';
 import type {
@@ -152,12 +152,7 @@ export type MembershipSettingsProps = {
     'highlighted' | 'fields' | 'additionalFieldProps'
   >;
 };
-export type GithubInstallationInstallButtonProps = {
-  handleSubmit: (e: React.MouseEvent) => void;
-  hasSCMMultiOrg: boolean;
-  installationID: SelectKey;
-  isSaving: boolean;
-};
+
 /**
  * Component wrapping hooks
  */
@@ -198,7 +193,6 @@ type ComponentHooks = {
   'component:replay-onboarding-alert': () => React.ComponentType<ReplayOnboardingAlertProps>;
   'component:replay-onboarding-cta': () => React.ComponentType<ReplayOnboardingCTAProps>;
   'component:replay-settings-alert': () => React.ComponentType | null;
-  'component:scm-multi-org-install-button': () => React.ComponentType<GithubInstallationInstallButtonProps>;
   'component:seer-beta-closing-alert': () => React.ComponentType;
   'component:superuser-access-category': React.ComponentType<any>;
   'component:superuser-warning': React.ComponentType<any>;
@@ -290,6 +284,7 @@ type OnboardingHooks = {
  * Settings navigation hooks.
  */
 type SettingsHooks = {
+  'settings:api-navigation-config': SettingsItemsHook;
   'settings:organization-navigation': OrganizationSettingsHook;
   'settings:organization-navigation-config': SettingsConfigHook;
 };
@@ -314,6 +309,7 @@ type ReactHooks = {
   'react-hook:route-activated': (
     props: RouteContextInterface
   ) => React.ContextType<typeof RouteAnalyticsContext>;
+  'react-hook:use-button-tracking': (props: ButtonProps) => () => void;
   'react-hook:use-get-max-retention-days': () => number | undefined;
 };
 
@@ -458,6 +454,11 @@ type OrganizationSettingsHook = (organization: Organization) => React.ReactEleme
  * Provides additional setting configurations
  */
 type SettingsConfigHook = (organization: Organization) => NavigationSection;
+
+/**
+ * Provides additional setting navigation items
+ */
+type SettingsItemsHook = (organization?: Organization) => NavigationItem[];
 
 /**
  * Each sidebar label is wrapped with this hook, to allow sidebar item

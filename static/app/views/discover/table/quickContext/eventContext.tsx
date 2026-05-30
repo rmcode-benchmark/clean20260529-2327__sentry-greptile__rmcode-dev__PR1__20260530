@@ -166,7 +166,7 @@ const ErrorTitleBody = styled(ContextBody)`
 `;
 
 const EventContextBody = styled(ContextBody)`
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   margin: 0;
   align-items: flex-start;
   flex-direction: column;

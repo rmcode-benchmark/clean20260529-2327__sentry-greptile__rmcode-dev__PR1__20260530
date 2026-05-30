@@ -2,31 +2,23 @@ import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
 import {ActivityAvatar} from 'sentry/components/activity/item/avatar';
+import {Flex} from 'sentry/components/container/flex';
 import {UserAvatar} from 'sentry/components/core/avatar/userAvatar';
 import {Tag} from 'sentry/components/core/badge/tag';
-import {ButtonBar} from 'sentry/components/core/button/buttonBar';
-import {Flex} from 'sentry/components/core/layout';
-import {Link} from 'sentry/components/core/link';
 import {Select} from 'sentry/components/core/select';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import {DateTime} from 'sentry/components/dateTime';
-import DropdownButton from 'sentry/components/dropdownButton';
+import Link from 'sentry/components/links/link';
 import type {CursorHandler} from 'sentry/components/pagination';
 import Pagination from 'sentry/components/pagination';
 import {PanelTable} from 'sentry/components/panels/panelTable';
-import type {ChangeData} from 'sentry/components/timeRangeSelector';
-import {TimeRangeSelector} from 'sentry/components/timeRangeSelector';
-import {getAbsoluteSummary} from 'sentry/components/timeRangeSelector/utils';
 import {t, tct} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
-import type {DateString} from 'sentry/types/core';
 import type {AuditLog, Organization} from 'sentry/types/organization';
 import type {User} from 'sentry/types/user';
-import {getInternalDate} from 'sentry/utils/dates';
-import getDaysSinceDate from 'sentry/utils/getDaysSinceDate';
+import {shouldUse24Hours} from 'sentry/utils/dates';
 import useOrganization from 'sentry/utils/useOrganization';
 import useProjects from 'sentry/utils/useProjects';
-import {useUser} from 'sentry/utils/useUser';
 import SettingsPageHeader from 'sentry/views/settings/components/settingsPageHeader';
 import {
   projectDetectorSettingsId,
@@ -58,7 +50,7 @@ const addUsernameDisplay = (logEntryUser: User | undefined) => {
   if (logEntryUser?.isSuperuser) {
     return (
       <Name data-test-id="actor-name">
-        <Flex align="center" gap="md">
+        <Flex align="center" gap={space(1)}>
           {logEntryUser.name}
           <Tag>{t('Sentry Staff')}</Tag>
         </Flex>
@@ -249,104 +241,42 @@ type Props = {
   eventType: string | undefined;
   eventTypes: string[] | null;
   isLoading: boolean;
-  onCursor: CursorHandler;
-  onDateSelect: (data: ChangeData) => void;
+  onCursor: CursorHandler | undefined;
   onEventSelect: (value: string) => void;
   pageLinks: string | null;
-  statsPeriod: string | null;
-  end?: DateString;
-  start?: DateString;
-  utc?: boolean;
 };
 
 function AuditLogList({
+  isLoading,
+  pageLinks,
   entries,
   eventType,
   eventTypes,
-  isLoading,
   onCursor,
-  onDateSelect,
   onEventSelect,
-  pageLinks,
-  start,
-  end,
-  statsPeriod,
-  utc = false,
 }: Props) {
-  const is24Hours = useUser().options?.clock24Hours;
+  const is24Hours = shouldUse24Hours();
   const organization = useOrganization();
   const hasEntries = entries && entries.length > 0;
   const ipv4Length = 15;
-  const allTime = t('All time');
 
-  // Calculate display values for the dropdown - convert UTC timestamps back to user's intended timezone
-  const getDisplayValues = () => {
-    if (!start || !end) {
-      return {displayStart: start, displayEnd: end};
-    }
-
-    // Convert UTC timestamps to display format based on user's UTC preference
-    const displayStart = getInternalDate(start, utc);
-    const displayEnd = getInternalDate(end, utc);
-
-    return {
-      displayStart: displayStart.toISOString(),
-      displayEnd: displayEnd.toISOString(),
-    };
-  };
-
-  const {displayStart, displayEnd} = getDisplayValues();
-
-  const headerActions = (
-    <ButtonBar gap="xl">
-      <TimeRangeSelector
-        start={start}
-        end={end}
-        relative={statsPeriod || allTime}
-        onChange={onDateSelect}
-        relativeOptions={{
-          allTime,
-        }}
-        utc={utc}
-        maxPickableDays={getDaysSinceDate(organization.dateCreated)}
-        trigger={(triggerProps, isOpen) => {
-          const currentValue = statsPeriod || allTime;
-          let displayLabel: React.ReactNode;
-
-          if (displayStart && displayEnd) {
-            // Show formatted absolute date range using display values (user's intended timezone)
-            displayLabel = getAbsoluteSummary(displayStart, displayEnd, utc);
-          } else if (start && end) {
-            // Fallback to regular start/end if display values not available
-            displayLabel = getAbsoluteSummary(start, end, utc);
-          } else if (currentValue === allTime) {
-            displayLabel = allTime;
-          }
-
-          return (
-            <DropdownButton isOpen={isOpen} {...triggerProps}>
-              {displayLabel}
-            </DropdownButton>
-          );
-        }}
-      />
-      <EventSelector
-        clearable
-        isDisabled={isLoading}
-        name="eventFilter"
-        value={eventType}
-        placeholder={t('Select Action: ')}
-        options={getEventOptions(eventTypes)}
-        onChange={(options: any) => {
-          onEventSelect(options?.value);
-        }}
-      />
-    </ButtonBar>
+  const action = (
+    <EventSelector
+      clearable
+      isDisabled={isLoading}
+      name="eventFilter"
+      value={eventType}
+      placeholder={t('Select Action: ')}
+      options={getEventOptions(eventTypes)}
+      onChange={(options: any) => {
+        onEventSelect(options?.value);
+      }}
+    />
   );
 
   return (
     <div>
-      <SettingsPageHeader title={t('Audit Log')} action={headerActions} />
+      <SettingsPageHeader title={t('Audit Log')} action={action} />
       <PanelTable
         headers={[t('Member'), t('Action'), t('IP'), t('Time')]}
         isEmpty={!hasEntries && entries?.length === 0}
@@ -366,10 +296,10 @@ function AuditLogList({
                   <AuditNote entry={entry} orgSlug={organization.slug} />
                 </NameContainer>
               </UserInfo>
-              <Flex align="center">
+              <FlexCenter>
                 <MonoDetail>{getTypeDisplay(entry.event)}</MonoDetail>
-              </Flex>
-              <Flex align="center">
+              </FlexCenter>
+              <FlexCenter>
                 {entry.ipAddress && (
                   <IpAddressOverflow>
                     <Tooltip
@@ -380,12 +310,12 @@ function AuditLogList({
                     </Tooltip>
                   </IpAddressOverflow>
                 )}
-              </Flex>
+              </FlexCenter>
               <TimestampInfo>
                 <DateTime dateOnly date={entry.dateCreated} />
                 <DateTime
                   timeOnly
-                  format={is24Hours ? 'HH:mm z' : 'LT z'}
+                  format={is24Hours ? 'HH:mm zz' : 'LT zz'}
                   date={entry.dateCreated}
                 />
               </TimestampInfo>
@@ -403,7 +333,7 @@ const SentryAvatar = styled(ActivityAvatar)`
 `;
 
 const Name = styled('strong')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 const EventSelector = styled(Select)`
@@ -414,7 +344,7 @@ const UserInfo = styled('div')`
   display: flex;
   align-items: center;
   line-height: 1.2;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   min-width: 250px;
 `;
 
@@ -425,9 +355,14 @@ const NameContainer = styled('div')`
 `;
 
 const Note = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   word-break: break-word;
   margin-top: ${space(0.5)};
+`;
+
+const FlexCenter = styled('div')`
+  display: flex;
+  align-items: center;
 `;
 
 const IpAddressOverflow = styled('div')`
@@ -436,7 +371,7 @@ const IpAddressOverflow = styled('div')`
 `;
 
 const MonoDetail = styled('code')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   white-space: no-wrap;
 `;
 
@@ -444,7 +379,7 @@ const TimestampInfo = styled('div')`
   display: grid;
   grid-template-rows: auto auto;
   gap: ${space(1)};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 export default AuditLogList;

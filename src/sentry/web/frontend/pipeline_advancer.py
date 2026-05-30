@@ -4,9 +4,8 @@ from django.http.response import HttpResponseBase
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from sentry.identity.pipeline import IdentityPipeline
+from sentry.identity.pipeline import IdentityProviderPipeline
 from sentry.integrations.pipeline import IntegrationPipeline
-from sentry.integrations.types import IntegrationProviderSlug
 from sentry.organizations.absolute_url import generate_organization_url
 from sentry.utils.http import absolute_uri, create_redirect_url
 from sentry.web.frontend.base import BaseView
@@ -14,7 +13,7 @@ from sentry.web.frontend.base import BaseView
 # The request doesn't contain the pipeline type (pipeline information is stored
 # in redis keyed by the pipeline name), so we try to construct multiple pipelines
 # and use whichever one works.
-PIPELINE_CLASSES = (IntegrationPipeline, IdentityPipeline)
+PIPELINE_CLASSES = [IntegrationPipeline, IdentityProviderPipeline]
 
 
 class PipelineAdvancerView(BaseView):
@@ -36,7 +35,7 @@ class PipelineAdvancerView(BaseView):
         # they will redirect here *without* being in the pipeline. If that happens
         # redirect to the integration install org picker.
         if (
-            provider_id == IntegrationProviderSlug.GITHUB.value
+            provider_id == "github"
             and request.GET.get("setup_action") == "install"
             and pipeline is None
         ):

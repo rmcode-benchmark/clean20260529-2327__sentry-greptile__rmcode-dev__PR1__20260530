@@ -1,9 +1,8 @@
+import {BaseAvatar, type BaseAvatarProps} from 'sentry/components/core/avatar/baseAvatar';
 import {PluginIcon} from 'sentry/plugins/components/pluginIcon';
 import type {DocIntegration} from 'sentry/types/integrations';
 
-import {BaseAvatar, type BaseAvatarProps} from './baseAvatar';
-
-interface DocIntegrationAvatarProps extends BaseAvatarProps {
+export interface DocIntegrationAvatarProps extends BaseAvatarProps {
   docIntegration?: DocIntegration;
   ref?: React.Ref<HTMLSpanElement>;
 }

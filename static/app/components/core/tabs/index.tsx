@@ -5,8 +5,6 @@ import type {AriaTabListOptions} from '@react-aria/tabs';
 import type {TabListState, TabListStateOptions} from '@react-stately/tabs';
 import type {Orientation} from '@react-types/shared';
 
-import type {BaseTabProps} from 'sentry/components/core/tabs/tab.chonk';
-
 import {tabsShouldForwardProp} from './utils';
 
 export {TabList, type TabListProps} from './tabList';
@@ -42,23 +40,21 @@ export interface TabsProps<T>
    * Callback when the selected tab changes.
    */
   onChange?: (key: T) => void;
-  size?: BaseTabProps['size'];
   /**
-   * [Controlled] Selected tab. Must match the `key` prop on the selected tab
+   * [Controlled] Selected tab . Must match the `key` prop on the selected tab
    * item.
    */
   value?: T;
 }
 
 interface TabContext {
-  rootProps: Omit<TabsProps<any>, 'children' | 'className' | 'orientation' | 'size'> &
-    Required<Pick<TabsProps<any>, 'orientation' | 'size'>>;
+  rootProps: Omit<TabsProps<any>, 'children' | 'className'>;
   setTabListState: (state: TabListState<any>) => void;
   tabListState?: TabListState<any>;
 }
 
 export const TabsContext = createContext<TabContext>({
-  rootProps: {orientation: 'horizontal', size: 'md'},
+  rootProps: {orientation: 'horizontal'},
   setTabListState: () => {},
 });
 
@@ -71,7 +67,7 @@ export function TabStateProvider<T extends string | number>({
   return (
     <TabsContext
       value={{
-        rootProps: {orientation: 'horizontal', size: 'md', ...props},
+        rootProps: {...props, orientation: 'horizontal'},
         tabListState,
         setTabListState,
       }}
@@ -88,13 +84,12 @@ export function TabStateProvider<T extends string | number>({
  */
 export function Tabs<T extends string | number>({
   orientation = 'horizontal',
-  size = 'md',
   className,
   children,
   ...props
 }: TabsProps<T>) {
   return (
-    <TabStateProvider orientation={orientation} size={size} {...props}>
+    <TabStateProvider orientation={orientation} {...props}>
       <TabsWrap orientation={orientation} className={className}>
         {children}
       </TabsWrap>

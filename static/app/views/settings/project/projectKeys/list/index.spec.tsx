@@ -1,5 +1,6 @@
 import {ProjectFixture} from 'sentry-fixture/project';
 import {ProjectKeysFixture} from 'sentry-fixture/projectKeys';
+import {RouterFixture} from 'sentry-fixture/routerFixture';
 
 import {initializeOrg} from 'sentry-test/initializeOrg';
 import {
@@ -16,13 +17,6 @@ describe('ProjectKeys', function () {
   const {organization, project} = initializeOrg();
   const projectKeys = ProjectKeysFixture();
   let deleteMock: jest.Mock;
-
-  const initialRouterConfig = {
-    location: {
-      pathname: `/settings/${organization.slug}/projects/${project.slug}/settings/keys/`,
-    },
-    route: '/settings/:orgId/projects/:projectId/settings/keys/',
-  };
 
   beforeEach(function () {
     MockApiClient.clearMockResponses();
@@ -44,7 +38,12 @@ describe('ProjectKeys', function () {
       method: 'GET',
       body: [],
     });
-    render(<ProjectKeys project={project} />, {initialRouterConfig});
+    const router = RouterFixture({projectId: project.slug});
+
+    render(<ProjectKeys project={project} />, {
+      router,
+      deprecatedRouterMocks: true,
+    });
 
     expect(
       await screen.findByText('There are no keys active for this project.')
@@ -52,7 +51,11 @@ describe('ProjectKeys', function () {
   });
 
   it('has clippable box', async function () {
-    render(<ProjectKeys project={ProjectFixture()} />, {initialRouterConfig});
+    const router = RouterFixture({projectId: project.slug});
+    render(<ProjectKeys project={ProjectFixture()} />, {
+      router,
+      deprecatedRouterMocks: true,
+    });
 
     const expandButton = await screen.findByRole('button', {name: 'Expand'});
     await userEvent.click(expandButton);
@@ -61,8 +64,10 @@ describe('ProjectKeys', function () {
   });
 
   it('renders for default project', async function () {
+    const router = RouterFixture({projectId: project.slug});
     render(<ProjectKeys project={ProjectFixture({platform: 'other'})} />, {
-      initialRouterConfig,
+      router,
+      deprecatedRouterMocks: true,
     });
 
     const allDsn = await screen.findAllByRole('textbox', {name: 'DSN URL'});
@@ -89,8 +94,10 @@ describe('ProjectKeys', function () {
   });
 
   it('renders for javascript project', async function () {
+    const router = RouterFixture({projectId: project.slug});
     render(<ProjectKeys project={ProjectFixture({platform: 'javascript'})} />, {
-      initialRouterConfig,
+      router,
+      deprecatedRouterMocks: true,
     });
 
     const expandButton = screen.queryByRole('button', {name: 'Expand'});
@@ -122,8 +129,10 @@ describe('ProjectKeys', function () {
   });
 
   it('renders for javascript-react project', async function () {
+    const router = RouterFixture({projectId: project.slug});
     render(<ProjectKeys project={ProjectFixture({platform: 'javascript-react'})} />, {
-      initialRouterConfig,
+      router,
+      deprecatedRouterMocks: true,
     });
 
     const expandButton = screen.queryByRole('button', {name: 'Expand'});
@@ -161,8 +170,6 @@ describe('ProjectKeys', function () {
           cdn: '',
           unreal: '',
           crons: '',
-          playstation:
-            'http://dev.getsentry.net:8000/api/1/playstation?sentry_key=188ee45a58094d939428d8585aa6f662',
         },
         dateCreated: '2018-02-28T07:13:51.087Z',
         public: '188ee45a58094d939428d8585aa6f662',
@@ -197,8 +204,11 @@ describe('ProjectKeys', function () {
       body: multipleProjectKeys,
     });
 
+    const router = RouterFixture({projectId: project.slug});
+
     render(<ProjectKeys project={ProjectFixture({platform: 'other'})} />, {
-      initialRouterConfig,
+      router,
+      deprecatedRouterMocks: true,
     });
 
     const allDsn = await screen.findAllByRole('textbox', {name: 'DSN URL'});
@@ -206,8 +216,10 @@ describe('ProjectKeys', function () {
   });
 
   it('deletes key', async function () {
+    const router = RouterFixture({projectId: project.slug});
     render(<ProjectKeys project={ProjectFixture()} />, {
-      initialRouterConfig,
+      router,
+      deprecatedRouterMocks: true,
     });
 
     await userEvent.click(await screen.findByRole('button', {name: 'Delete'}));
@@ -218,8 +230,10 @@ describe('ProjectKeys', function () {
   });
 
   it('disable and enables key', async function () {
+    const router = RouterFixture({projectId: project.slug});
     render(<ProjectKeys project={ProjectFixture()} />, {
-      initialRouterConfig,
+      router,
+      deprecatedRouterMocks: true,
     });
 
     const enableMock = MockApiClient.addMockResponse({

@@ -63,10 +63,6 @@ export enum ChartType {
   AREA = 2,
 }
 
-export function isChartType(value: any): value is ChartType {
-  return typeof value === 'number' && Object.values(ChartType).includes(value as any);
-}
-
 interface ChartRenderingProps {
   height: number;
   isFullscreen: boolean;
@@ -652,7 +648,7 @@ const StyledTransparentLoadingMask = styled((props: any) => (
   align-items: center;
 `;
 
-function LoadingScreen({loading}: {loading: boolean}) {
+export function LoadingScreen({loading}: {loading: boolean}) {
   if (!loading) {
     return null;
   }

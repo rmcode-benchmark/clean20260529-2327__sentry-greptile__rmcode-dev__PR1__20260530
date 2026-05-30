@@ -36,7 +36,7 @@ export const DurationPill = styled('div')<{
   align-items: center;
   transform: translateY(-50%);
   white-space: nowrap;
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
 
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -44,7 +44,7 @@ export const DurationPill = styled('div')<{
   ${getDurationPillAlignment}
   ${getDurationPillColors}
 
-  @media (max-width: ${p => p.theme.breakpoints.md}) {
+  @media (max-width: ${p => p.theme.breakpoints.medium}) {
     font-size: 10px;
   }
 `;

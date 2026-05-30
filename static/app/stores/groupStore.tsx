@@ -92,7 +92,7 @@ function mergePendingChanges(
   pendingChanges: Map<ChangeId, Change>
 ): readonly Item[] {
   // Merge pending changes into the existing group items. This gives the
-  // appearance of optimistic updates
+  // apperance of optimistic updates
   const pendingById: Record<string, Change[]> = {};
 
   pendingChanges.forEach(change => {

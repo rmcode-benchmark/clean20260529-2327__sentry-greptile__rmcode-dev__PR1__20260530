@@ -25,8 +25,6 @@ from sentry.models.releaseprojectenvironment import ReleaseProjectEnvironment
 from sentry.models.releases.release_project import ReleaseProject
 from sentry.release_health.base import ReleaseHealthOverview
 from sentry.users.api.serializers.user import UserSerializerResponse
-from sentry.users.models.user import User
-from sentry.users.services.user.model import RpcUser
 from sentry.users.services.user.serial import serialize_generic_user
 from sentry.users.services.user.service import user_service
 from sentry.utils import metrics
@@ -113,13 +111,7 @@ def _expose_current_project_meta(current_project_meta):
     return rv
 
 
-class _AuthorList(TypedDict):
-    authors: list[Author]
-
-
-def _get_authors_metadata(
-    item_list: list[Release], user: User | RpcUser | AnonymousUser
-) -> dict[Release, _AuthorList]:
+def _get_authors_metadata(item_list, user):
     """
     Returns a dictionary of release_id => authors metadata,
     where each commit metadata dict contains an array of
@@ -134,8 +126,7 @@ def _get_authors_metadata(
     """
     author_ids = set()
     for obj in item_list:
-        if obj.authors is not None:
-            author_ids.update(obj.authors)
+        author_ids.update(obj.authors)
 
     if author_ids:
         authors = list(CommitAuthor.objects.filter(id__in=author_ids))
@@ -153,17 +144,18 @@ def _get_authors_metadata(
     else:
         users_by_author = {}
 
-    result: dict[Release, _AuthorList] = {}
+    result = {}
     for item in item_list:
         item_authors = []
         seen_authors = set()
-        if item.authors is not None:
-            for user_resp in (users_by_author.get(a) for a in item.authors):
-                if user_resp and user_resp["email"] not in seen_authors:
-                    seen_authors.add(user_resp["email"])
-                    item_authors.append(user_resp)
+        for user in (users_by_author.get(a) for a in item.authors):
+            if user and user["email"] not in seen_authors:
+                seen_authors.add(user["email"])
+                item_authors.append(user)
 
-        result[item] = {"authors": item_authors}
+        result[item] = {
+            "authors": item_authors,
+        }
     return result
 
 
@@ -234,9 +226,7 @@ Author = Union[UserSerializerResponse, NonMappableUser]
 
 
 def get_users_for_authors(
-    organization_id: int,
-    authors: list[CommitAuthor],
-    user: User | AnonymousUser | RpcUser | None = None,
+    organization_id: int, authors: list[CommitAuthor], user=None
 ) -> Mapping[str, Author]:
     """
     Returns a dictionary of author_id => user, if a Sentry

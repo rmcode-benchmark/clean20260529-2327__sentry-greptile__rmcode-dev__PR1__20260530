@@ -50,12 +50,10 @@ function createOrganizationMenuItem(): MenuItemProps {
 
 export function OrgDropdown({
   className,
-  onClick,
   hideOrgLinks,
 }: {
   className?: string;
   hideOrgLinks?: boolean;
-  onClick?: () => void;
 }) {
   const theme = useTheme();
 
@@ -104,14 +102,9 @@ export function OrgDropdown({
       trigger={props => (
         <OrgDropdownTrigger
           borderless={!theme.isChonk}
-          size={theme.isChonk ? 'xs' : undefined}
           width={isMobile ? 32 : 48}
           aria-label={t('Toggle organization menu')}
           {...props}
-          onClick={e => {
-            props.onClick?.(e);
-            onClick?.();
-          }}
         >
           <StyledOrganizationAvatar
             size={isMobile ? 24 : 36}
@@ -138,7 +131,7 @@ export function OrgDropdown({
             {
               key: 'organization-settings',
               label: t('Organization Settings'),
-              to: `/settings/${organization.slug}/`,
+              to: `/organizations/${organization.slug}/settings/`,
               hidden: !hasOrgRead || hideOrgLinks,
             },
             {
@@ -150,19 +143,19 @@ export function OrgDropdown({
             {
               key: 'members',
               label: t('Members'),
-              to: `/settings/${organization.slug}/members/`,
+              to: `/organizations/${organization.slug}/settings/members/`,
               hidden: !hasMemberRead || hideOrgLinks,
             },
             {
               key: 'teams',
               label: t('Teams'),
-              to: `/settings/${organization.slug}/teams/`,
+              to: `/organizations/${organization.slug}/settings/teams/`,
               hidden: !hasTeamRead || hideOrgLinks,
             },
             {
               key: 'billing',
               label: t('Usage & Billing'),
-              to: `/settings/${organization.slug}/billing/`,
+              to: `/organizations/${organization.slug}/settings/billing/`,
               hidden: !hasBillingAccess || hideOrgLinks,
             },
             {
@@ -198,7 +191,6 @@ export function OrgDropdown({
 const OrgDropdownTrigger = styled(Button)<{width: number}>`
   height: ${p => p.width}px;
   width: ${p => p.width}px;
-  min-height: ${p => (p.theme.isChonk ? `${p.width}px` : undefined)};
   padding: 0; /* Without this the icon will be cutoff due to overflow */
 `;
 
@@ -208,7 +200,7 @@ const StyledOrganizationAvatar = styled(OrganizationAvatar)`
 
 const SectionTitleWrapper = styled('div')`
   text-transform: none;
-  font-size: ${p => p.theme.fontSize.md};
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-size: ${p => p.theme.fontSizeMedium};
+  font-weight: ${p => p.theme.fontWeightNormal};
   color: ${p => p.theme.textColor};
 `;

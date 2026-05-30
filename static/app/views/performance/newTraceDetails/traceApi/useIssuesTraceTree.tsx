@@ -7,23 +7,27 @@ import useProjects from 'sentry/utils/useProjects';
 import {traceAnalytics} from 'sentry/views/performance/newTraceDetails/traceAnalytics';
 import {IssuesTraceTree} from 'sentry/views/performance/newTraceDetails/traceModels/issuesTraceTree';
 import type {TraceTree} from 'sentry/views/performance/newTraceDetails/traceModels/traceTree';
-import {useTraceState} from 'sentry/views/performance/newTraceDetails/traceState/traceStateProvider';
-import type {HydratedReplayRecord} from 'sentry/views/replays/types';
+import type {ReplayRecord} from 'sentry/views/replays/types';
 
+import type {TraceMetaQueryResults} from './useTraceMeta';
 import {isEmptyTrace} from './utils';
 
 type UseTraceTreeParams = {
-  replay: HydratedReplayRecord | null;
+  meta: TraceMetaQueryResults;
+  replay: ReplayRecord | null;
   trace: UseApiQueryResult<TraceTree.Trace | undefined, any>;
   traceSlug?: string;
 };
 
-function getTraceViewQueryStatus(traceQueryStatus: QueryStatus): QueryStatus {
-  if (traceQueryStatus === 'error') {
+function getTraceViewQueryStatus(
+  traceQueryStatus: QueryStatus,
+  traceMetaQueryStatus: QueryStatus
+): QueryStatus {
+  if (traceQueryStatus === 'error' || traceMetaQueryStatus === 'error') {
     return 'error';
   }
 
-  if (traceQueryStatus === 'pending') {
+  if (traceQueryStatus === 'pending' || traceMetaQueryStatus === 'pending') {
     return 'pending';
   }
 
@@ -32,18 +36,18 @@ function getTraceViewQueryStatus(traceQueryStatus: QueryStatus): QueryStatus {
 
 export function useIssuesTraceTree({
   trace,
+  meta,
   replay,
   traceSlug,
 }: UseTraceTreeParams): IssuesTraceTree {
   const api = useApi();
   const {projects} = useProjects();
-  const traceState = useTraceState();
   const organization = useOrganization();
 
   const [tree, setTree] = useState<IssuesTraceTree>(IssuesTraceTree.Empty());
 
   useEffect(() => {
-    const status = getTraceViewQueryStatus(trace.status);
+    const status = getTraceViewQueryStatus(trace.status, meta.status);
 
     if (status === 'error') {
       setTree(t =>
@@ -76,20 +80,27 @@ export function useIssuesTraceTree({
       return;
     }
 
-    if (trace.data) {
+    if (trace.data && meta.data) {
       const newTree = IssuesTraceTree.FromTrace(trace.data, {
-        meta: null,
+        meta: meta.data,
         replay,
-        preferences: traceState.preferences,
       });
 
       setTree(newTree);
       newTree.build();
       return;
     }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, organization, projects, replay, trace.status, trace.data, traceSlug]);
+  }, [
+    api,
+    organization,
+    projects,
+    replay,
+    meta.status,
+    trace.status,
+    trace.data,
+    meta.data,
+    traceSlug,
+  ]);
 
   return tree;
 }

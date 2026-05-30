@@ -478,14 +478,16 @@ class BaseEvent(metaclass=abc.ABCMeta):
         return len(orjson.dumps(dict(self.data)).decode())
 
     def get_email_subject(self) -> str:
-        subject_template = self.project.get_option("mail:subject_template")
-        if subject_template:
-            template = EventSubjectTemplate(subject_template)
+        template = self.project.get_option("mail:subject_template")
+        if template:
+            template = EventSubjectTemplate(template)
         elif self.group.issue_category == GroupCategory.PERFORMANCE:
             template = EventSubjectTemplate("$shortID - $issueType")
         else:
             template = DEFAULT_SUBJECT_TEMPLATE
-        return truncatechars(template.safe_substitute(EventSubjectTemplateData(self)), 128)
+        return cast(
+            str, truncatechars(template.safe_substitute(EventSubjectTemplateData(self)), 128)
+        )
 
     def as_dict(self) -> dict[str, Any]:
         """Returns the data in normalized form for external consumers."""
@@ -752,7 +754,7 @@ class GroupEvent(BaseEvent):
         return self._occurrence
 
     @occurrence.setter
-    def occurrence(self, value: IssueOccurrence | None) -> None:
+    def occurrence(self, value: IssueOccurrence) -> None:
         self._occurrence = value
 
     @property

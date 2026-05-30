@@ -54,7 +54,7 @@ export function IssueEventNavigation({event, group}: IssueEventNavigationProps) 
   const {eventCount} = useIssueDetails();
   const issueTypeConfig = getConfigForIssueType(group, group.project);
   const theme = useTheme();
-  const isSmallScreen = useMedia(`(max-width: ${theme.breakpoints.sm})`);
+  const isSmallScreen = useMedia(`(max-width: ${theme.breakpoints.small})`);
 
   const hideDropdownButton =
     !issueTypeConfig.pages.attachments.enabled &&
@@ -197,7 +197,9 @@ export function IssueEventNavigation({event, group}: IssueEventNavigationProps) 
             )
           }
         />
-        <LargeInThisIssueText aria-hidden>{t('in this issue')}</LargeInThisIssueText>
+        <LargeInThisIssueText aria-hidden>
+          {t('matching your filters')}
+        </LargeInThisIssueText>
       </LargeDropdownButtonWrapper>
       <TourElement<IssueDetailsTour>
         tourContext={IssueDetailsTourContext}
@@ -268,16 +270,10 @@ export function IssueEventNavigation({event, group}: IssueEventNavigationProps) 
             </Fragment>
           )}
           {isListView && (
-            <ButtonBar>
+            <ButtonBar gap={1}>
               {issueTypeConfig.discover.enabled && currentTab === Tab.EVENTS && (
                 <LinkButton
-                  to={{
-                    pathname: discoverUrl.pathname,
-                    query: {
-                      ...discoverUrl.query,
-                      sort: location.query.sort ?? '-timestamp',
-                    },
-                  }}
+                  to={discoverUrl}
                   aria-label={t('Open in Discover')}
                   size="xs"
                   icon={<IconTelescope />}
@@ -312,21 +308,21 @@ const LargeDropdownButtonWrapper = styled('div')`
 `;
 
 const NavigationDropdownButton = styled(DropdownButton)`
-  font-size: ${p => p.theme.fontSize.lg};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-size: ${p => p.theme.fontSizeLarge};
+  font-weight: ${p => p.theme.fontWeightBold};
   padding-right: ${space(0.5)};
 `;
 
 const NavigationLabel = styled('div')`
-  font-size: ${p => p.theme.fontSize.lg};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-size: ${p => p.theme.fontSizeLarge};
+  font-weight: ${p => p.theme.fontWeightBold};
   padding-right: ${space(0.25)};
   padding-left: ${space(1.5)};
 `;
 
 const LargeInThisIssueText = styled('div')`
-  font-size: ${p => p.theme.fontSize.lg};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-size: ${p => p.theme.fontSizeLarge};
+  font-weight: ${p => p.theme.fontWeightBold};
   color: ${p => p.theme.subText};
 `;
 
@@ -335,9 +331,9 @@ const EventNavigationWrapper = styled('div')`
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 
-  @media (min-width: ${p => p.theme.breakpoints.xs}) {
+  @media (min-width: ${p => p.theme.breakpoints.xsmall}) {
     flex-direction: row;
     align-items: center;
   }
@@ -348,7 +344,7 @@ const NavigationWrapper = styled('div')`
   gap: ${space(0.25)};
   justify-content: space-between;
 
-  @media (min-width: ${p => p.theme.breakpoints.xs}) {
+  @media (min-width: ${p => p.theme.breakpoints.xsmall}) {
     gap: ${space(0.5)};
   }
 `;
@@ -360,7 +356,7 @@ const DropdownCountWrapper = styled('div')<{isCurrentTab: boolean}>`
   gap: ${space(3)};
   font-variant-numeric: tabular-nums;
   font-weight: ${p =>
-    p.isCurrentTab ? p.theme.fontWeight.bold : p.theme.fontWeight.normal};
+    p.isCurrentTab ? p.theme.fontWeightBold : p.theme.fontWeightNormal};
 `;
 
 const ItemCount = styled(Count)`

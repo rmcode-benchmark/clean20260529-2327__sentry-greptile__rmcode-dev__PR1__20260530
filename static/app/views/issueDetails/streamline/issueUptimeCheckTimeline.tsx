@@ -7,7 +7,7 @@ import {
   GridLineLabels,
   GridLineOverlay,
 } from 'sentry/components/checkInTimeline/gridLines';
-import {Flex} from 'sentry/components/core/layout';
+import {Flex} from 'sentry/components/container/flex';
 import {tn} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {Event} from 'sentry/types/event';
@@ -98,7 +98,7 @@ export function IssueUptimeCheckTimeline({group}: {group: Group}) {
     <ChartContainer>
       <TimelineLegend ref={elementRef} role="caption">
         {legendStatuses.map(status => (
-          <Flex align="center" gap="xs" key={status}>
+          <Flex align="center" gap={space(0.5)} key={status}>
             <CheckIndicator status={status} width={8} />
             <TimelineLegendText>{statusToText[status]}</TimelineLegendText>
           </Flex>
@@ -109,8 +109,6 @@ export function IssueUptimeCheckTimeline({group}: {group: Group}) {
         showCursor
         timeWindowConfig={timeWindowConfig}
         labelPosition="center-bottom"
-        cursorOverlayAnchor="bottom"
-        cursorOverlayAnchorOffset={2}
       />
       <GridLineLabels timeWindowConfig={timeWindowConfig} labelPosition="center-bottom" />
       <TimelineContainer>
@@ -148,7 +146,7 @@ const TimelineLegend = styled('div')`
 
 const TimelineLegendText = styled('div')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const TimelineContainer = styled('div')`

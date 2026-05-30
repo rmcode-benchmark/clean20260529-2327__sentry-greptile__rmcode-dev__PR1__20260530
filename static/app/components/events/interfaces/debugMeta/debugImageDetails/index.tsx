@@ -219,11 +219,9 @@ export function DebugImageDetails({
     refetch,
   } = useApiQuery<DebugFile[]>(
     [
-      `/projects/${organization.slug}/${projSlug}/files/dsyms/`,
+      `/projects/${organization.slug}/${projSlug}/files/dsyms/?debug_id=${image?.debug_id}`,
       {
         query: {
-          debug_id: image?.debug_id,
-          code_id: image?.code_id,
           // FIXME(swatinem): Ideally we should not filter here at all,
           // though Symbolicator does not currently report `bcsymbolmap` and `il2cpp`
           // candidates, and we would thus show bogus "unapplied" entries for those,
@@ -317,7 +315,7 @@ export function DebugImageDetails({
         </Content>
       </Body>
       <Footer>
-        <StyledButtonBar>
+        <StyledButtonBar gap={1}>
           <LinkButton
             href="https://docs.sentry.io/platforms/native/data-management/debug-files/"
             external
@@ -344,7 +342,7 @@ export function DebugImageDetails({
 const Content = styled('div')`
   display: grid;
   gap: ${space(3)};
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 const Title = styled('div')`
@@ -352,7 +350,7 @@ const Title = styled('div')`
   grid-template-columns: max-content 1fr;
   gap: ${space(1)};
   align-items: center;
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   max-width: calc(100% - 40px);
   word-break: break-all;
 `;
@@ -370,15 +368,15 @@ export const modalCss = (theme: Theme) => css`
     overflow: initial;
   }
 
-  @media (min-width: ${theme.breakpoints.sm}) {
+  @media (min-width: ${theme.breakpoints.small}) {
     width: 90%;
   }
 
-  @media (min-width: ${theme.breakpoints.xl}) {
+  @media (min-width: ${theme.breakpoints.xlarge}) {
     width: 70%;
   }
 
-  @media (min-width: ${theme.breakpoints['2xl']}) {
+  @media (min-width: ${theme.breakpoints.xxlarge}) {
     width: 50%;
   }
 `;

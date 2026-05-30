@@ -1,24 +1,23 @@
 import logging
 from collections.abc import Mapping
 from datetime import datetime
-from functools import partial
 
 import orjson
+import sentry_sdk
 from arroyo import Topic as ArroyoTopic
-from arroyo.backends.kafka import KafkaProducer, build_kafka_producer_configuration
+from arroyo.backends.kafka import KafkaProducer, build_kafka_configuration
 from arroyo.backends.kafka.consumer import KafkaPayload
-from arroyo.dlq import InvalidMessage
 from arroyo.processing.strategies.abstract import ProcessingStrategy, ProcessingStrategyFactory
 from arroyo.processing.strategies.commit import CommitOffsets
 from arroyo.processing.strategies.produce import Produce
 from arroyo.processing.strategies.unfold import Unfold
-from arroyo.types import BrokerValue, Commit, FilteredPayload, Message, Partition, Value
+from arroyo.types import Commit, FilteredPayload, Message, Partition, Value
 
 from sentry import options
 from sentry.conf.types.kafka_definition import Topic
 from sentry.spans.consumers.process_segments.convert import convert_span_to_item
-from sentry.spans.consumers.process_segments.enrichment import Span
 from sentry.spans.consumers.process_segments.message import process_segment
+from sentry.spans.consumers.process_segments.types import Span
 from sentry.utils.arroyo import MultiprocessingPool, run_task_with_multiprocessing
 from sentry.utils.kafka_config import get_kafka_producer_cluster_options, get_topic_definition
 
@@ -64,8 +63,7 @@ class DetectPerformanceIssuesStrategyFactory(ProcessingStrategyFactory[KafkaPayl
         producer_config["queue.buffering.max.messages"] = self.kafka_queue_size
 
         self.producer = KafkaProducer(
-            build_kafka_producer_configuration(default_config=producer_config),
-            use_simple_futures=True,
+            build_kafka_configuration(default_config=producer_config), use_simple_futures=True
         )
         self.output_topic = ArroyoTopic(topic_definition["real_topic_name"])
 
@@ -91,7 +89,7 @@ class DetectPerformanceIssuesStrategyFactory(ProcessingStrategyFactory[KafkaPayl
         unfold_step = Unfold(generator=_unfold_segment, next_step=produce_step)
 
         return run_task_with_multiprocessing(
-            function=partial(_process_message, skip_produce=self.skip_produce),
+            function=_process_message,
             next_step=unfold_step,
             max_batch_size=self.max_batch_size,
             max_batch_time=self.max_batch_time,
@@ -100,26 +98,23 @@ class DetectPerformanceIssuesStrategyFactory(ProcessingStrategyFactory[KafkaPayl
             output_block_size=self.output_block_size,
         )
 
-    def shutdown(self) -> None:
+    def shutdown(self):
         self.pool.close()
 
 
-def _process_message(
-    message: Message[KafkaPayload], skip_produce: bool = False
-) -> list[Value[KafkaPayload]]:
-    if not options.get("spans.process-segments.consumer.enable"):
+def _process_message(message: Message[KafkaPayload]) -> list[Value[KafkaPayload]]:
+    if not options.get("standalone-spans.process-segments-consumer.enable"):
         return []
-
-    assert isinstance(message.value, BrokerValue)
 
     try:
         value = message.payload.value
         segment = orjson.loads(value)
-        processed = process_segment(segment["spans"], skip_produce=skip_produce)
+        processed = process_segment(segment["spans"])
         return [_serialize_payload(span, message.timestamp) for span in processed]
     except Exception:
-        logger.exception("segments.invalid-message")
-        raise InvalidMessage(message.value.partition, message.value.offset)
+        # TODO: revise error handling
+        sentry_sdk.capture_exception()
+        return []
 
 
 def _serialize_payload(span: Span, timestamp: datetime | None) -> Value[KafkaPayload]:
@@ -138,5 +133,5 @@ def _serialize_payload(span: Span, timestamp: datetime | None) -> Value[KafkaPay
     )
 
 
-def _unfold_segment(spans: list[Value[KafkaPayload]]) -> list[Value[KafkaPayload]]:
+def _unfold_segment(spans: list[Value[KafkaPayload]]):
     return [span for span in spans if span is not None]

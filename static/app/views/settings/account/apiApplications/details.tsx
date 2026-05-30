@@ -6,7 +6,6 @@ import {openModal} from 'sentry/actionCreators/modal';
 import Confirm from 'sentry/components/confirm';
 import {Alert} from 'sentry/components/core/alert';
 import {Button} from 'sentry/components/core/button';
-import FieldGroup from 'sentry/components/forms/fieldGroup';
 import Form from 'sentry/components/forms/form';
 import FormField from 'sentry/components/forms/formField';
 import JsonForm from 'sentry/components/forms/jsonForm';
@@ -70,7 +69,7 @@ function ApiApplicationsDetails() {
           <Header>{t('Your new Client Secret')}</Header>
           <Body>
             <Alert.Container>
-              <Alert type="info">
+              <Alert type="info" showIcon>
                 {t('This will be the only time your client secret is visible!')}
               </Alert>
             </Alert.Container>
@@ -115,7 +114,7 @@ function ApiApplicationsDetails() {
           <PanelHeader>{t('Credentials')}</PanelHeader>
 
           <PanelBody>
-            <FormField name="clientID" label="Client ID" flexibleControlStateSize>
+            <FormField name="clientID" label="Client ID">
               {({value}: any) => (
                 <TextCopyInput>
                   {getDynamicText({value, fixed: 'CI_CLIENT_ID'})}
@@ -128,7 +127,6 @@ function ApiApplicationsDetails() {
               label={t('Client Secret')}
               help={t(`Your secret is only available briefly after application creation. Make
                   sure to save this value!`)}
-              flexibleControlStateSize
             >
               {({value}: any) =>
                 value ? (
@@ -153,13 +151,13 @@ function ApiApplicationsDetails() {
               }
             </FormField>
 
-            <FieldGroup label={t('Authorization URL')} flexibleControlStateSize>
-              <TextCopyInput>{`${urlPrefix}/oauth/authorize/`}</TextCopyInput>
-            </FieldGroup>
+            <FormField name="" label={t('Authorization URL')}>
+              {() => <TextCopyInput>{`${urlPrefix}/oauth/authorize/`}</TextCopyInput>}
+            </FormField>
 
-            <FieldGroup label={t('Token URL')} flexibleControlStateSize>
-              <TextCopyInput>{`${urlPrefix}/oauth/token/`}</TextCopyInput>
-            </FieldGroup>
+            <FormField name="" label={t('Token URL')}>
+              {() => <TextCopyInput>{`${urlPrefix}/oauth/token/`}</TextCopyInput>}
+            </FormField>
           </PanelBody>
         </Panel>
       </Form>

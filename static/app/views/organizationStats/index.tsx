@@ -7,10 +7,10 @@ import moment from 'moment-timezone';
 
 import type {DateTimeObject} from 'sentry/components/charts/utils';
 import {CompactSelect} from 'sentry/components/core/compactSelect';
-import {ExternalLink} from 'sentry/components/core/link';
 import ErrorBoundary from 'sentry/components/errorBoundary';
 import HookOrDefault from 'sentry/components/hookOrDefault';
 import * as Layout from 'sentry/components/layouts/thirds';
+import ExternalLink from 'sentry/components/links/externalLink';
 import NoProjectMessage from 'sentry/components/noProjectMessage';
 import {DatePageFilter} from 'sentry/components/organizations/datePageFilter';
 import PageFilterBar from 'sentry/components/organizations/pageFilterBar';
@@ -35,12 +35,10 @@ import type {Project} from 'sentry/types/project';
 import {hasDynamicSamplingCustomFeature} from 'sentry/utils/dynamicSampling/features';
 import withOrganization from 'sentry/utils/withOrganization';
 import withPageFilters from 'sentry/utils/withPageFilters';
-import {prefersStackedNav} from 'sentry/views/nav/prefersStackedNav';
 import HeaderTabs from 'sentry/views/organizationStats/header';
 import {getPerformanceBaseUrl} from 'sentry/views/performance/utils';
 import {makeProjectsPathname} from 'sentry/views/projects/pathname';
 import {getPricingDocsLinkForEventType} from 'sentry/views/settings/account/notifications/utils';
-import SettingsPageHeader from 'sentry/views/settings/components/settingsPageHeader';
 
 import type {ChartDataTransform} from './usageChart';
 import {CHART_OPTIONS_DATACATEGORY} from './usageChart';
@@ -90,7 +88,7 @@ export class OrganizationStats extends Component<OrganizationStatsProps> {
     ) {
       return {
         ...info,
-        name: DataCategoryExact.SPAN_INDEXED,
+        apiName: 'span_indexed',
       };
     }
 
@@ -104,10 +102,6 @@ export class OrganizationStats extends Component<OrganizationStatsProps> {
 
   get dataCategoryName() {
     return this.dataCategoryInfo.titleName;
-  }
-
-  get dataCategoryApiName() {
-    return this.dataCategoryInfo.name;
   }
 
   get dataDatetime(): DateTimeObject {
@@ -334,8 +328,8 @@ export class OrganizationStats extends Component<OrganizationStatsProps> {
         projectIds={this.projectIds}
         organization={organization}
         dataCategory={this.dataCategory}
-        dataCategoryName={this.dataCategoryName}
-        dataCategoryApiName={this.dataCategoryApiName}
+        dataCategoryName={this.dataCategoryInfo.titleName}
+        dataCategoryApiName={this.dataCategoryInfo.apiName}
         dataDatetime={this.dataDatetime}
         chartTransform={this.chartTransform}
         clientDiscard={this.clientDiscard}
@@ -346,8 +340,8 @@ export class OrganizationStats extends Component<OrganizationStatsProps> {
 
   renderEstimationDisclaimer() {
     if (
-      this.dataCategory === DATA_CATEGORY_INFO.profile_duration.plural ||
-      this.dataCategory === DATA_CATEGORY_INFO.profile_duration_ui.plural
+      this.dataCategory === DATA_CATEGORY_INFO.profileDuration.plural ||
+      this.dataCategory === DATA_CATEGORY_INFO.profileDurationUI.plural
     ) {
       return (
         <EstimationText data-test-id="estimation-text">
@@ -371,31 +365,6 @@ export class OrganizationStats extends Component<OrganizationStatsProps> {
     const {organization} = this.props;
     const hasTeamInsights = organization.features.includes('team-insights');
     const showProfilingBanner = this.dataCategory === 'profiles';
-    const newLayout = prefersStackedNav(organization);
-
-    const BodyWrapper = newLayout ? NewLayoutBody : Body;
-    const noTeamInsightsHeader = newLayout ? (
-      <SettingsPageHeader
-        title={t('Stats & Usage')}
-        subtitle={t(
-          'A view of the usage data that Sentry has received across your entire organization.'
-        )}
-      />
-    ) : (
-      <Layout.Header>
-        <Layout.HeaderContent>
-          <Layout.Title>{t('Organization Usage Stats')}</Layout.Title>
-          <HeadingSubtitle>
-            {tct(
-              'A view of the usage data that Sentry has received across your entire organization. [link: Read the docs].',
-              {
-                link: <ExternalLink href="https://docs.sentry.io/product/stats/" />,
-              }
-            )}
-          </HeadingSubtitle>
-        </Layout.HeaderContent>
-      </Layout.Header>
-    );
 
     return (
       <SentryDocumentTitle title={t('Usage Stats')} orgSlug={organization.slug}>
@@ -404,9 +373,23 @@ export class OrganizationStats extends Component<OrganizationStatsProps> {
             {hasTeamInsights ? (
               <HeaderTabs organization={organization} activeTab="stats" />
             ) : (
-              noTeamInsightsHeader
+              <Layout.Header>
+                <Layout.HeaderContent>
+                  <Layout.Title>{t('Organization Usage Stats')}</Layout.Title>
+                  <HeadingSubtitle>
+                    {tct(
+                      'A view of the usage data that Sentry has received across your entire organization. [link: Read the docs].',
+                      {
+                        link: (
+                          <ExternalLink href="https://docs.sentry.io/product/stats/" />
+                        ),
+                      }
+                    )}
+                  </HeadingSubtitle>
+                </Layout.HeaderContent>
+              </Layout.Header>
             )}
-            <BodyWrapper>
+            <Body>
               <Layout.Main fullWidth>
                 <HookHeader organization={organization} />
                 <ControlsWrapper>
@@ -432,7 +415,7 @@ export class OrganizationStats extends Component<OrganizationStatsProps> {
                   />
                 </ErrorBoundary>
               </Layout.Main>
-            </BodyWrapper>
+            </Body>
           </PageFiltersContainer>
         </NoProjectMessage>
       </SentryDocumentTitle>
@@ -457,10 +440,10 @@ const DropdownDataCategory = styled(CompactSelect)`
     height: 100%;
   }
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     grid-column: auto / span 2;
   }
-  @media (min-width: ${p => p.theme.breakpoints.lg}) {
+  @media (min-width: ${p => p.theme.breakpoints.large}) {
     grid-column: auto / span 1;
   }
 
@@ -477,10 +460,8 @@ const DropdownDataCategory = styled(CompactSelect)`
   }
 `;
 
-const NewLayoutBody = styled('div')``;
-
 const Body = styled(Layout.Body)`
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     display: block;
   }
 `;
@@ -503,13 +484,13 @@ const PageControl = styled('div')`
 
   margin-bottom: 0;
   grid-template-columns: minmax(0, max-content);
-  @media (max-width: ${p => p.theme.breakpoints.sm}) {
+  @media (max-width: ${p => p.theme.breakpoints.small}) {
     grid-template-columns: minmax(0, 1fr);
   }
 `;
 
 const EstimationText = styled('div')`
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   line-height: ${p => p.theme.text.lineHeightBody};
 `;

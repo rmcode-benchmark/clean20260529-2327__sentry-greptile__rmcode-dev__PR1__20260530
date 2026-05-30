@@ -49,7 +49,7 @@ const SmallMessage = styled('div')`
   display: flex;
   align-items: center;
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   line-height: 1em;
 `;
 

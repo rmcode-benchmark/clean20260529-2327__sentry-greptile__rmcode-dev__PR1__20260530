@@ -81,17 +81,17 @@ const FooterWrapper = styled('div')`
 
 export const SidebarFooter = styled('div')`
   margin-left: auto;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   white-space: nowrap;
   color: ${p => p.theme.subText};
   h1 {
     text-transform: uppercase;
     font-weight: bold;
-    font-size: ${p => p.theme.fontSize.sm};
+    font-size: ${p => p.theme.fontSizeSmall};
     margin-bottom: 0.5rem;
   }
   h2 {
-    font-size: ${p => p.theme.fontSize.lg};
+    font-size: ${p => p.theme.fontSizeLarge};
     font-weight: normal;
     margin-bottom: 0.5rem;
   }

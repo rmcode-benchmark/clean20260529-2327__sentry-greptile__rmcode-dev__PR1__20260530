@@ -333,7 +333,7 @@ function GenericConsumptionGroup(props: GenericConsumptionGroupProps) {
 export default withSubscription(SubscriptionNotifications);
 
 const PageDescription = styled('p')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   margin-bottom: ${space(2)};
 `;
 

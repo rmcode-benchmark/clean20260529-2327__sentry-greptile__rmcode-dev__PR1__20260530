@@ -243,11 +243,6 @@ class Monitor(Model):
     Human readable name of the monitor. Used for display purposes.
     """
 
-    is_upserting = models.BooleanField(default=False, db_default=False)
-    """
-    Indicates that the most recently received check-in was an upsert check-in.
-    """
-
     owner_user_id = HybridCloudForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete="SET_NULL")
     """
     The user assigned as the owner of this model.
@@ -485,8 +480,10 @@ class MonitorCheckIn(Model):
 
     date_updated = models.DateTimeField(default=timezone.now)
     """
-    Represents the last time a check-in was updated. This will typically be by
-    the terminal state.
+    Represents the last time a check-in was updated by . This will typically be by the terminal state
+    Currently only updated when a in_progress check-in is sent with this
+    check-in's guid. Can be used to extend the lifetime of a check-in so that
+    it does not time out.
     """
 
     date_clock = models.DateTimeField(null=True)

@@ -1,10 +1,9 @@
+import {BaseAvatar, type BaseAvatarProps} from 'sentry/components/core/avatar/baseAvatar';
 import type {OrganizationSummary} from 'sentry/types/organization';
 import {explodeSlug} from 'sentry/utils';
 
-import {BaseAvatar, type BaseAvatarProps} from './baseAvatar';
-
-interface OrganizationAvatarProps extends BaseAvatarProps {
-  organization: OrganizationSummary | undefined;
+export interface OrganizationAvatarProps extends BaseAvatarProps {
+  organization?: OrganizationSummary;
   ref?: React.Ref<HTMLSpanElement>;
 }
 
@@ -18,7 +17,7 @@ export function OrganizationAvatar({
     return null;
   }
 
-  const slug = organization.slug || '';
+  const slug = organization?.slug || '';
   const title = explodeSlug(slug);
 
   return (

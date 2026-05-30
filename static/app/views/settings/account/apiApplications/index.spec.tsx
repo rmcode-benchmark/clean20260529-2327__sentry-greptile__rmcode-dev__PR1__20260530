@@ -3,7 +3,6 @@ import {ApiApplicationFixture} from 'sentry-fixture/apiApplication';
 import {initializeOrg} from 'sentry-test/initializeOrg';
 import {
   render,
-  renderGlobalModal,
   screen,
   userEvent,
   waitFor,
@@ -98,10 +97,9 @@ describe('ApiApplications', function () {
   });
 
   it('deletes application', async function () {
-    const apiApp = ApiApplicationFixture({id: '123'});
     MockApiClient.addMockResponse({
       url: '/api-applications/',
-      body: [apiApp],
+      body: [ApiApplicationFixture({id: '123'})],
     });
     const deleteApplicationRequest = MockApiClient.addMockResponse({
       url: '/api-applications/123/',
@@ -109,16 +107,9 @@ describe('ApiApplications', function () {
     });
 
     render(<ApiApplications {...routerProps} />);
-    renderGlobalModal();
     await waitForElementToBeRemoved(() => screen.queryByTestId('loading-indicator'));
 
     await userEvent.click(screen.getByLabelText('Remove'));
-
-    await userEvent.type(
-      await screen.findByRole('textbox', {name: /confirm the deletion/}),
-      apiApp.name
-    );
-    await userEvent.click(screen.getByRole('button', {name: 'Confirm'}));
 
     expect(deleteApplicationRequest).toHaveBeenCalledWith(
       '/api-applications/123/',

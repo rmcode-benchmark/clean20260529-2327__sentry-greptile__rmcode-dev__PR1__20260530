@@ -17,5 +17,6 @@ HIDDEN_PLUGINS = (
     "splunk",
     "segment",
     "victorops",
+    "heroku",
     "sessionstack",
 )

@@ -971,22 +971,6 @@ class EventAttributeConditionTest(RuleTestCase):
         )
         self.assertDoesNotPass(rule, event)
 
-    def test_attr_is_in_with_spaces(self):
-        event = self.get_event()
-        rule = self.get_rule(
-            data={
-                "match": MatchType.IS_IN,
-                "attribute": "exception.value",
-                "value": "hello world, foo bar",
-            }
-        )
-        self.assertPasses(rule, event)
-
-        rule = self.get_rule(
-            data={"match": MatchType.IS_IN, "attribute": "exception.value", "value": "foo bar"}
-        )
-        self.assertDoesNotPass(rule, event)
-
     def test_attr_not_in(self):
         event = self.get_event()
         rule = self.get_rule(
@@ -996,21 +980,5 @@ class EventAttributeConditionTest(RuleTestCase):
 
         rule = self.get_rule(
             data={"match": MatchType.NOT_IN, "attribute": "platform", "value": "python"}
-        )
-        self.assertPasses(rule, event)
-
-    def test_attr_not_in_with_spaces(self):
-        event = self.get_event()
-        rule = self.get_rule(
-            data={
-                "match": MatchType.NOT_IN,
-                "attribute": "exception.value",
-                "value": "hello world, foo bar",
-            }
-        )
-        self.assertDoesNotPass(rule, event)
-
-        rule = self.get_rule(
-            data={"match": MatchType.NOT_IN, "attribute": "exception.value", "value": "foo bar"}
         )
         self.assertPasses(rule, event)

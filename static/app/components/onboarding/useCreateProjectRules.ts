@@ -1,4 +1,3 @@
-import type {IssueAlertRule} from 'sentry/types/alerts';
 import {useMutation} from 'sentry/utils/queryClient';
 import type RequestError from 'sentry/utils/requestError/requestError';
 import useApi from 'sentry/utils/useApi';
@@ -18,7 +17,8 @@ interface Variables
 export function useCreateProjectRules() {
   const api = useApi({persistInFlight: true});
   const organization = useOrganization();
-  return useMutation<IssueAlertRule, RequestError, Variables>({
+  // TODO(priscila): Introduce better response types
+  return useMutation<{id: string}, RequestError, Variables>({
     mutationFn: ({projectSlug, name, conditions, actions, actionMatch, frequency}) => {
       return api.requestPromise(`/projects/${organization.slug}/${projectSlug}/rules/`, {
         method: 'POST',

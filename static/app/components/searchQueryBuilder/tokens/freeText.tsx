@@ -7,6 +7,7 @@ import type {KeyboardEvent, Node} from '@react-types/shared';
 
 import {useSearchQueryBuilder} from 'sentry/components/searchQueryBuilder/context';
 import {useQueryBuilderGridItem} from 'sentry/components/searchQueryBuilder/hooks/useQueryBuilderGridItem';
+import {replaceTokensWithPadding} from 'sentry/components/searchQueryBuilder/hooks/useQueryBuilderState';
 import {SearchQueryBuilderCombobox} from 'sentry/components/searchQueryBuilder/tokens/combobox';
 import {useFilterKeyListBox} from 'sentry/components/searchQueryBuilder/tokens/filterKeyListBox/useFilterKeyListBox';
 import {InvalidTokenTooltip} from 'sentry/components/searchQueryBuilder/tokens/invalidTokenTooltip';
@@ -35,7 +36,6 @@ import {
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import {trackAnalytics} from 'sentry/utils/analytics';
-import type {FieldDefinition} from 'sentry/utils/fields';
 import {FieldKind, FieldValueType} from 'sentry/utils/fields';
 import {isCtrlKeyPressed} from 'sentry/utils/isCtrlKeyPressed';
 import useOrganization from 'sentry/utils/useOrganization';
@@ -115,11 +115,7 @@ function countPreviousItemsOfType({
   type: Token;
 }) {
   const itemKeys = [...state.collection.getKeys()];
-  const focusedKey = state.selectionManager.focusedKey;
-  if (!focusedKey) {
-    return 0;
-  }
-  const currentIndex = itemKeys.indexOf(focusedKey);
+  const currentIndex = itemKeys.indexOf(state.selectionManager.focusedKey);
 
   return itemKeys.slice(0, currentIndex).reduce<number>((count, next) => {
     if (next.toString().includes(type)) {
@@ -129,19 +125,12 @@ function countPreviousItemsOfType({
   }, 0);
 }
 
-function calculateNextFocusForFilter(
-  state: ListState<ParseResultToken>,
-  definition: FieldDefinition | null
-): FocusOverride {
+function calculateNextFocusForFilter(state: ListState<ParseResultToken>): FocusOverride {
   const numPreviousFilterItems = countPreviousItemsOfType({state, type: Token.FILTER});
-  const part =
-    definition && definition.kind === FieldKind.FUNCTION && definition.parameters?.length
-      ? 'key'
-      : 'value';
 
   return {
     itemKey: `${Token.FILTER}:${numPreviousFilterItems}`,
-    part,
+    part: 'value',
   };
 }
 
@@ -272,10 +261,9 @@ function SearchQueryBuilderInputInternal({
     recentSearches,
   } = useSearchQueryBuilder();
 
-  const {customMenu, sectionItems, maxOptions, onKeyDownCapture, handleOptionSelected} =
-    useFilterKeyListBox({
-      filterValue,
-    });
+  const {customMenu, sectionItems, maxOptions, onKeyDownCapture} = useFilterKeyListBox({
+    filterValue,
+  });
   const sortedFilteredItems = useSortedFilterKeyItems({
     filterValue,
     inputValue,
@@ -392,19 +380,13 @@ function SearchQueryBuilderInputInternal({
         items={items}
         placeholder={query === '' ? placeholder : undefined}
         onOptionSelected={option => {
-          if (handleOptionSelected) {
-            handleOptionSelected(option);
-            if (option.type === 'ask-seer' || option.type === 'ask-seer-consent') {
-              return;
-            }
-          }
-
           if (option.type === 'recent-query') {
             dispatch({
               type: 'UPDATE_QUERY',
               query: option.value,
               focusOverride: {itemKey: 'end'},
             });
+            handleSearch(option.value);
             return;
           }
 
@@ -416,6 +398,10 @@ function SearchQueryBuilderInputInternal({
               shouldCommitQuery: true,
             });
             resetInputValue();
+
+            // Because the query does not change until a subsequent render,
+            // we need to do the replacement that is does in the reducer here
+            handleSearch(replaceTokensWithPadding(query, [token], option.value));
             return;
           }
 
@@ -424,18 +410,6 @@ function SearchQueryBuilderInputInternal({
               type: 'UPDATE_FREE_TEXT',
               tokens: [token],
               text: replaceFocusedWord(inputValue, selectionIndex, option.textValue),
-              focusOverride: calculateNextFocusForInsertedToken(item),
-              shouldCommitQuery: true,
-            });
-            resetInputValue();
-            return;
-          }
-
-          if (option.type === 'raw-search-filter-value' && option.textValue) {
-            dispatch({
-              type: 'UPDATE_FREE_TEXT',
-              tokens: [token],
-              text: option.textValue,
               focusOverride: calculateNextFocusForInsertedToken(item),
               shouldCommitQuery: true,
             });
@@ -454,7 +428,7 @@ function SearchQueryBuilderInputInternal({
               value,
               getFieldDefinition
             ),
-            focusOverride: calculateNextFocusForFilter(state, getFieldDefinition(value)),
+            focusOverride: calculateNextFocusForFilter(state),
             shouldCommitQuery: false,
           });
           resetInputValue();
@@ -485,13 +459,6 @@ function SearchQueryBuilderInputInternal({
           resetInputValue();
         }}
         onCustomValueCommitted={value => {
-          // if we haven't changed anything, just search
-          if (value.trim() === trimmedTokenValue) {
-            handleSearch(query);
-            return;
-          }
-
-          // Otherwise, commit the query (which will trigger a search)
           dispatch({
             type: 'UPDATE_FREE_TEXT',
             tokens: [token],
@@ -503,6 +470,10 @@ function SearchQueryBuilderInputInternal({
             shouldCommitQuery: true,
           });
           resetInputValue();
+
+          // Because the query does not change until a subsequent render,
+          // we need to do the replacement that is does in the reducer here
+          handleSearch(replaceTokensWithPadding(query, [token], value));
         }}
         onExit={() => {
           if (inputValue !== token.value.trim()) {
@@ -521,49 +492,14 @@ function SearchQueryBuilderInputInternal({
         onInputChange={e => {
           // Parse text to see if this keystroke would have created any tokens.
           // Add a trailing quote in case the user wants to wrap with quotes.
-          const rawValue = e.target.value;
-          const parsedText = parseSearch(rawValue + '"');
+          const parsedText = parseSearch(e.target.value + '"');
 
-          const parenIndex =
-            parsedText?.findIndex(
+          if (
+            parsedText?.some(
               textToken =>
                 textToken.type === Token.L_PAREN || textToken.type === Token.R_PAREN
-            ) ?? -1;
-
-          if (parenIndex > -1) {
-            // There's a chance they're trying to type a function.
-            // If so we should autocomplete it as a function.
-            const paren = parsedText![parenIndex]!;
-            if (paren.type === Token.L_PAREN) {
-              const maybeSpaces = parsedText![parenIndex - 1];
-              const maybeFunction = parsedText![parenIndex - 2];
-              if (
-                maybeSpaces?.type === Token.SPACES &&
-                maybeSpaces.value === '' &&
-                maybeFunction?.type === Token.FREE_TEXT &&
-                getFieldDefinition(maybeFunction.value)?.kind === FieldKind.FUNCTION
-              ) {
-                dispatch({
-                  type: 'UPDATE_FREE_TEXT',
-                  tokens: [token],
-                  text: replaceFocusedWordWithFilter(
-                    inputValue,
-                    selectionIndex,
-                    filterValue,
-                    getFieldDefinition
-                  ),
-                  focusOverride: calculateNextFocusForFilter(
-                    state,
-                    getFieldDefinition(filterValue)
-                  ),
-                  shouldCommitQuery: false,
-                });
-                resetInputValue();
-                return;
-              }
-            }
-
-            // It's not a function so treat it as just a parenthesis
+            )
+          ) {
             dispatch({
               type: 'UPDATE_FREE_TEXT',
               tokens: [token],
@@ -592,10 +528,7 @@ function SearchQueryBuilderInputInternal({
                 filterKey,
                 getFieldDefinition
               ),
-              focusOverride: calculateNextFocusForFilter(
-                state,
-                getFieldDefinition(filterKey)
-              ),
+              focusOverride: calculateNextFocusForFilter(state),
               shouldCommitQuery: false,
             });
             resetInputValue();

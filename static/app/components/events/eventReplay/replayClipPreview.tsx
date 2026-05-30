@@ -43,12 +43,12 @@ export default function ReplayClipPreview({
     eventTimestampMs,
   });
 
-  const {status, replay} = readerResult;
+  const {fetching, replay} = readerResult;
 
   return (
     <ReplayContextProvider
       analyticsContext={analyticsContext}
-      isFetching={status === 'pending'}
+      isFetching={fetching}
       replay={replay}
     >
       <ReplayClipPreviewPlayer

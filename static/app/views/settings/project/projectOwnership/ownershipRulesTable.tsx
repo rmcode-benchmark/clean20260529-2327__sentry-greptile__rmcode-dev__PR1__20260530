@@ -202,7 +202,7 @@ export function OwnershipRulesTable({
         })}
       </StyledPanelTable>
       <PaginationWrapper>
-        <ButtonBar merged gap="none">
+        <ButtonBar merged>
           <Button
             icon={<IconChevron direction="left" size="sm" />}
             onClick={() => {
@@ -246,7 +246,7 @@ const RulesTableWrapper = styled('div')`
 
 const StyledPanelTable = styled(PanelTable)`
   grid-template-columns: min-content minmax(1fr, max-content) auto;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   margin-bottom: 0;
 
   ${p =>
@@ -274,7 +274,7 @@ const RowRule = styled('div')`
   align-items: center;
   gap: ${space(1)};
   font-family: ${p => p.theme.text.familyMono};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   word-break: break-word;
 `;
 

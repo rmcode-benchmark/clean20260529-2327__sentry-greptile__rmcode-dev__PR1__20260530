@@ -16,7 +16,7 @@ describe('awslambda onboarding docs', function () {
       expect(screen.getByRole('heading', {name: 'Install'})).toBeInTheDocument();
       expect(screen.getByRole('heading', {name: 'Configure SDK'})).toBeInTheDocument();
       expect(
-        screen.getByRole('heading', {name: /Upload Source Maps/i})
+        screen.getByRole('heading', {name: 'Upload Source Maps (Optional)'})
       ).toBeInTheDocument();
       expect(screen.getByRole('heading', {name: 'Verify'})).toBeInTheDocument();
 

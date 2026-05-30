@@ -40,7 +40,6 @@ interface ResponsePage<Data> {
   getResponseHeader: ((header: string) => string | null) | undefined;
   isError: boolean;
   isFetching: boolean;
-  status: 'pending' | 'error' | 'success';
 }
 
 interface State<Data> {
@@ -49,7 +48,6 @@ interface State<Data> {
   isError: boolean;
   isFetching: boolean;
   pages: Data[];
-  status: 'pending' | 'error' | 'success';
 }
 
 /**
@@ -102,7 +100,6 @@ export default function useFetchSequentialPages<Data>({
     pages: [],
     error: undefined,
     getLastResponseHeader: undefined,
-    status: 'pending',
     isError: false,
     isFetching: enabled,
   });
@@ -131,7 +128,6 @@ export default function useFetchSequentialPages<Data>({
             data,
             error: undefined,
             getResponseHeader: resp?.getResponseHeader,
-            status: 'success',
             isError: false,
             isFetching: false,
           });
@@ -144,7 +140,6 @@ export default function useFetchSequentialPages<Data>({
           data: undefined,
           error,
           getResponseHeader: undefined,
-          status: 'error',
           isError: true,
           isFetching: false,
         });
@@ -154,11 +149,6 @@ export default function useFetchSequentialPages<Data>({
           pages: values.map(value => value.data).filter(defined),
           error: values.map(value => value.error).at(0),
           getLastResponseHeader: values.at(-1)?.getResponseHeader,
-          status: values.some(value => value.status === 'error')
-            ? 'error'
-            : values.some(value => value.status === 'pending')
-              ? 'pending'
-              : 'success',
           isError: values.map(value => value.isError).some(Boolean),
           isFetching: values.map(value => value.isFetching).every(Boolean),
         });
@@ -174,7 +164,6 @@ export default function useFetchSequentialPages<Data>({
 
     setState(prev => ({
       ...prev,
-      status: 'pending',
       isFetching: true,
     }));
 

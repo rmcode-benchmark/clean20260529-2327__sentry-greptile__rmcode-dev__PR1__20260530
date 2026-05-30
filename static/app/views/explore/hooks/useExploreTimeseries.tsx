@@ -7,14 +7,15 @@ import {MutableSearch} from 'sentry/utils/tokenizeSearch';
 import usePrevious from 'sentry/utils/usePrevious';
 import {determineSeriesSampleCountAndIsSampled} from 'sentry/views/alerts/rules/metric/utils/determineSeriesSampleCount';
 import {
-  useExploreAggregateSortBys,
   useExploreDataset,
   useExploreGroupBys,
+  useExploreMode,
+  useExploreSortBys,
   useExploreVisualizes,
 } from 'sentry/views/explore/contexts/pageParamsContext';
+import {Mode} from 'sentry/views/explore/contexts/pageParamsContext/mode';
 import {formatSort} from 'sentry/views/explore/contexts/pageParamsContext/sortBys';
 import type {Visualize} from 'sentry/views/explore/contexts/pageParamsContext/visualizes';
-import {DEFAULT_VISUALIZATION} from 'sentry/views/explore/contexts/pageParamsContext/visualizes';
 import {useChartInterval} from 'sentry/views/explore/hooks/useChartInterval';
 import {
   type SpansRPCQueryExtras,
@@ -69,18 +70,21 @@ function useExploreTimeseriesImpl({
 }: UseExploreTimeseriesOptions): UseExploreTimeseriesResults {
   const dataset = useExploreDataset();
   const groupBys = useExploreGroupBys();
-  const sortBys = useExploreAggregateSortBys();
-  const visualizes = useExploreVisualizes({validate: true});
+  const mode = useExploreMode();
+  const sortBys = useExploreSortBys();
+  const visualizes = useExploreVisualizes();
   const [interval] = useChartInterval();
   const topEvents = useTopEvents();
 
-  const validYAxes = useMemo(() => {
-    return visualizes.map(visualize => visualize.yAxis);
-  }, [visualizes]);
-
   const fields: string[] = useMemo(() => {
-    return [...groupBys, ...validYAxes].filter(Boolean);
-  }, [groupBys, validYAxes]);
+    if (mode === Mode.SAMPLES) {
+      return [];
+    }
+
+    return [...groupBys, ...visualizes.flatMap(visualize => visualize.yAxes)].filter(
+      Boolean
+    );
+  }, [mode, groupBys, visualizes]);
 
   const orderby: string | string[] | undefined = useMemo(() => {
     if (!sortBys.length) {
@@ -91,17 +95,18 @@ function useExploreTimeseriesImpl({
   }, [sortBys]);
 
   const yAxes = useMemo(() => {
-    const allYAxes = [...validYAxes];
-
-    // injects DEFAULT_VISUALIZATION here as it can be used to populate the
-    // confidence footer as a fallback
-    allYAxes.push(DEFAULT_VISUALIZATION);
-
-    return dedupeArray(allYAxes).sort();
-  }, [validYAxes]);
+    const deduped = dedupeArray(visualizes.flatMap(visualize => visualize.yAxes));
+    deduped.sort();
+    return deduped;
+  }, [visualizes]);
 
   const options = useMemo(() => {
     const search = new MutableSearch(query);
+
+    // Filtering out all spans with op like 'ui.interaction*' which aren't
+    // embedded under transactions. The trace view does not support rendering
+    // such spans yet.
+    search.addFilterValues('!transaction.span_id', ['00']);
 
     return {
       search,
@@ -168,7 +173,7 @@ function _checkCanQueryForMoreData(
   isTopN: boolean
 ) {
   return visualizes.some(visualize => {
-    const dedupedYAxes = [visualize.yAxis];
+    const dedupedYAxes = dedupeArray(visualize.yAxes);
     const series = dedupedYAxes.flatMap(yAxis => data[yAxis]).filter(defined);
     const {dataScanned} = determineSeriesSampleCountAndIsSampled(series, isTopN);
     return dataScanned === 'partial';

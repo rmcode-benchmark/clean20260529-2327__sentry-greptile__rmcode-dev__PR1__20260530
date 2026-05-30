@@ -9,7 +9,7 @@ from sentry.ingest.transaction_clusterer.datasource.redis import get_redis_clien
 from sentry.ingest.transaction_clusterer.rule_validator import RuleValidator
 from sentry.models.project import Project
 from sentry.utils import metrics
-from sentry.utils.sdk import set_span_attribute
+from sentry.utils.sdk import set_span_data
 
 from .base import ReplacementRule
 
@@ -105,11 +105,7 @@ class ProjectOptionRuleStore:
         # Track the number of rules per project.
         metrics.distribution(self._tracker, len(converted_rules))
 
-        # Check if the rules have changed compared to what is stored
-        # to prevent a needless project option update and project config
-        # invalidation.
-        if converted_rules != project.get_option(self._storage, default=[]):
-            project.update_option(self._storage, converted_rules)
+        project.update_option(self._storage, converted_rules)
 
 
 class CompositeRuleStore:
@@ -150,8 +146,8 @@ class CompositeRuleStore:
         sorted_rules = [rule for rule in sorted_rules if rule[1] >= last_seen_deadline]
 
         if self.MERGE_MAX_RULES < len(rules):
-            set_span_attribute("discarded_rules", len(rules) - self.MERGE_MAX_RULES)
-            sentry_sdk.get_isolation_scope().set_context(
+            set_span_data("discarded_rules", len(rules) - self.MERGE_MAX_RULES)
+            sentry_sdk.Scope.get_isolation_scope().set_context(
                 "clustering_rules_max",
                 {
                     "num_existing_rules": len(rules),

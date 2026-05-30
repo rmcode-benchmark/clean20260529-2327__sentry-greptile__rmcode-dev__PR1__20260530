@@ -1,5 +1,5 @@
 import type {ComponentProps, SyntheticEvent} from 'react';
-import {Fragment, memo, useCallback, useLayoutEffect, useRef, useState} from 'react';
+import {Fragment, memo, useCallback, useState} from 'react';
 import {useTheme} from '@emotion/react';
 
 import {EmptyStreamWrapper} from 'sentry/components/emptyStateWarning';
@@ -15,10 +15,7 @@ import {FieldValueType} from 'sentry/utils/fields';
 import {useLocation} from 'sentry/utils/useLocation';
 import useOrganization from 'sentry/utils/useOrganization';
 import useProjectFromId from 'sentry/utils/useProjectFromId';
-import CellAction, {
-  Actions,
-  copyToClipBoard,
-} from 'sentry/views/discover/table/cellAction';
+import CellAction, {Actions} from 'sentry/views/discover/table/cellAction';
 import type {TableColumn} from 'sentry/views/discover/table/types';
 import {AttributesTree} from 'sentry/views/explore/components/traceItemAttributes/attributesTree';
 import {
@@ -70,18 +67,9 @@ type LogsRowProps = {
   highlightTerms: string[];
   meta: EventsMetaType | undefined;
   sharedHoverTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
-  canDeferRenderElements?: boolean;
-  isExpanded?: boolean;
-  onCollapse?: (logItemId: string) => void;
-  onExpand?: (logItemId: string) => void;
-  onExpandHeight?: (logItemId: string, estimatedHeight: number) => void;
 };
 
-const ALLOWED_CELL_ACTIONS: Actions[] = [
-  Actions.ADD,
-  Actions.EXCLUDE,
-  Actions.COPY_TO_CLIPBOARD,
-];
+const ALLOWED_CELL_ACTIONS: Actions[] = [Actions.ADD, Actions.EXCLUDE];
 
 function isInsideButton(element: Element | null): boolean {
   let i = 10;
@@ -103,11 +91,6 @@ export const LogRowContent = memo(function LogRowContent({
   highlightTerms,
   meta,
   sharedHoverTimeoutRef,
-  isExpanded,
-  onExpand,
-  onCollapse,
-  onExpandHeight,
-  canDeferRenderElements,
 }: LogsRowProps) {
   const location = useLocation();
   const organization = useOrganization();
@@ -116,19 +99,15 @@ export const LogRowContent = memo(function LogRowContent({
   const setLogsSearch = useSetLogsSearch();
   const isTableFrozen = useLogsIsTableFrozen();
   const blockRowExpanding = useLogsBlockRowExpanding();
-  const measureRef = useRef<HTMLTableRowElement>(null);
-  const [shouldRenderHoverElements, _setShouldRenderHoverElements] = useState(
-    canDeferRenderElements ? false : true
-  );
 
-  const setShouldRenderHoverElements = useCallback(
-    (value: boolean) => {
-      if (canDeferRenderElements) {
-        _setShouldRenderHoverElements(value);
-      }
-    },
-    [canDeferRenderElements, _setShouldRenderHoverElements]
-  );
+  function toggleExpanded() {
+    setExpanded(e => !e);
+    trackAnalytics('logs.table.row_expanded', {
+      log_id: String(dataRow[OurLogKnownFieldKey.ID]),
+      page_source: analyticsPageSource,
+      organization,
+    });
+  }
 
   function onPointerUp(event: SyntheticEvent) {
     if (event.target instanceof Element && isInsideButton(event.target)) {
@@ -141,35 +120,7 @@ export const LogRowContent = memo(function LogRowContent({
   }
 
   const analyticsPageSource = useLogsAnalyticsPageSource();
-  const [_expanded, setExpanded] = useState<boolean>(false);
-  const expanded = isExpanded ?? _expanded;
-
-  function toggleExpanded() {
-    if (onExpand) {
-      if (isExpanded) {
-        onCollapse?.(String(dataRow[OurLogKnownFieldKey.ID]));
-      } else {
-        onExpand?.(String(dataRow[OurLogKnownFieldKey.ID]));
-      }
-    } else {
-      setExpanded(e => !e);
-    }
-    trackAnalytics('logs.table.row_expanded', {
-      log_id: String(dataRow[OurLogKnownFieldKey.ID]),
-      page_source: analyticsPageSource,
-      organization,
-    });
-  }
-
-  useLayoutEffect(() => {
-    if (measureRef.current && isExpanded) {
-      onExpandHeight?.(
-        String(dataRow[OurLogKnownFieldKey.ID]),
-        measureRef.current.clientHeight
-      );
-    }
-  }, [isExpanded, onExpandHeight, dataRow]);
-
+  const [expanded, setExpanded] = useState<boolean>(false);
   const addSearchFilter = useCallback(
     ({
       key,
@@ -228,21 +179,12 @@ export const LogRowContent = memo(function LogRowContent({
         isClickable: true,
       };
 
-  const buttonSize = 'xs';
-  const chevronIcon = (
-    <IconChevron size={buttonSize} direction={expanded ? 'down' : 'right'} />
-  );
-
   return (
     <Fragment>
-      <LogTableRow
-        data-test-id="log-table-row"
-        {...rowInteractProps}
-        onMouseEnter={() => setShouldRenderHoverElements(true)}
-      >
+      <LogTableRow data-test-id="log-table-row" {...rowInteractProps}>
         <LogsTableBodyFirstCell key={'first'}>
           <LogFirstCellContent>
-            {blockRowExpanding ? null : shouldRenderHoverElements ? (
+            {blockRowExpanding ? null : (
               <StyledChevronButton
                 icon={<IconChevron size="xs" direction={expanded ? 'down' : 'right'} />}
                 aria-label={t('Toggle trace details')}
@@ -251,8 +193,6 @@ export const LogRowContent = memo(function LogRowContent({
                 borderless
                 onClick={() => toggleExpanded()}
               />
-            ) : (
-              <span className="log-table-row-chevron-button">{chevronIcon}</span>
             )}
             <SeverityCircleRenderer extra={rendererExtra} meta={meta} />
           </LogFirstCellContent>
@@ -263,14 +203,6 @@ export const LogRowContent = memo(function LogRowContent({
           if (!defined(value)) {
             return <LogTableBodyCell key={field} />;
           }
-
-          const renderedField = (
-            <LogFieldRenderer
-              item={getLogRowItem(field, dataRow, meta)}
-              meta={meta}
-              extra={rendererExtra}
-            />
-          );
 
           const discoverColumn: TableColumn<keyof TableDataRow> = {
             column: {
@@ -285,54 +217,46 @@ export const LogRowContent = memo(function LogRowContent({
 
           return (
             <LogTableBodyCell key={field} data-test-id={'log-table-cell-' + field}>
-              {shouldRenderHoverElements ? (
-                <CellAction
-                  column={discoverColumn}
-                  dataRow={dataRow as unknown as TableDataRow}
-                  handleCellAction={(actions, cellValue) => {
-                    switch (actions) {
-                      case Actions.ADD:
-                        addSearchFilter({
-                          key: field,
-                          value: cellValue,
-                        });
-                        break;
-                      case Actions.EXCLUDE:
-                        addSearchFilter({
-                          key: field,
-                          value: cellValue,
-                          negated: true,
-                        });
-                        break;
-                      case Actions.COPY_TO_CLIPBOARD:
-                        copyToClipBoard(cellValue);
-                        break;
-                      default:
-                        break;
-                    }
-                  }}
-                  allowActions={
-                    field === OurLogKnownFieldKey.TIMESTAMP || isTableFrozen
-                      ? []
-                      : ALLOWED_CELL_ACTIONS
+              <CellAction
+                column={discoverColumn}
+                dataRow={dataRow as unknown as TableDataRow}
+                handleCellAction={(actions, cellValue) => {
+                  switch (actions) {
+                    case Actions.ADD:
+                      addSearchFilter({
+                        key: field,
+                        value: cellValue,
+                      });
+                      break;
+                    case Actions.EXCLUDE:
+                      addSearchFilter({
+                        key: field,
+                        value: cellValue,
+                        negated: true,
+                      });
+                      break;
+                    default:
+                      break;
                   }
-                >
-                  {renderedField}
-                </CellAction>
-              ) : (
-                renderedField
-              )}
+                }}
+                allowActions={
+                  field === OurLogKnownFieldKey.TIMESTAMP || isTableFrozen
+                    ? []
+                    : ALLOWED_CELL_ACTIONS
+                }
+              >
+                <LogFieldRenderer
+                  item={getLogRowItem(field, dataRow, meta)}
+                  meta={meta}
+                  extra={rendererExtra}
+                />
+              </CellAction>
             </LogTableBodyCell>
           );
         })}
       </LogTableRow>
       {expanded && (
-        <LogRowDetails
-          dataRow={dataRow}
-          highlightTerms={highlightTerms}
-          meta={meta}
-          ref={measureRef}
-        />
+        <LogRowDetails dataRow={dataRow} highlightTerms={highlightTerms} meta={meta} />
       )}
     </Fragment>
   );
@@ -342,12 +266,10 @@ function LogRowDetails({
   dataRow,
   highlightTerms,
   meta,
-  ref,
 }: {
   dataRow: OurLogsResponseItem;
   highlightTerms: string[];
   meta: EventsMetaType | undefined;
-  ref: React.RefObject<HTMLTableRowElement | null>;
 }) {
   const location = useLocation();
   const organization = useOrganization();
@@ -381,7 +303,7 @@ function LogRowDetails({
 
   if (missingLogId || isError) {
     return (
-      <DetailsWrapper ref={ref}>
+      <DetailsWrapper>
         <EmptyStreamWrapper>
           <IconWarning color="gray300" size="lg" />
         </EmptyStreamWrapper>
@@ -389,11 +311,9 @@ function LogRowDetails({
     );
   }
 
-  const colSpan = fields.length + 1; // Number of dynamic fields + first cell which is always rendered.
-
   return (
-    <DetailsWrapper ref={isPending ? undefined : ref}>
-      <LogDetailTableBodyCell colSpan={colSpan}>
+    <DetailsWrapper>
+      <LogDetailTableBodyCell colSpan={fields.length}>
         {isPending && <LoadingIndicator />}
         {!isPending && data && (
           <Fragment>
@@ -415,9 +335,8 @@ function LogRowDetails({
               </DetailsBody>
               <LogAttributeTreeWrapper>
                 <AttributesTree<RendererExtra>
-                  attributes={data.attributes.filter(
-                    attribute => !HiddenLogDetailFields.includes(attribute.name)
-                  )}
+                  attributes={data.attributes}
+                  hiddenAttributes={HiddenLogDetailFields}
                   getCustomActions={getActions}
                   getAdjustedAttributeKey={adjustAliases}
                   renderers={LogAttributesRendererMap}

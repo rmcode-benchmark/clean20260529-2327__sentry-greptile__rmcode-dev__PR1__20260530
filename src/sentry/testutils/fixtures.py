@@ -15,7 +15,6 @@ from sentry.grouping.grouptype import ErrorGroupType
 from sentry.incidents.models.alert_rule import AlertRule
 from sentry.integrations.models.integration import Integration
 from sentry.integrations.models.organization_integration import OrganizationIntegration
-from sentry.integrations.types import IntegrationProviderSlug
 from sentry.models.activity import Activity
 from sentry.models.environment import Environment
 from sentry.models.grouprelease import GroupRelease
@@ -52,7 +51,7 @@ from sentry.uptime.models import (
     UptimeSubscriptionRegion,
     create_detector_from_project_subscription,
 )
-from sentry.uptime.types import UptimeMonitorMode
+from sentry.uptime.types import ProjectUptimeSubscriptionMode
 from sentry.users.models.identity import Identity, IdentityProvider
 from sentry.users.models.user import User
 from sentry.users.services.user import RpcUser
@@ -143,7 +142,7 @@ class Fixtures:
     @assume_test_silo_mode(SiloMode.CONTROL)
     def integration(self):
         integration = Integration.objects.create(
-            provider=IntegrationProviderSlug.GITHUB.value,
+            provider="github",
             name="GitHub",
             external_id="github:1",
             metadata={
@@ -317,6 +316,11 @@ class Fixtures:
 
     def create_file_from_path(self, *args, **kwargs):
         return Factories.create_file_from_path(*args, **kwargs)
+
+    def create_event_attachment(self, event=None, *args, **kwargs):
+        if event is None:
+            event = self.event
+        return Factories.create_event_attachment(event, *args, **kwargs)
 
     def create_dif_file(self, project: Project | None = None, *args, **kwargs):
         if project is None:
@@ -495,9 +499,6 @@ class Fixtures:
             team=team, organization=team.organization, integration_id=integration.id, **kwargs
         )
 
-    def create_data_access_grant(self, **kwargs):
-        return Factories.create_data_access_grant(**kwargs)
-
     def create_codeowners(self, project=None, code_mapping=None, **kwargs):
         if not project:
             project = self.project
@@ -656,11 +657,11 @@ class Fixtures:
     def create_data_source_detector(self, *args, **kwargs):
         return Factories.create_data_source_detector(*args, **kwargs)
 
-    def create_data_condition_group(self, organization=None, **kwargs):
+    def create_data_condition_group(self, *args, organization=None, **kwargs):
         if organization is None:
             organization = self.organization
 
-        return Factories.create_data_condition_group(organization=organization, **kwargs)
+        return Factories.create_data_condition_group(*args, organization=organization, **kwargs)
 
     def create_data_condition_group_action(self, *args, **kwargs):
         return Factories.create_data_condition_group_action(*args, **kwargs)
@@ -759,7 +760,7 @@ class Fixtures:
         env: Environment | None = None,
         uptime_subscription: UptimeSubscription | None = None,
         status: int = ObjectStatus.ACTIVE,
-        mode=UptimeMonitorMode.AUTO_DETECTED_ACTIVE,
+        mode=ProjectUptimeSubscriptionMode.AUTO_DETECTED_ACTIVE,
         name: str | None = None,
         owner: User | Team | None = None,
         uptime_status=UptimeStatus.OK,

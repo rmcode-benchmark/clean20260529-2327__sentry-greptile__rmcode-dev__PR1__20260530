@@ -27,11 +27,11 @@ export function AttributeDetails({column, kind, label, type}: AttributeDetailsPr
 const Details = styled('div')`
   padding: ${space(0.75)} ${space(1)};
   max-width: 220px;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
 `;
 
 const DetailsLabel = styled('p')`
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
   word-break: break-all;
   margin-bottom: ${space(1)};
 `;

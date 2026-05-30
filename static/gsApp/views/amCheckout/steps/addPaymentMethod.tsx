@@ -147,13 +147,13 @@ const StyledRadio = styled(Radio)`
 const CardDetails = styled('div')`
   display: inline-grid;
   gap: ${space(0.75)};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   color: ${p => p.theme.textColor};
   font-weight: 600;
 `;
 
 const Description = styled(TextBlock)`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   color: ${p => p.theme.subText};
   margin: 0;
   font-weight: normal;

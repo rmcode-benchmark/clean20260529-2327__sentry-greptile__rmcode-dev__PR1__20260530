@@ -9,15 +9,15 @@ import type {AssignableEntity} from 'sentry/components/assigneeSelectorDropdown'
 import GuideAnchor from 'sentry/components/assistant/guideAnchor';
 import GroupStatusChart from 'sentry/components/charts/groupStatusChart';
 import {Checkbox} from 'sentry/components/core/checkbox';
-import InteractionStateLayer from 'sentry/components/core/interactionStateLayer';
-import {Link} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import Count from 'sentry/components/count';
 import EventOrGroupExtraDetails from 'sentry/components/eventOrGroupExtraDetails';
 import EventOrGroupHeader from 'sentry/components/eventOrGroupHeader';
 import {AssigneeSelector} from 'sentry/components/group/assigneeSelector';
 import {getBadgeProperties} from 'sentry/components/group/inboxBadges/statusBadge';
+import InteractionStateLayer from 'sentry/components/interactionStateLayer';
 import type {GroupListColumn} from 'sentry/components/issues/groupList';
+import Link from 'sentry/components/links/link';
 import PanelItem from 'sentry/components/panels/panelItem';
 import Placeholder from 'sentry/components/placeholder';
 import ProgressBar from 'sentry/components/progressBar';
@@ -71,6 +71,7 @@ type Props = {
   customStatsPeriod?: TimePeriodType;
   displayReprocessingLayout?: boolean;
   hasGuideAnchor?: boolean;
+  index?: number;
   memberList?: User[];
   onPriorityChange?: (newPriority: PriorityLevel) => void;
   query?: string;
@@ -185,6 +186,7 @@ function StreamGroup({
   customStatsPeriod,
   displayReprocessingLayout,
   hasGuideAnchor,
+  index,
   memberList,
   query,
   queryFilterDescription,
@@ -365,6 +367,7 @@ function StreamGroup({
       pathname: `/organizations/${organization.slug}/issues/${group.id}/events/`,
       query: {
         referrer,
+        stream_index: index,
         ...commonQuery,
         query: filteredQuery,
       },
@@ -556,6 +559,7 @@ function StreamGroup({
           data: group,
           organization,
           referrer,
+          streamIndex: index,
           location,
           query,
         })
@@ -579,7 +583,7 @@ function StreamGroup({
         />
       )}
       <GroupSummary canSelect={canSelect}>
-        <EventOrGroupHeader data={group} query={query} source={referrer} />
+        <EventOrGroupHeader index={index} data={group} query={query} source={referrer} />
         <EventOrGroupExtraDetails data={group} showLifetime={false} />
       </GroupSummary>
       {hasGuideAnchor && <GuideAnchor target="issue_stream" />}
@@ -687,7 +691,7 @@ const Wrapper = styled(PanelItem)<{
   padding: ${space(1)} 0;
   min-height: 82px;
 
-  &:not(:has(:hover)):not(:has(input:checked)) {
+  &:not(:hover):not(:has(input:checked)) {
     ${CheckboxLabel} {
       ${p => p.theme.visuallyHidden};
     }
@@ -754,7 +758,7 @@ export const GroupSummary = styled('div')<{canSelect: boolean}>`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   width: auto;
 `;
 
@@ -780,7 +784,7 @@ const CountsWrapper = styled('div')`
 `;
 
 const PrimaryCount = styled(Count)`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   display: flex;
   justify-content: right;
   margin-bottom: ${space(0.25)};
@@ -788,7 +792,7 @@ const PrimaryCount = styled(Count)`
 `;
 
 const SecondaryCount = styled(({value, ...p}: any) => <Count {...p} value={value} />)`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   display: flex;
   justify-content: right;
   color: ${p => p.theme.subText};
@@ -807,12 +811,12 @@ const CountTooltipContent = styled('div')`
   grid-template-columns: 1fr max-content;
   gap: ${space(1)} ${space(3)};
   text-align: left;
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   align-items: center;
 
   h4 {
     color: ${p => p.theme.subText};
-    font-size: ${p => p.theme.fontSize.xs};
+    font-size: ${p => p.theme.fontSizeExtraSmall};
     text-transform: uppercase;
     grid-column: 1 / -1;
     margin-bottom: ${space(0.25)};
@@ -914,7 +918,7 @@ const StartedColumn = styled('div')`
   ${p => p.theme.overflowEllipsis};
   width: 85px;
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     display: block;
     width: 140px;
   }
@@ -927,7 +931,7 @@ const EventsReprocessedColumn = styled('div')`
   ${p => p.theme.overflowEllipsis};
   width: 75px;
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     width: 140px;
   }
 `;
@@ -937,7 +941,7 @@ const ProgressColumn = styled('div')`
   align-self: center;
   display: none;
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     display: block;
     width: 160px;
   }

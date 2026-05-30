@@ -281,6 +281,7 @@ class AlertRuleDetailsGetEndpointTest(AlertRuleDetailsBase):
         assert "latestIncident" not in no_expand_resp.data
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @with_feature("organizations:incidents")
     def test_static_detection_type(self):
         self.create_team(organization=self.organization, members=[self.user])
@@ -315,6 +316,7 @@ class AlertRuleDetailsGetEndpointTest(AlertRuleDetailsBase):
             self.create_alert_rule(threshold_type=AlertRuleThresholdType.ABOVE_AND_BELOW)
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @with_feature("organizations:incidents")
     def test_percent_detection_type(self):
         self.create_team(organization=self.organization, members=[self.user])
@@ -355,6 +357,7 @@ class AlertRuleDetailsGetEndpointTest(AlertRuleDetailsBase):
             )
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @with_feature("organizations:incidents")
     @patch(
         "sentry.seer.anomaly_detection.store_data.seer_anomaly_detection_connection_pool.urlopen"
@@ -434,6 +437,7 @@ class AlertRuleDetailsGetEndpointTest(AlertRuleDetailsBase):
             )
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @with_feature("organizations:incidents")
     def test_missing_threshold(self):
         """Test that we throw a validation error when the trigger is missing alertThreshold"""
@@ -1046,6 +1050,7 @@ class AlertRuleDetailsPutEndpointTest(AlertRuleDetailsBase):
         assert_dual_written_resolution_threshold_equals(self.alert_rule, 50)
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @with_feature("organizations:incidents")
     @patch(
         "sentry.seer.anomaly_detection.store_data.seer_anomaly_detection_connection_pool.urlopen"
@@ -1068,6 +1073,7 @@ class AlertRuleDetailsPutEndpointTest(AlertRuleDetailsBase):
         assert mock_seer_request.call_count == 1
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @with_feature("organizations:incidents")
     @patch(
         "sentry.seer.anomaly_detection.store_data.seer_anomaly_detection_connection_pool.urlopen"
@@ -1093,6 +1099,7 @@ class AlertRuleDetailsPutEndpointTest(AlertRuleDetailsBase):
         assert mock_seer_request.call_count == 1
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @with_feature("organizations:incidents")
     @patch(
         "sentry.seer.anomaly_detection.store_data.seer_anomaly_detection_connection_pool.urlopen"
@@ -1120,6 +1127,7 @@ class AlertRuleDetailsPutEndpointTest(AlertRuleDetailsBase):
         assert mock_seer_request.call_count == 1
 
     @with_feature("organizations:anomaly-detection-alerts")
+    @with_feature("organizations:anomaly-detection-rollout")
     @with_feature("organizations:incidents")
     @patch(
         "sentry.seer.anomaly_detection.store_data.seer_anomaly_detection_connection_pool.urlopen"
@@ -1369,24 +1377,10 @@ class AlertRuleDetailsSlackPutEndpointTest(AlertRuleDetailsBase):
             ),
         )
 
-    def mock_users_info(self, user):
-        return patch(
-            "slack_sdk.web.client.WebClient.users_info",
-            return_value=SlackResponse(
-                client=None,
-                http_verb="POST",
-                api_url="https://slack.com/api/users.info",
-                req_args={"user": user},
-                data={"ok": True, "user": user},
-                headers={},
-                status_code=200,
-            ),
-        )
-
     def _organization_alert_rule_api_call(
         self,
         channelName: str | None = None,
-        channelID: str | None = None,
+        channelID: int | None = None,
     ) -> Response:
         """
         Call the project alert rule API but do some Slack integration set up before doing so
@@ -1481,16 +1475,14 @@ class AlertRuleDetailsSlackPutEndpointTest(AlertRuleDetailsBase):
         self.login_as(self.user)
         channelName = "my-channel"
         # Specifying an inputChannelID will cause the validate_channel_id logic to be triggered
-        channelID = "C12345678"
+        channelID = 123
         channel = {"name": channelName}
         with self.mock_conversations_info(channel):
             with (
                 assume_test_silo_mode(SiloMode.REGION),
                 override_settings(SILO_MODE=SiloMode.REGION),
             ):
-                resp = self._organization_alert_rule_api_call(
-                    channelName=channelName, channelID=channelID
-                )
+                resp = self._organization_alert_rule_api_call(channelName, channelID)
 
             stored_action = resp.data["triggers"][0]["actions"][0]
             assert stored_action["inputChannelId"] == str(channelID)
@@ -1507,81 +1499,20 @@ class AlertRuleDetailsSlackPutEndpointTest(AlertRuleDetailsBase):
         otherChannel = "some-other-channel"
         channelName = "my-channel"
         # Specifying an inputChannelID will cause the validate_channel_id logic to be triggered
-        channelID = "C12345678"
+        channelID = 123
         channel = {"name": otherChannel}
         with self.mock_conversations_info(channel):
             with (
                 assume_test_silo_mode(SiloMode.REGION),
                 override_settings(SILO_MODE=SiloMode.REGION),
             ):
-                resp = self._organization_alert_rule_api_call(
-                    channelName=channelName, channelID=channelID
-                )
+                resp = self._organization_alert_rule_api_call(channelName, channelID)
 
             assert resp.status_code == 400
             assert resp.data == {
                 "nonFieldErrors": [
                     ErrorDetail(
-                        string="Slack channel name from ID does not match input channel name.",
-                        code="invalid",
-                    )
-                ]
-            }
-
-    def test_create_slack_alert_with_mismatch_name_and_user_id_sdk(self):
-        """
-        The user specifies the Slack user and user ID but they do not match.
-        """
-        self.create_member(
-            user=self.user, organization=self.organization, role="owner", teams=[self.team]
-        )
-        self.login_as(self.user)
-        otherUserId = "U12345678"
-        otherUser = {
-            "id": otherUserId,
-            "name": "kim.possible",
-            "profile": {
-                "display_name": "Kim Possible 🕵️‍♀️",
-                "display_name_normalized": "Kim Possible",
-            },
-        }
-        inputName = "Ron Stoppable"
-
-        with self.mock_users_info(user=otherUser):
-            resp = self._organization_alert_rule_api_call(
-                channelName=inputName, channelID=otherUserId
-            )
-            assert resp.status_code == 400
-            assert resp.data == {
-                "nonFieldErrors": [
-                    ErrorDetail(
-                        string="Slack username from ID does not match input username.",
-                        code="invalid",
-                    )
-                ]
-            }
-
-    def test_create_slack_alert_with_missing_name_from_sdk(self):
-        """
-        The user specifies the Slack user and user ID but the response doesn't have a name.
-        """
-        self.create_member(
-            user=self.user, organization=self.organization, role="owner", teams=[self.team]
-        )
-        self.login_as(self.user)
-        otherUserId = "U12345678"
-        otherUser = {"id": otherUserId}
-        inputName = "Ron Stoppable"
-
-        with self.mock_users_info(user=otherUser):
-            resp = self._organization_alert_rule_api_call(
-                channelName=inputName, channelID=otherUserId
-            )
-            assert resp.status_code == 400
-            assert resp.data == {
-                "nonFieldErrors": [
-                    ErrorDetail(
-                        string="Did not receive user name from API results",
+                        string=f"Received channel name {otherChannel} does not match inputted channel name {channelName}.",
                         code="invalid",
                     )
                 ]
@@ -1614,120 +1545,13 @@ class AlertRuleDetailsSlackPutEndpointTest(AlertRuleDetailsBase):
             self.login_as(self.user)
             channelName = "my-channel"
             # Specifying an inputChannelID will cause the validate_channel_id logic to be triggered
-            channelID = "C12345678"
-            resp = self._organization_alert_rule_api_call(
-                channelName=channelName, channelID=channelID
-            )
+            channelID = 123
+            resp = self._organization_alert_rule_api_call(channelName, channelID)
 
             assert resp.status_code == 400
             assert resp.data == {
                 "nonFieldErrors": [
                     ErrorDetail(string="Channel not found. Invalid ID provided.", code="invalid")
-                ]
-            }
-
-    @responses.activate
-    def test_create_slack_alert_with_non_existent_user_id(self):
-        """
-        The user specifies a bad Slack user ID.
-        """
-        with patch(
-            "slack_sdk.web.client.WebClient.users_info",
-            side_effect=SlackApiError(
-                "error",
-                SlackResponse(
-                    client=None,
-                    http_verb="POST",
-                    api_url="https://slack.com/api/users.info",
-                    req_args={"user": "waldo"},
-                    data={"ok": False, "error": "user_not_found"},
-                    headers={},
-                    status_code=400,
-                ),
-            ),
-        ):
-            self.create_member(
-                user=self.user, organization=self.organization, role="owner", teams=[self.team]
-            )
-            self.login_as(self.user)
-            resp = self._organization_alert_rule_api_call(
-                channelName="waldo", channelID="U12345678"
-            )
-            assert resp.status_code == 400
-            assert resp.data == {
-                "nonFieldErrors": [
-                    ErrorDetail(string="User not found. Invalid ID provided.", code="invalid")
-                ]
-            }
-
-    @responses.activate
-    def test_create_slack_alert_with_non_visible_user(self):
-        """
-        The user specifies a hidden Slack user ID.
-        """
-        with patch(
-            "slack_sdk.web.client.WebClient.users_info",
-            side_effect=SlackApiError(
-                "error",
-                SlackResponse(
-                    client=None,
-                    http_verb="POST",
-                    api_url="https://slack.com/api/users.info",
-                    req_args={"user": "waldo"},
-                    data={"ok": False, "error": "user_not_visible"},
-                    headers={},
-                    status_code=400,
-                ),
-            ),
-        ):
-            self.create_member(
-                user=self.user, organization=self.organization, role="owner", teams=[self.team]
-            )
-            self.login_as(self.user)
-            resp = self._organization_alert_rule_api_call(
-                channelName="waldo", channelID="U12345678"
-            )
-            assert resp.status_code == 400
-            assert resp.data == {
-                "nonFieldErrors": [
-                    ErrorDetail(
-                        string="User not visible, you may need to modify your Slack settings.",
-                        code="invalid",
-                    )
-                ]
-            }
-
-    @responses.activate
-    def test_create_slack_alert_with_bad_user_response(self):
-        """
-        Catch-all for less common Slack API errors.
-        """
-        with patch(
-            "slack_sdk.web.client.WebClient.users_info",
-            side_effect=SlackApiError(
-                "error",
-                SlackResponse(
-                    client=None,
-                    http_verb="POST",
-                    api_url="https://slack.com/api/users.info",
-                    req_args={"user": "waldo"},
-                    data={"ok": False, "error": "user_not_found"},
-                    headers={},
-                    status_code=400,
-                ),
-            ),
-        ):
-            self.create_member(
-                user=self.user, organization=self.organization, role="owner", teams=[self.team]
-            )
-            self.login_as(self.user)
-            resp = self._organization_alert_rule_api_call(
-                channelName="waldo", channelID="U12345678"
-            )
-            assert resp.status_code == 400
-            assert resp.data == {
-                "nonFieldErrors": [
-                    ErrorDetail(string="User not found. Invalid ID provided.", code="invalid")
                 ]
             }
 
@@ -1748,7 +1572,7 @@ class AlertRuleDetailsSlackPutEndpointTest(AlertRuleDetailsBase):
         mock_uuid4.return_value = self.get_mock_uuid()
         channelName = "my-channel"
         # Because channel ID is None it will be converted to an async request for the channel name
-        resp = self._organization_alert_rule_api_call(channelName=channelName, channelID=None)
+        resp = self._organization_alert_rule_api_call(channelName, channelID=None)
 
         # A task with this uuid has been scheduled because there's a Slack channel async search
         assert resp.status_code == 202

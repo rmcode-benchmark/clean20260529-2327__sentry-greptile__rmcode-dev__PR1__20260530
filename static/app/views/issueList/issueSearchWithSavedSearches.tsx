@@ -8,7 +8,7 @@ import useOrganization from 'sentry/utils/useOrganization';
 import {useSyncedLocalStorageState} from 'sentry/utils/useSyncedLocalStorageState';
 import {SAVED_SEARCHES_SIDEBAR_OPEN_LOCALSTORAGE_KEY} from 'sentry/views/issueList/utils';
 import {useSelectedSavedSearch} from 'sentry/views/issueList/utils/useSelectedSavedSearch';
-import {usePrefersStackedNav} from 'sentry/views/nav/usePrefersStackedNav';
+import {usePrefersOldNavWithEnforcedStackedNav} from 'sentry/views/nav/usePrefersStackedNav';
 
 import IssueListSearchBar from './searchBar';
 
@@ -30,9 +30,11 @@ export function IssueSearchWithSavedSearches({
     SAVED_SEARCHES_SIDEBAR_OPEN_LOCALSTORAGE_KEY,
     false
   );
-  const prefersStackedNav = usePrefersStackedNav();
+  const prefersOldNavWithEnforcement = usePrefersOldNavWithEnforcedStackedNav();
 
-  const shouldShowSavedSearchesButton = !prefersStackedNav;
+  const shouldShowSavedSearchesButton =
+    !organization.features.includes('issue-stream-custom-views') ||
+    prefersOldNavWithEnforcement;
 
   function onSavedSearchesToggleClicked() {
     const newOpenState = !isSavedSearchesOpen;
@@ -68,7 +70,7 @@ const SearchBarWithButtonContainer = styled('div')`
   align-items: stretch;
   width: 100%;
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     flex-basis: 35rem;
   }
 `;
@@ -77,7 +79,7 @@ const StyledButton = styled(Button)`
   /* Hide this button on small screens */
   display: none;
 
-  @media (min-width: ${p => p.theme.breakpoints.sm}) {
+  @media (min-width: ${p => p.theme.breakpoints.small}) {
     display: flex;
     align-items: center;
     height: 100%;
@@ -102,7 +104,7 @@ const StyledIssueListSearchBarWithButton = styled(IssueListSearchBar)<{
   ${p =>
     !p.roundCorners &&
     css`
-      @media (min-width: ${p.theme.breakpoints.sm}) {
+      @media (min-width: ${p.theme.breakpoints.small}) {
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
       }

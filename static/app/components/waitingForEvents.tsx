@@ -4,7 +4,7 @@ import styled from '@emotion/styled';
 import waitingForEventImg from 'sentry-images/spot/waiting-for-event.svg';
 
 import {LinkButton} from 'sentry/components/core/button/linkButton';
-import {Link} from 'sentry/components/core/link';
+import Link from 'sentry/components/links/link';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {Organization} from 'sentry/types/organization';
@@ -115,12 +115,12 @@ export default WaitingForEvents;
 const Wrapper = styled('div')`
   display: flex;
   justify-content: center;
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   border-radius: 0 0 3px 3px;
   padding: 40px ${space(3)};
   min-height: 260px;
 
-  @media (max-width: ${p => p.theme.breakpoints.sm}) {
+  @media (max-width: ${p => p.theme.breakpoints.small}) {
     flex-direction: column;
     align-items: center;
     padding: ${space(3)};
@@ -133,7 +133,7 @@ const MessageContainer = styled('div')`
   max-width: 480px;
   margin-left: 40px;
 
-  @media (max-width: ${p => p.theme.breakpoints.sm}) {
+  @media (max-width: ${p => p.theme.breakpoints.small}) {
     margin: 0;
   }
 `;

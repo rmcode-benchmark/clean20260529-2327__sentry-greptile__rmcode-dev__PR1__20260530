@@ -113,7 +113,7 @@ class OrganizationOption(Model):
 
     organization = FlexibleForeignKey("sentry.Organization")
     key = models.CharField(max_length=64)
-    value = PickledObjectField(null=True)
+    value = PickledObjectField()
 
     objects: ClassVar[OrganizationOptionManager] = OrganizationOptionManager()
 

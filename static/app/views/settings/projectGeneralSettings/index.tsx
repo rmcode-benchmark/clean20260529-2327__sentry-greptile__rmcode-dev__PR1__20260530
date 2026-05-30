@@ -9,7 +9,6 @@ import {
 import {hasEveryAccess} from 'sentry/components/acl/access';
 import Confirm from 'sentry/components/confirm';
 import {Button} from 'sentry/components/core/button';
-import {ExternalLink} from 'sentry/components/core/link';
 import FieldGroup from 'sentry/components/forms/fieldGroup';
 import TextField from 'sentry/components/forms/fields/textField';
 import type {FormProps} from 'sentry/components/forms/form';
@@ -18,6 +17,7 @@ import JsonForm from 'sentry/components/forms/jsonForm';
 import type {FieldValue} from 'sentry/components/forms/model';
 import type {FieldObject} from 'sentry/components/forms/types';
 import Hook from 'sentry/components/hook';
+import ExternalLink from 'sentry/components/links/externalLink';
 import LoadingError from 'sentry/components/loadingError';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import {removePageFiltersStorage} from 'sentry/components/organizations/pageFilters/persistence';
@@ -34,6 +34,7 @@ import {handleXhrErrorResponse} from 'sentry/utils/handleXhrErrorResponse';
 import type {ApiQueryKey} from 'sentry/utils/queryClient';
 import {setApiQueryData, useApiQuery, useQueryClient} from 'sentry/utils/queryClient';
 import recreateRoute from 'sentry/utils/recreateRoute';
+import type RequestError from 'sentry/utils/requestError/requestError';
 import useApi from 'sentry/utils/useApi';
 import {useLocation} from 'sentry/utils/useLocation';
 import {useNavigate} from 'sentry/utils/useNavigate';
@@ -51,7 +52,6 @@ type Props = {
 function ProjectGeneralSettings({onChangeSlug}: Props) {
   const form: Record<string, FieldValue> = {};
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   const organization = useOrganization();
   const {projectId} = useParams<{projectId: string}>();
@@ -82,27 +82,37 @@ function ProjectGeneralSettings({onChangeSlug}: Props) {
     form[id] = value;
   };
 
-  const handleRemoveProject = async () => {
+  const handleRemoveProject = () => {
     removePageFiltersStorage(organization.slug);
 
     if (!project) {
       return;
     }
 
-    try {
-      await removeProject({
-        api,
-        orgSlug: organization.slug,
-        projectSlug: project.slug,
-        origin: 'settings',
-      });
-    } catch (err) {
-      addErrorMessage(tct('Error removing [project]', {project: project.slug}));
-      throw err;
-    }
-
-    addSuccessMessage(tct('[project] was successfully removed', {project: project.slug}));
-    navigate(`/settings/${organization.slug}/projects/`);
+    removeProject({
+      api,
+      orgSlug: organization.slug,
+      projectSlug: project.slug,
+      origin: 'settings',
+    })
+      .then(
+        () => {
+          addSuccessMessage(
+            tct('[project] was successfully removed', {project: project.slug})
+          );
+        },
+        err => {
+          addErrorMessage(tct('Error removing [project]', {project: project.slug}));
+          throw err;
+        }
+      )
+      .then(
+        () => {
+          // Need to hard reload because lots of components do not listen to Projects Store
+          window.location.assign('/');
+        },
+        (err: RequestError) => handleXhrErrorResponse('Unable to remove project', err)
+      );
   };
 
   const handleTransferProject = async () => {
@@ -273,7 +283,7 @@ function ProjectGeneralSettings({onChangeSlug}: Props) {
   // The <Form /> component applies its props to its children meaning the
   // hooked component would need to conform to the form settings applied in a
   // separate repository. This is not feasible to maintain and may introduce
-  // compatibility errors if something changes in either repository. For that
+  // compatability errors if something changes in either repository. For that
   // reason, the Form component is split in two, since the fields do not
   // depend on one another, allowing for the Hook to manage its own state.
   const formProps: FormProps = {

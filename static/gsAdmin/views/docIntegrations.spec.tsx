@@ -15,7 +15,7 @@ import DocIntegrations from 'admin/views/docIntegrations';
 
 describe('Doc Integrations', function () {
   it('renders', function () {
-    const {routerProps} = initializeOrg();
+    const {router, routerProps} = initializeOrg();
 
     MockApiClient.addMockResponse({
       url: '/doc-integrations/',
@@ -23,7 +23,10 @@ describe('Doc Integrations', function () {
       body: [],
     });
 
-    render(<DocIntegrations {...routerProps} />);
+    render(<DocIntegrations {...routerProps} />, {
+      router,
+      deprecatedRouterMocks: true,
+    });
 
     expect(
       screen.getByRole('heading', {name: 'Document Integrations'})
@@ -40,6 +43,12 @@ describe('Doc Integration Details', function () {
   });
 
   it('renders', async function () {
+    const {router} = initializeOrg({
+      router: {
+        params: {docIntegrationSlug: mockDocIntegration.slug},
+      },
+    });
+
     MockApiClient.addMockResponse({
       url: ENDPOINT,
       method: 'GET',
@@ -47,12 +56,8 @@ describe('Doc Integration Details', function () {
     });
 
     render(<DocIntegrationDetails />, {
-      initialRouterConfig: {
-        location: {
-          pathname: `/admin/doc-integrations/${mockDocIntegration.slug}/`,
-        },
-        route: `/admin/doc-integrations/:docIntegrationSlug/`,
-      },
+      router,
+      deprecatedRouterMocks: true,
     });
 
     expect(
@@ -70,6 +75,12 @@ describe('Doc Integration Details', function () {
 
   it('can delete', async function () {
     jest.spyOn(indicators, 'addSuccessMessage');
+    const {router} = initializeOrg({
+      router: {
+        params: {docIntegrationSlug: mockDocIntegration.slug},
+      },
+    });
+
     MockApiClient.addMockResponse({
       url: ENDPOINT,
       method: 'GET',
@@ -82,12 +93,8 @@ describe('Doc Integration Details', function () {
     });
 
     render(<DocIntegrationDetails />, {
-      initialRouterConfig: {
-        location: {
-          pathname: `/admin/doc-integrations/${mockDocIntegration.slug}/`,
-        },
-        route: `/admin/doc-integrations/:docIntegrationSlug/`,
-      },
+      router,
+      deprecatedRouterMocks: true,
     });
 
     expect(
@@ -123,6 +130,12 @@ describe('Doc Integration Details', function () {
   it('handles API errors when deleting', async function () {
     jest.spyOn(indicators, 'addErrorMessage');
 
+    const {router} = initializeOrg({
+      router: {
+        params: {docIntegrationSlug: mockDocIntegration.slug},
+      },
+    });
+
     MockApiClient.addMockResponse({
       url: ENDPOINT,
       method: 'GET',
@@ -139,12 +152,8 @@ describe('Doc Integration Details', function () {
     });
 
     render(<DocIntegrationDetails />, {
-      initialRouterConfig: {
-        location: {
-          pathname: `/admin/doc-integrations/${mockDocIntegration.slug}/`,
-        },
-        route: `/admin/doc-integrations/:docIntegrationSlug/`,
-      },
+      router,
+      deprecatedRouterMocks: true,
     });
     expect(
       await screen.findByRole('heading', {name: 'Doc Integrations'})
@@ -178,6 +187,11 @@ describe('Doc Integration Details', function () {
 
   it('can unpublish', async function () {
     jest.spyOn(indicators, 'addSuccessMessage');
+    const {router} = initializeOrg({
+      router: {
+        params: {docIntegrationSlug: mockDocIntegration.slug},
+      },
+    });
 
     MockApiClient.addMockResponse({
       url: ENDPOINT,
@@ -195,12 +209,8 @@ describe('Doc Integration Details', function () {
     });
 
     render(<DocIntegrationDetails />, {
-      initialRouterConfig: {
-        location: {
-          pathname: `/admin/doc-integrations/${mockDocIntegration.slug}/`,
-        },
-        route: `/admin/doc-integrations/:docIntegrationSlug/`,
-      },
+      router,
+      deprecatedRouterMocks: true,
     });
 
     expect(

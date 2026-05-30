@@ -11,9 +11,7 @@ import {
   OnDemandWarningIcon,
 } from 'sentry/components/alerts/onDemandMetricAlert';
 import {Alert} from 'sentry/components/core/alert';
-import {ExternalLink} from 'sentry/components/core/link';
 import {Select} from 'sentry/components/core/select';
-import {Tooltip} from 'sentry/components/core/tooltip';
 import {getHasTag} from 'sentry/components/events/searchBar';
 import {
   STATIC_FIELD_TAGS,
@@ -27,10 +25,12 @@ import {components} from 'sentry/components/forms/controls/reactSelectWrapper';
 import SelectField from 'sentry/components/forms/fields/selectField';
 import FormField from 'sentry/components/forms/formField';
 import IdBadge from 'sentry/components/idBadge';
+import ExternalLink from 'sentry/components/links/externalLink';
 import ListItem from 'sentry/components/list/listItem';
 import {normalizeDateTimeParams} from 'sentry/components/organizations/pageFilters/parse';
 import Panel from 'sentry/components/panels/panel';
 import PanelBody from 'sentry/components/panels/panelBody';
+import {EAPSpanSearchQueryBuilder} from 'sentry/components/performance/spanSearchQueryBuilder';
 import {SearchQueryBuilder} from 'sentry/components/searchQueryBuilder';
 import {InvalidReason} from 'sentry/components/searchSyntax/parser';
 import {t, tct} from 'sentry/locale';
@@ -42,8 +42,14 @@ import type {Organization} from 'sentry/types/organization';
 import type {Environment, Project} from 'sentry/types/project';
 import {defined} from 'sentry/utils';
 import {isAggregateField, isMeasurement} from 'sentry/utils/discover/fields';
+import {DiscoverDatasets} from 'sentry/utils/discover/types';
 import {getDisplayName} from 'sentry/utils/environment';
-import {DEVICE_CLASS_TAG_VALUES, FieldKind, isDeviceClass} from 'sentry/utils/fields';
+import {
+  ALLOWED_EXPLORE_VISUALIZE_AGGREGATES,
+  DEVICE_CLASS_TAG_VALUES,
+  FieldKind,
+  isDeviceClass,
+} from 'sentry/utils/fields';
 import {
   getMeasurements,
   type MeasurementCollection,
@@ -54,35 +60,25 @@ import withApi from 'sentry/utils/withApi';
 import withProjects from 'sentry/utils/withProjects';
 import withTags from 'sentry/utils/withTags';
 import WizardField from 'sentry/views/alerts/rules/metric/wizardField';
-import {getProjectOptions, isEapAlertType} from 'sentry/views/alerts/rules/utils';
+import {getProjectOptions} from 'sentry/views/alerts/rules/utils';
 import {
   convertDatasetEventTypesToSource,
   DATA_SOURCE_LABELS,
   DATA_SOURCE_TO_SET_AND_EVENT_TYPES,
 } from 'sentry/views/alerts/utils';
 import type {AlertType} from 'sentry/views/alerts/wizard/options';
+import {getSupportedAndOmittedTags} from 'sentry/views/alerts/wizard/options';
 import {
-  DEPRECATED_TRANSACTION_ALERTS,
-  getSupportedAndOmittedTags,
-} from 'sentry/views/alerts/wizard/options';
-import {getTraceItemTypeForDatasetAndEventType} from 'sentry/views/alerts/wizard/utils';
-import {TraceItemSearchQueryBuilder} from 'sentry/views/explore/components/traceItemSearchQueryBuilder';
-import {
-  TraceItemAttributeProvider,
-  useTraceItemAttributes,
-} from 'sentry/views/explore/contexts/traceItemAttributeContext';
-import {TraceItemDataset} from 'sentry/views/explore/types';
-import {
-  deprecateTransactionAlerts,
-  hasEAPAlerts,
-} from 'sentry/views/insights/common/utils/hasEAPAlerts';
+  SpanTagsProvider,
+  useSpanTags,
+} from 'sentry/views/explore/contexts/spanTagsContext';
+import {hasEAPAlerts} from 'sentry/views/insights/common/utils/hasEAPAlerts';
 
 import {
   DEFAULT_AGGREGATE,
   DEFAULT_TRANSACTION_AGGREGATE,
   getTimeWindowOptions,
 } from './constants';
-import type {EventTypes} from './types';
 import {AlertRuleComparisonType, Dataset, Datasource} from './types';
 
 type Props = {
@@ -92,7 +88,6 @@ type Props = {
   comparisonType: AlertRuleComparisonType;
   dataset: Dataset;
   disabled: boolean;
-  eventTypes: EventTypes[];
   isEditing: boolean;
   onComparisonDeltaChange: (value: number) => void;
   onFilterSearch: (query: string, isQueryValid: any) => void;
@@ -270,24 +265,6 @@ class RuleConditionsForm extends PureComponent<Props, State> {
     };
   }
 
-  get disableTransactionAlertType() {
-    const {organization, alertType, isEditing} = this.props;
-
-    return (
-      isEditing &&
-      alertType &&
-      deprecateTransactionAlerts(organization) &&
-      DEPRECATED_TRANSACTION_ALERTS.includes(alertType) &&
-      hasEAPAlerts(organization)
-    );
-  }
-
-  get transactionAlertDisabledMessage() {
-    return t(
-      'Transaction based alerts are no longer supported. Create span alerts instead.'
-    );
-  }
-
   renderEventTypeFilter() {
     const {organization, disabled, alertType, isErrorMigration} = this.props;
 
@@ -412,9 +389,7 @@ class RuleConditionsForm extends PureComponent<Props, State> {
 
           return (
             <Select
-              isDisabled={
-                disabled || disableProjectSelector || this.disableTransactionAlertType
-              }
+              isDisabled={disabled || disableProjectSelector}
               value={selectedProject.id}
               options={projectOptions}
               onChange={({value}: {value: Project['id']}) => {
@@ -463,8 +438,6 @@ class RuleConditionsForm extends PureComponent<Props, State> {
       dataset,
       comparisonType,
       onTimeWindowChange,
-      isEditing,
-      eventTypes,
     } = this.props;
 
     return (
@@ -474,47 +447,34 @@ class RuleConditionsForm extends PureComponent<Props, State> {
             <div>{t('Define your metric')}</div>
           </StyledListTitle>
         </StyledListItem>
-        <Tooltip
-          title={this.transactionAlertDisabledMessage}
-          disabled={!this.disableTransactionAlertType}
-          isHoverable
-        >
-          <FormRow>
-            <WizardField
-              name="aggregate"
-              help={null}
-              organization={organization}
-              disabled={disabled}
-              project={project}
-              style={{
-                ...this.formElemBaseStyle,
-                flex: 1,
-              }}
-              inline={false}
-              flexibleControlStateSize
-              columnWidth={200}
-              alertType={alertType}
-              required
-              isEditing={isEditing}
-              eventTypes={eventTypes}
-              disabledReason={
-                this.disableTransactionAlertType
-                  ? this.transactionAlertDisabledMessage
-                  : undefined
-              }
-            />
-            <Select
-              name="timeWindow"
-              styles={this.selectControlStyles}
-              options={getTimeWindowOptions(dataset, comparisonType)}
-              isDisabled={disabled || this.disableTransactionAlertType}
-              value={timeWindow}
-              onChange={({value}: any) => onTimeWindowChange(value)}
-              inline={false}
-              flexibleControlStateSize
-            />
-          </FormRow>
-        </Tooltip>
+        <FormRow>
+          <WizardField
+            name="aggregate"
+            help={null}
+            organization={organization}
+            disabled={disabled}
+            project={project}
+            style={{
+              ...this.formElemBaseStyle,
+              flex: 1,
+            }}
+            inline={false}
+            flexibleControlStateSize
+            columnWidth={200}
+            alertType={alertType}
+            required
+          />
+          <Select
+            name="timeWindow"
+            styles={this.selectControlStyles}
+            options={getTimeWindowOptions(dataset, comparisonType)}
+            isDisabled={disabled}
+            value={timeWindow}
+            onChange={({value}: any) => onTimeWindowChange(value)}
+            inline={false}
+            flexibleControlStateSize
+          />
+        </FormRow>
       </Fragment>
     );
   }
@@ -534,7 +494,6 @@ class RuleConditionsForm extends PureComponent<Props, State> {
       comparisonType,
       isLowConfidenceChartData,
       isOnDemandLimitReached,
-      eventTypes,
     } = this.props;
 
     const {environments, filterKeys} = this.state;
@@ -549,8 +508,6 @@ class RuleConditionsForm extends PureComponent<Props, State> {
 
     const confidenceEnabled = hasEAPAlerts(organization);
 
-    const traceItemType = getTraceItemTypeForDatasetAndEventType(dataset, eventTypes);
-
     return (
       <Fragment>
         <ChartPanel>
@@ -564,12 +521,12 @@ class RuleConditionsForm extends PureComponent<Props, State> {
           </Fragment>
         ) : (
           <Fragment>
-            <TraceItemAttributeProvider
+            <SpanTagsProvider
               projects={[project]}
-              traceItemType={traceItemType ?? TraceItemDataset.SPANS}
+              dataset={DiscoverDatasets.SPANS_EAP}
               enabled={
                 organization.features.includes('visibility-explore-view') &&
-                isEapAlertType(alertType)
+                alertType === 'eap_metrics'
               }
             >
               {isExtrapolatedChartData && (
@@ -581,7 +538,7 @@ class RuleConditionsForm extends PureComponent<Props, State> {
               )}
               {confidenceEnabled && isLowConfidenceChartData && (
                 <Alert.Container>
-                  <Alert type="warning">
+                  <Alert showIcon type="warning">
                     {t(
                       'Your low sample count may impact the accuracy of this alert. Edit your query or increase your sampling rate.'
                     )}
@@ -590,43 +547,34 @@ class RuleConditionsForm extends PureComponent<Props, State> {
               )}
               {!isErrorMigration && this.renderInterval()}
               <StyledListItem>{t('Filter events')}</StyledListItem>
-              <Tooltip
-                title={this.transactionAlertDisabledMessage}
-                disabled={!this.disableTransactionAlertType}
-                isHoverable
-              >
-                <FormRow noMargin columns={1 + (allowChangeEventTypes ? 1 : 0) + 1}>
-                  {this.renderProjectSelector()}
-                  <SelectField
-                    name="environment"
-                    placeholder={t('All Environments')}
-                    style={{
-                      ...this.formElemBaseStyle,
-                      minWidth: 230,
-                      flex: 1,
-                    }}
-                    styles={{
-                      singleValue: (base: any) => ({
-                        ...base,
-                      }),
-                      option: (base: any) => ({
-                        ...base,
-                      }),
-                    }}
-                    options={environmentOptions}
-                    isDisabled={
-                      disabled ||
-                      this.state.environments === null ||
-                      isErrorMigration ||
-                      this.disableTransactionAlertType
-                    }
-                    isClearable
-                    inline={false}
-                    flexibleControlStateSize
-                  />
-                  {allowChangeEventTypes && this.renderEventTypeFilter()}
-                </FormRow>
-              </Tooltip>
+              <FormRow noMargin columns={1 + (allowChangeEventTypes ? 1 : 0) + 1}>
+                {this.renderProjectSelector()}
+                <SelectField
+                  name="environment"
+                  placeholder={t('All Environments')}
+                  style={{
+                    ...this.formElemBaseStyle,
+                    minWidth: 230,
+                    flex: 1,
+                  }}
+                  styles={{
+                    singleValue: (base: any) => ({
+                      ...base,
+                    }),
+                    option: (base: any) => ({
+                      ...base,
+                    }),
+                  }}
+                  options={environmentOptions}
+                  isDisabled={
+                    disabled || this.state.environments === null || isErrorMigration
+                  }
+                  isClearable
+                  inline={false}
+                  flexibleControlStateSize
+                />
+                {allowChangeEventTypes && this.renderEventTypeFilter()}
+              </FormRow>
               <FormRow noMargin>
                 <FormField
                   name="query"
@@ -638,29 +586,27 @@ class RuleConditionsForm extends PureComponent<Props, State> {
                   flexibleControlStateSize
                 >
                   {({onChange, onBlur, initialData, value}: any) => {
-                    return isEapAlertType(alertType) ? (
-                      <EAPSearchQueryBuilderWithContext
+                    return alertType === 'eap_metrics' ? (
+                      <EAPSpanSearchQueryBuilderWithContext
                         initialQuery={value ?? ''}
                         onSearch={(query, {parsedQuery}) => {
                           onFilterSearch(query, parsedQuery);
                           onChange(query, {});
                         }}
                         project={project}
-                        traceItemType={traceItemType ?? TraceItemDataset.SPANS}
                       />
                     ) : (
                       <SearchContainer>
                         <SearchQueryBuilder
+                          searchOnChange={organization.features.includes(
+                            'ui-search-on-change'
+                          )}
                           initialQuery={initialData?.query ?? ''}
                           getTagValues={this.getEventFieldValues}
                           placeholder={this.searchPlaceholder}
                           searchSource="alert_builder"
                           filterKeys={filterKeys}
-                          disabled={
-                            disabled ||
-                            isErrorMigration ||
-                            this.disableTransactionAlertType
-                          }
+                          disabled={disabled || isErrorMigration}
                           onChange={onChange}
                           invalidMessages={{
                             [InvalidReason.WILDCARD_NOT_ALLOWED]: t(
@@ -759,7 +705,7 @@ class RuleConditionsForm extends PureComponent<Props, State> {
                   }}
                 </FormField>
               </FormRow>
-            </TraceItemAttributeProvider>
+            </SpanTagsProvider>
           </Fragment>
         )}
       </Fragment>
@@ -767,33 +713,30 @@ class RuleConditionsForm extends PureComponent<Props, State> {
   }
 }
 
-interface EAPSearchQueryBuilderWithContextProps {
+interface EAPSpanSearchQueryBuilderWithContextProps {
   initialQuery: string;
   onSearch: (query: string, isQueryValid: any) => void;
   project: Project;
-  traceItemType: TraceItemDataset;
 }
 
-function EAPSearchQueryBuilderWithContext({
+function EAPSpanSearchQueryBuilderWithContext({
   initialQuery,
   onSearch,
   project,
-  traceItemType,
-}: EAPSearchQueryBuilderWithContextProps) {
-  const {attributes: numberAttributes} = useTraceItemAttributes('number');
-  const {attributes: stringAttributes} = useTraceItemAttributes('string');
-
-  const tracesItemSearchQueryBuilderProps = {
-    initialQuery,
-    searchSource: 'alerts',
-    onSearch,
-    numberAttributes,
-    stringAttributes,
-    itemType: traceItemType,
-    projects: [parseInt(project.id, 10)],
-  };
-
-  return <TraceItemSearchQueryBuilder {...tracesItemSearchQueryBuilderProps} />;
+}: EAPSpanSearchQueryBuilderWithContextProps) {
+  const {tags: numberTags} = useSpanTags('number');
+  const {tags: stringTags} = useSpanTags('string');
+  return (
+    <EAPSpanSearchQueryBuilder
+      numberTags={numberTags}
+      stringTags={stringTags}
+      initialQuery={initialQuery}
+      searchSource="alerts"
+      onSearch={onSearch}
+      supportedAggregates={ALLOWED_EXPLORE_VISUALIZE_AGGREGATES}
+      projects={[parseInt(project.id, 10)]}
+    />
+  );
 }
 
 const StyledListTitle = styled('div')`
@@ -836,7 +779,7 @@ const SearchContainer = styled('div')`
 
 const StyledListItem = styled(ListItem)`
   margin-bottom: ${space(0.5)};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   line-height: 1.3;
 `;
 

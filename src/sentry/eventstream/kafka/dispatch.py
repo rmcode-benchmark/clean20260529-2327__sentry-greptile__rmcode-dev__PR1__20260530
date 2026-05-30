@@ -100,5 +100,4 @@ class EventPostProcessForwarderStrategyFactory(PostProcessForwarderStrategyFacto
     def _dispatch_function(
         message: Message[KafkaPayload], eventstream_type: str | None = None
     ) -> None:
-        with _sampled_eventstream_timer(instance="_get_task_kwargs_and_dispatch"):
-            return _get_task_kwargs_and_dispatch(message, eventstream_type)
+        return _get_task_kwargs_and_dispatch(message, eventstream_type)

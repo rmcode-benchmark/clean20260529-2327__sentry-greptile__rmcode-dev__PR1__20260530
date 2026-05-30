@@ -25,9 +25,8 @@ from sentry.issues.grouptype import (
     PerformanceSlowDBQueryGroupType,
     PerformanceUncompressedAssetsGroupType,
     ProfileFunctionRegressionType,
-    QueryInjectionVulnerabilityGroupType,
 )
-from sentry.performance_issues.performance_detection import get_merged_settings
+from sentry.utils.performance_issues.performance_detection import get_merged_settings
 
 MAX_VALUE = 2147483647
 TEN_SECONDS = 10000  # ten seconds in milliseconds
@@ -73,8 +72,6 @@ class ConfigurableThresholds(Enum):
     CONSECUTIVE_HTTP_SPANS_MIN_TIME_SAVED = "consecutive_http_spans_min_time_saved_threshold"
     HTTP_OVERHEAD = "http_overhead_detection_enabled"
     HTTP_OVERHEAD_REQUEST_DELAY = "http_request_delay_threshold"
-    DB_QUERY_INJECTION = "db_query_injection_detection_enabled"
-    SQL_INJECTION_QUERY_VALUE_LENGTH = "sql_injection_query_value_length_threshold"
 
 
 project_settings_to_group_map: dict[str, type[GroupType]] = {
@@ -91,7 +88,6 @@ project_settings_to_group_map: dict[str, type[GroupType]] = {
     ConfigurableThresholds.HTTP_OVERHEAD.value: PerformanceHTTPOverheadGroupType,
     InternalProjectOptions.TRANSACTION_DURATION_REGRESSION.value: PerformanceP95EndpointRegressionGroupType,
     InternalProjectOptions.FUNCTION_DURATION_REGRESSION.value: ProfileFunctionRegressionType,
-    ConfigurableThresholds.DB_QUERY_INJECTION.value: QueryInjectionVulnerabilityGroupType,
 }
 """
 A mapping of the management settings to the group type that the detector spawns.
@@ -111,7 +107,6 @@ thresholds_to_manage_map: dict[str, str] = {
     ConfigurableThresholds.N_PLUS_API_CALLS_DURATION.value: ConfigurableThresholds.N_PLUS_ONE_API_CALLS.value,
     ConfigurableThresholds.CONSECUTIVE_HTTP_SPANS_MIN_TIME_SAVED.value: ConfigurableThresholds.CONSECUTIVE_HTTP_SPANS.value,
     ConfigurableThresholds.HTTP_OVERHEAD_REQUEST_DELAY.value: ConfigurableThresholds.HTTP_OVERHEAD.value,
-    ConfigurableThresholds.SQL_INJECTION_QUERY_VALUE_LENGTH.value: ConfigurableThresholds.DB_QUERY_INJECTION.value,
 }
 """
 A mapping of threshold setting to the parent setting that manages it's detection.
@@ -170,10 +165,6 @@ class ProjectPerformanceIssueSettingsSerializer(serializers.Serializer):
     http_overhead_detection_enabled = serializers.BooleanField(required=False)
     transaction_duration_regression_detection_enabled = serializers.BooleanField(required=False)
     function_duration_regression_detection_enabled = serializers.BooleanField(required=False)
-    db_query_injection_detection_enabled = serializers.BooleanField(required=False)
-    sql_injection_query_value_length_threshold = serializers.IntegerField(
-        required=False, min_value=3, max_value=10
-    )
 
 
 def get_management_options() -> list[str]:

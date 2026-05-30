@@ -338,12 +338,7 @@ class TestTop5IssuesByCount(GithubCommentTestCase, SnubaTestCase):
 class TestGetCommentBody(GithubCommentTestCase):
     def test_simple(self):
         ev1 = self.store_event(
-            data={
-                "message": "issue 1",
-                "culprit": "issue1",
-                "fingerprint": ["group-1"],
-                "environment": "dev",
-            },
+            data={"message": "issue 1", "culprit": "issue1", "fingerprint": ["group-1"]},
             project_id=self.project.id,
         )
         assert ev1.group is not None
@@ -353,12 +348,7 @@ class TestGetCommentBody(GithubCommentTestCase):
         )
         assert ev2.group is not None
         ev3 = self.store_event(
-            data={
-                "message": "issue 3",
-                "culprit": "issue3",
-                "fingerprint": ["group-3"],
-                "environment": "prod",
-            },
+            data={"message": "issue 3", "culprit": "issue3", "fingerprint": ["group-3"]},
             project_id=self.project.id,
         )
         assert ev3.group is not None
@@ -369,12 +359,9 @@ class TestGetCommentBody(GithubCommentTestCase):
         expected_comment = f"""## Suspect Issues
 This pull request was deployed and Sentry observed the following issues:
 
-* ‼️ [**issue 1**](http://testserver/organizations/{self.organization.slug}/issues/{ev1.group.id}/?referrer=github-pr-bot) in `dev`
-
-* ‼️ [**issue 2**](http://testserver/organizations/{self.organization.slug}/issues/{ev2.group.id}/?referrer=github-pr-bot)
-
-* ‼️ [**issue 3**](http://testserver/organizations/{self.organization.slug}/issues/{ev3.group.id}/?referrer=github-pr-bot) in `prod`
-
+- ‼️ **issue 1** `issue1` [View Issue](http://testserver/organizations/foo/issues/{ev1.group.id}/?referrer=github-pr-bot)
+- ‼️ **issue 2** `issue2` [View Issue](http://testserver/organizations/foo/issues/{ev2.group.id}/?referrer=github-pr-bot)
+- ‼️ **issue 3** `issue3` [View Issue](http://testserver/organizations/foo/issues/{ev3.group.id}/?referrer=github-pr-bot)
 
 <sub>Did you find this useful? React with a 👍 or 👎</sub>"""
         assert formatted_comment == expected_comment
@@ -397,6 +384,7 @@ class TestCommentWorkflow(GithubCommentTestCase):
         group_objs = Group.objects.order_by("id").all()
         groups = [g.id for g in group_objs]
         titles = [g.title for g in group_objs]
+        culprits = [g.culprit for g in group_objs]
         mock_issues.return_value = [{"group_id": id, "event_count": 10} for id in groups]
 
         responses.add(
@@ -409,7 +397,7 @@ class TestCommentWorkflow(GithubCommentTestCase):
         github_comment_workflow(self.pr.id, self.project.id)
 
         assert (
-            f'"body": "## Suspect Issues\\nThis pull request was deployed and Sentry observed the following issues:\\n\\n* \\u203c\\ufe0f [**{titles[0]}**](http://testserver/organizations/foo/issues/{groups[0]}/?referrer=github-pr-bot)\\n\\n* \\u203c\\ufe0f [**{titles[1]}**](http://testserver/organizations/foobar/issues/{groups[1]}/?referrer=github-pr-bot)\\n\\n\\n<sub>Did you find this useful? React with a \\ud83d\\udc4d or \\ud83d\\udc4e</sub>"'.encode()
+            f'"body": "## Suspect Issues\\nThis pull request was deployed and Sentry observed the following issues:\\n\\n- \\u203c\\ufe0f **{titles[0]}** `{culprits[0]}` [View Issue](http://testserver/organizations/foo/issues/{groups[0]}/?referrer=github-pr-bot)\\n- \\u203c\\ufe0f **{titles[1]}** `{culprits[1]}` [View Issue](http://testserver/organizations/foobar/issues/{groups[1]}/?referrer=github-pr-bot)\\n\\n<sub>Did you find this useful? React with a \\ud83d\\udc4d or \\ud83d\\udc4e</sub>"'.encode()
             in responses.calls[0].request.body
         )
         pull_request_comment_query = PullRequestComment.objects.all()
@@ -425,9 +413,7 @@ class TestCommentWorkflow(GithubCommentTestCase):
     @responses.activate
     @freeze_time(datetime(2023, 6, 8, 0, 0, 0, tzinfo=UTC))
     def test_comment_workflow_updates_comment(self, mock_metrics, mock_issues):
-        group_objs = Group.objects.order_by("id").all()
-        groups = [g.id for g in group_objs]
-        titles = [g.title for g in group_objs]
+        groups = [g.id for g in Group.objects.all()]
         mock_issues.return_value = [{"group_id": id, "event_count": 10} for id in groups]
         pull_request_comment = PullRequestComment.objects.create(
             external_id=1,
@@ -457,11 +443,11 @@ class TestCommentWorkflow(GithubCommentTestCase):
         github_comment_workflow(self.pr.id, self.project.id)
 
         assert (
-            f'"body": "## Suspect Issues\\nThis pull request was deployed and Sentry observed the following issues:\\n\\n* \\u203c\\ufe0f [**{titles[0]}**](http://testserver/organizations/foo/issues/{groups[0]}/?referrer=github-pr-bot)\\n\\n* \\u203c\\ufe0f [**{titles[1]}**](http://testserver/organizations/foobar/issues/{groups[1]}/?referrer=github-pr-bot)\\n\\n\\n<sub>Did you find this useful? React with a \\ud83d\\udc4d or \\ud83d\\udc4e</sub>"'.encode()
+            f'"body": "## Suspect Issues\\nThis pull request was deployed and Sentry observed the following issues:\\n\\n- \\u203c\\ufe0f **issue 1** `issue1` [View Issue](http://testserver/organizations/foo/issues/{groups[0]}/?referrer=github-pr-bot)\\n- \\u203c\\ufe0f **issue 2** `issue2` [View Issue](http://testserver/organizations/foobar/issues/{groups[1]}/?referrer=github-pr-bot)\\n\\n<sub>Did you find this useful? React with a \\ud83d\\udc4d or \\ud83d\\udc4e</sub>"'.encode()
             in responses.calls[0].request.body
         )
         pull_request_comment.refresh_from_db()
-        assert pull_request_comment.group_ids == groups
+        assert pull_request_comment.group_ids == [g.id for g in Group.objects.all()]
         assert pull_request_comment.updated_at == timezone.now()
         mock_metrics.incr.assert_called_with("github.pr_comment.comment_updated")
 

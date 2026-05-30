@@ -1,16 +1,17 @@
+import type {CSSProperties} from 'react';
 import styled from '@emotion/styled';
 
+import {Flex} from 'sentry/components/container/flex';
 import {ActorAvatar} from 'sentry/components/core/avatar/actorAvatar';
 import {Checkbox} from 'sentry/components/core/checkbox';
-import InteractionStateLayer from 'sentry/components/core/interactionStateLayer';
-import {Flex} from 'sentry/components/core/layout';
-import {Link} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import IssueTrackingSignals from 'sentry/components/feedback/list/issueTrackingSignals';
 import ProjectBadge from 'sentry/components/idBadge/projectBadge';
+import InteractionStateLayer from 'sentry/components/interactionStateLayer';
+import Link from 'sentry/components/links/link';
 import TextOverflow from 'sentry/components/textOverflow';
 import TimeSince from 'sentry/components/timeSince';
-import {IconChat, IconFatal, IconImage, IconPlay} from 'sentry/icons';
+import {IconChat, IconCircleFill, IconFatal, IconImage, IconPlay} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {Group} from 'sentry/types/group';
@@ -28,6 +29,8 @@ interface Props {
   feedbackItem: FeedbackIssueListItem;
   isSelected: 'all-selected' | boolean;
   onSelect: (isSelected: boolean) => void;
+  ref?: React.Ref<HTMLDivElement>;
+  style?: CSSProperties;
 }
 
 function useIsSelectedFeedback({feedbackItem}: {feedbackItem: FeedbackIssueListItem}) {
@@ -38,7 +41,7 @@ function useIsSelectedFeedback({feedbackItem}: {feedbackItem: FeedbackIssueListI
   return feedbackId === feedbackItem.id;
 }
 
-export default function FeedbackListItem({feedbackItem, isSelected, onSelect}: Props) {
+function FeedbackListItem({feedbackItem, isSelected, onSelect, style, ref}: Props) {
   const organization = useOrganization();
   const isOpen = useIsSelectedFeedback({feedbackItem});
   const {feedbackHasReplay} = useReplayCountForFeedbacks();
@@ -50,7 +53,7 @@ export default function FeedbackListItem({feedbackItem, isSelected, onSelect}: P
   const hasComments = feedbackItem.numComments > 0;
 
   return (
-    <CardSpacing>
+    <CardSpacing ref={ref} style={style}>
       <LinkedFeedbackCard
         data-selected={isOpen}
         to={{
@@ -95,9 +98,7 @@ export default function FeedbackListItem({feedbackItem, isSelected, onSelect}: P
 
         {feedbackItem.hasSeen ? null : (
           <DotRow style={{gridArea: 'unread'}}>
-            <Tooltip title={t('Unread')} skipWrapper>
-              <UnreadIndicator />
-            </Tooltip>
+            <IconCircleFill size="xs" color="purple400" />
           </DotRow>
         )}
 
@@ -112,7 +113,7 @@ export default function FeedbackListItem({feedbackItem, isSelected, onSelect}: P
         </PreviewRow>
 
         <BottomGrid style={{gridArea: 'bottom'}}>
-          <Row justify="flex-start" gap="sm">
+          <Row justify="flex-start" gap={space(0.75)}>
             {feedbackItem.project ? (
               <StyledProjectBadge
                 disableLink
@@ -125,7 +126,7 @@ export default function FeedbackListItem({feedbackItem, isSelected, onSelect}: P
             <ShortId>{feedbackItem.shortId}</ShortId>
           </Row>
 
-          <Row justify="flex-end" gap="md">
+          <Row justify="flex-end" gap={space(1)}>
             <IssueTrackingSignals group={feedbackItem as unknown as Group} />
 
             {hasComments && (
@@ -165,6 +166,8 @@ export default function FeedbackListItem({feedbackItem, isSelected, onSelect}: P
     </CardSpacing>
   );
 }
+
+export default FeedbackListItem;
 
 const LinkedFeedbackCard = styled(Link)`
   position: relative;
@@ -215,7 +218,7 @@ const StyledProjectBadge = styled(ProjectBadge)`
 
 const PreviewRow = styled(Row)`
   align-items: flex-start;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   padding-bottom: ${space(0.75)};
 `;
 
@@ -223,13 +226,6 @@ const DotRow = styled(Row)`
   height: 1.1em;
   align-items: flex-start;
   justify-content: center;
-`;
-
-const UnreadIndicator = styled('div')`
-  width: 8px;
-  height: 8px;
-  background-color: ${p => p.theme.purple400};
-  border-radius: 50%;
 `;
 
 const StyledTextOverflow = styled(TextOverflow)`
@@ -242,18 +238,18 @@ const StyledTextOverflow = styled(TextOverflow)`
 `;
 
 const ContactRow = styled(TextOverflow)`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   grid-area: 'user';
   font-weight: bold;
 `;
 
 const ShortId = styled(TextOverflow)`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
 `;
 
 const StyledTimeSince = styled(TimeSince)`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   grid-area: 'time';
 `;
 

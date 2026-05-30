@@ -22,7 +22,7 @@ const enum CallTreeTableClassNames {
 }
 
 export const CallTreeTable = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   margin: 0;
   overflow: auto;
   max-height: 100%;

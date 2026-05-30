@@ -17,12 +17,6 @@ class SentryAppInteractionType(StrEnum):
     # External Requests
     EXTERNAL_REQUEST = "external_request"
 
-    # Authorizations
-    AUTHORIZATIONS = "authorizations"
-
-    # Managing Sentry Apps
-    MANAGEMENT = "management"
-
 
 @dataclass
 class SentryAppInteractionEvent(EventLifecycleMetric):
@@ -68,8 +62,6 @@ class SentryAppWebhookHaltReason(StrEnum):
     GOT_CLIENT_ERROR = "got_client_error"
     INTEGRATOR_ERROR = "integrator_error"
     MISSING_INSTALLATION = "missing_installation"
-    RESTRICTED_IP = "restricted_ip"
-    CONNECTION_RESET = "connection_reset"
 
 
 class SentryAppExternalRequestFailureReason(StrEnum):
@@ -124,14 +116,3 @@ class SentryAppEventType(StrEnum):
     ISSUE_UNRESOLVED = "issue.unresolved"
     ISSUE_RESOLVED = "issue.resolved"
     ISSUE_ASSIGNED = "issue.assigned"
-
-    # authorizations
-    GRANT_EXCHANGER = "grant_exchanger"
-    REFRESHER = "refresher"
-
-    # management
-    APP_CREATE = "app_create"
-    APP_UPDATE = "app_update"
-    REQUESTS = "requests"
-    WEBHOOK_UPDATE = "webhook_update"
-    INSTALLATION_CREATE = "install_create"

@@ -35,14 +35,10 @@ from sentry.constants import (
     DATA_CONSENT_DEFAULT,
     DEBUG_FILES_ROLE_DEFAULT,
     DEFAULT_AUTOFIX_AUTOMATION_TUNING_DEFAULT,
-    DEFAULT_SEER_SCANNER_AUTOMATION_DEFAULT,
-    ENABLE_PR_REVIEW_TEST_GENERATION_DEFAULT,
-    ENABLED_CONSOLE_PLATFORMS_DEFAULT,
     EVENTS_MEMBER_ADMIN_DEFAULT,
     GITHUB_COMMENT_BOT_DEFAULT,
     GITLAB_COMMENT_BOT_DEFAULT,
     HIDE_AI_FEATURES_DEFAULT,
-    INGEST_THROUGH_TRUSTED_RELAYS_ONLY_DEFAULT,
     ISSUE_ALERTS_THREAD_DEFAULT,
     JOIN_REQUESTS_DEFAULT,
     METRIC_ALERTS_THREAD_DEFAULT,
@@ -125,6 +121,7 @@ class _Links(TypedDict):
 class OnboardingTasksSerializerResponse(TypedDict):
     task: str | None  # TODO: literal/enum
     status: str  # TODO: literal/enum
+    user: UserSerializerResponse | UserSerializerResponseSelf | None
     completionSeen: datetime | None
     dateCompleted: datetime
     data: Any  # JSON objec
@@ -501,6 +498,7 @@ class OnboardingTasksSerializer(Serializer):
         return {
             "task": OrganizationOnboardingTask.TASK_KEY_MAP.get(obj.task),
             "status": OrganizationOnboardingTask.STATUS_KEY_MAP[obj.status],
+            "user": attrs.get("user"),
             "completionSeen": obj.completion_seen,
             "dateCompleted": obj.date_completed,
             "data": obj.data,
@@ -515,8 +513,6 @@ class _DetailedOrganizationSerializerResponseOptional(OrganizationSerializerResp
     effectiveSampleRate: float
     planSampleRate: float
     desiredSampleRate: float
-    ingestThroughTrustedRelaysOnly: bool
-    enabledConsolePlatforms: list[str]
 
 
 @extend_schema_serializer(exclude_fields=["availableRoles"])
@@ -562,8 +558,6 @@ class DetailedOrganizationSerializerResponse(_DetailedOrganizationSerializerResp
     rollbackEnabled: bool
     streamlineOnly: bool
     defaultAutofixAutomationTuning: str
-    defaultSeerScannerAutomation: bool
-    enablePrReviewTestGeneration: bool
 
 
 class DetailedOrganizationSerializer(OrganizationSerializer):
@@ -717,16 +711,6 @@ class DetailedOrganizationSerializer(OrganizationSerializer):
                 "sentry:default_autofix_automation_tuning",
                 DEFAULT_AUTOFIX_AUTOMATION_TUNING_DEFAULT,
             ),
-            "defaultSeerScannerAutomation": obj.get_option(
-                "sentry:default_seer_scanner_automation",
-                DEFAULT_SEER_SCANNER_AUTOMATION_DEFAULT,
-            ),
-            "enablePrReviewTestGeneration": bool(
-                obj.get_option(
-                    "sentry:enable_pr_review_test_generation",
-                    ENABLE_PR_REVIEW_TEST_GENERATION_DEFAULT,
-                )
-            ),
             "streamlineOnly": obj.get_option("sentry:streamline_ui_only", None),
             "trustedRelays": [
                 # serialize trusted relays info into their external form
@@ -746,18 +730,6 @@ class DetailedOrganizationSerializer(OrganizationSerializer):
             )
             context["samplingMode"] = str(
                 obj.get_option("sentry:sampling_mode", SAMPLING_MODE_DEFAULT)
-            )
-
-        if features.has("organizations:ingest-through-trusted-relays-only", obj):
-            context["ingestThroughTrustedRelaysOnly"] = obj.get_option(
-                "sentry:ingest-through-trusted-relays-only",
-                INGEST_THROUGH_TRUSTED_RELAYS_ONLY_DEFAULT,
-            )
-
-        if features.has("organizations:project-creation-games-tab", obj):
-            context["enabledConsolePlatforms"] = obj.get_option(
-                "sentry:enabled_console_platforms",
-                ENABLED_CONSOLE_PLATFORMS_DEFAULT,
             )
 
         if access.role is not None:
@@ -793,8 +765,6 @@ class DetailedOrganizationSerializer(OrganizationSerializer):
         "quota",
         "rollbackEnabled",
         "streamlineOnly",
-        "ingestThroughTrustedRelaysOnly",
-        "enabledConsolePlatforms",
     ]
 )
 class DetailedOrganizationSerializerWithProjectsAndTeamsResponse(

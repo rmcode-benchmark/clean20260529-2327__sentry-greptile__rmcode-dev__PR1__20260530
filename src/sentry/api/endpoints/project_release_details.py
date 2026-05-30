@@ -1,4 +1,3 @@
-import sentry_sdk
 from rest_framework.exceptions import ParseError
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -17,7 +16,7 @@ from sentry.models.releases.exceptions import UnsafeReleaseDeletion
 from sentry.plugins.interfaces.releasehook import ReleaseHook
 from sentry.snuba.sessions import STATS_PERIODS
 from sentry.types.activity import ActivityType
-from sentry.utils.sdk import bind_organization_context
+from sentry.utils.sdk import Scope, bind_organization_context
 
 
 @region_silo_endpoint
@@ -96,7 +95,7 @@ class ProjectReleaseDetailsEndpoint(ProjectEndpoint, ReleaseAnalyticsMixin):
         :auth: required
         """
         bind_organization_context(project.organization)
-        scope = sentry_sdk.get_isolation_scope()
+        scope = Scope.get_isolation_scope()
         scope.set_tag("version", version)
         try:
             release = Release.objects.get(

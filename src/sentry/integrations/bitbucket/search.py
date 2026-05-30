@@ -14,7 +14,6 @@ from sentry.integrations.source_code_management.metrics import (
     SourceCodeSearchEndpointHaltReason,
 )
 from sentry.integrations.source_code_management.search import SourceCodeSearchEndpoint
-from sentry.integrations.types import IntegrationProviderSlug
 from sentry.shared_integrations.exceptions import ApiError
 
 logger = logging.getLogger("sentry.integrations.bitbucket")
@@ -35,7 +34,7 @@ class BitbucketSearchEndpoint(SourceCodeSearchEndpoint):
 
     @property
     def integration_provider(self):
-        return IntegrationProviderSlug.BITBUCKET.value
+        return "bitbucket"
 
     @property
     def installation_class(self):
@@ -51,17 +50,15 @@ class BitbucketSearchEndpoint(SourceCodeSearchEndpoint):
             try:
                 response = installation.search_issues(query=full_query, repo=repo)
             except ApiError as e:
-
                 if "no issue tracker" in str(e):
                     lifecycle.record_halt(str(SourceCodeSearchEndpointHaltReason.NO_ISSUE_TRACKER))
+                    logger.info(
+                        "bitbucket.issue-search-no-issue-tracker",
+                        extra={"installation_id": installation.model.id, "repo": repo},
+                    )
                     return Response(
                         {"detail": "Bitbucket Repository has no issue tracker."}, status=400
                     )
-                elif "resource not found" in str(e):
-                    lifecycle.record_halt(
-                        str(SourceCodeSearchEndpointHaltReason.MISSING_REPOSITORY_OR_NO_ACCESS)
-                    )
-                    return Response({"detail": "Bitbucket Repository not found."}, status=400)
                 raise
 
             assert isinstance(response, dict)

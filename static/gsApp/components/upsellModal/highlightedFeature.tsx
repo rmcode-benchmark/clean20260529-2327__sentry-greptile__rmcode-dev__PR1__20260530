@@ -60,7 +60,7 @@ const FeatureImg = styled('img')`
 `;
 
 const PlanContext = styled('div')`
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
   line-height: 1.5;
 `;
 

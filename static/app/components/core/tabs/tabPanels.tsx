@@ -1,5 +1,4 @@
 import {useContext, useRef} from 'react';
-import {css} from '@emotion/react';
 import styled from '@emotion/styled';
 import type {AriaTabPanelProps} from '@react-aria/tabs';
 import {useTabPanel} from '@react-aria/tabs';
@@ -8,16 +7,13 @@ import {ListCollection} from '@react-stately/list';
 import type {TabListState} from '@react-stately/tabs';
 import type {CollectionBase, Node, Orientation} from '@react-types/shared';
 
-import {isChonkTheme} from 'sentry/utils/theme/withChonk';
-
-import {TabPanelItem} from './item';
+import {Item} from './item';
 import {tabsShouldForwardProp} from './utils';
 import {TabsContext} from '.';
 
 const collectionFactory = (nodes: Iterable<Node<any>>) => new ListCollection(nodes);
 
-interface TabPanelsProps extends AriaTabPanelProps {
-  children: CollectionBase<unknown>['children'];
+interface TabPanelsProps extends AriaTabPanelProps, CollectionBase<any> {
   className?: string;
 }
 
@@ -35,14 +31,13 @@ export function TabPanels(props: TabPanelsProps) {
   const collection = useCollection({items, ...props}, collectionFactory, {
     suppressTextValueWarning: true,
   });
+  const selectedPanel = tabListState
+    ? collection.getItem(tabListState.selectedKey)
+    : null;
 
   if (!tabListState) {
     return null;
   }
-
-  const selectedPanel = tabListState.selectedKey
-    ? collection.getItem(tabListState.selectedKey)
-    : null;
 
   return (
     <TabPanel
@@ -56,7 +51,7 @@ export function TabPanels(props: TabPanelsProps) {
   );
 }
 
-TabPanels.Item = TabPanelItem;
+TabPanels.Item = Item;
 
 interface TabPanelProps extends AriaTabPanelProps {
   state: TabListState<any>;
@@ -92,16 +87,7 @@ const TabPanelWrap = styled('div', {shouldForwardProp: tabsShouldForwardProp})<{
 }>`
   border-radius: ${p => p.theme.borderRadius};
 
-  ${p =>
-    p.orientation === 'horizontal'
-      ? css`
-          height: 100%;
-          padding-top: ${isChonkTheme(p.theme) ? p.theme.space.md : 0};
-        `
-      : css`
-          width: 100%;
-          padding-left: ${isChonkTheme(p.theme) ? p.theme.space.md : 0};
-        `};
+  ${p => (p.orientation === 'horizontal' ? `height: 100%;` : `width: 100%;`)};
 
   &:focus-visible {
     outline: none;

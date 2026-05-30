@@ -139,13 +139,13 @@ const TitleWrapper = styled('div')`
 `;
 
 const TitleText = styled('div')`
-  font-weight: ${p => p.theme.fontWeight.bold};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-weight: ${p => p.theme.fontWeightBold};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
   ${p => p.theme.overflowEllipsis};
 `;
 
 const SubtitleText = styled('div')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
   color: ${p => p.theme.subText};
   display: flex;
   align-items: center;

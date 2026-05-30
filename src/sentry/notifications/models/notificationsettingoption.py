@@ -10,7 +10,7 @@ class NotificationSettingOption(NotificationSettingBase):
     __relocation_scope__ = RelocationScope.Excluded
 
     class Meta:
-        app_label = "notifications"
+        app_label = "sentry"
         db_table = "sentry_notificationsettingoption"
         unique_together = (
             (

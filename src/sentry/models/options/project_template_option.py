@@ -105,7 +105,7 @@ class ProjectTemplateOption(Model):
 
     project_template = FlexibleForeignKey("sentry.ProjectTemplate", related_name="options")
     key = models.CharField(max_length=64)
-    value = PickledObjectField(null=True)
+    value = PickledObjectField()
 
     objects: ClassVar[ProjectTemplateOptionManager] = ProjectTemplateOptionManager()
 

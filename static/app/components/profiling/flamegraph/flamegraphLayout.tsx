@@ -17,6 +17,7 @@ import {CollapsibleTimeline, CollapsibleTimelineLabel} from './collapsibleTimeli
 // 30px is the min height to where the drawer can still be resized
 const MIN_FLAMEGRAPH_DRAWER_DIMENSIONS: [number, number] = [680, 30];
 const FLAMEGRAPH_DRAWER_INITIAL_HEIGHT = 166;
+const TIMELINE_LABEL_HEIGHT = 20;
 const EMPTY_TIMELINE_HEIGHT = 80;
 
 interface FlamegraphLayoutProps {
@@ -170,7 +171,7 @@ export function FlamegraphLayout(props: FlamegraphLayoutProps) {
       (spansTreeDepth + flamegraphTheme.SIZES.SPANS_DEPTH_OFFSET) *
         flamegraphTheme.SIZES.SPANS_BAR_HEIGHT,
       flamegraphTheme.SIZES.MAX_SPANS_HEIGHT
-    ) + flamegraphTheme.SIZES.TIMELINE_LABEL_HEIGHT;
+    ) + TIMELINE_LABEL_HEIGHT;
 
   return (
     <FlamegraphLayoutContainer>
@@ -179,7 +180,7 @@ export function FlamegraphLayout(props: FlamegraphLayoutProps) {
           containerHeight={
             timelines.minimap
               ? flamegraphTheme.SIZES.MINIMAP_HEIGHT
-              : flamegraphTheme.SIZES.TIMELINE_LABEL_HEIGHT
+              : TIMELINE_LABEL_HEIGHT
           }
         >
           <CollapsibleTimeline
@@ -196,7 +197,7 @@ export function FlamegraphLayout(props: FlamegraphLayoutProps) {
             containerHeight={
               timelines.ui_frames
                 ? flamegraphTheme.SIZES.UI_FRAMES_HEIGHT
-                : flamegraphTheme.SIZES.TIMELINE_LABEL_HEIGHT
+                : TIMELINE_LABEL_HEIGHT
             }
           >
             <CollapsibleTimeline
@@ -214,7 +215,7 @@ export function FlamegraphLayout(props: FlamegraphLayoutProps) {
             containerHeight={
               timelines.battery_chart
                 ? flamegraphTheme.SIZES.BATTERY_CHART_HEIGHT
-                : flamegraphTheme.SIZES.TIMELINE_LABEL_HEIGHT
+                : TIMELINE_LABEL_HEIGHT
             }
           >
             <CollapsibleTimeline
@@ -232,7 +233,7 @@ export function FlamegraphLayout(props: FlamegraphLayoutProps) {
             containerHeight={
               timelines.memory_chart
                 ? flamegraphTheme.SIZES.MEMORY_CHART_HEIGHT
-                : flamegraphTheme.SIZES.TIMELINE_LABEL_HEIGHT
+                : TIMELINE_LABEL_HEIGHT
             }
           >
             <CollapsibleTimeline
@@ -250,7 +251,7 @@ export function FlamegraphLayout(props: FlamegraphLayoutProps) {
             containerHeight={
               timelines.cpu_chart
                 ? flamegraphTheme.SIZES.CPU_CHART_HEIGHT
-                : flamegraphTheme.SIZES.TIMELINE_LABEL_HEIGHT
+                : TIMELINE_LABEL_HEIGHT
             }
           >
             <CollapsibleTimeline
@@ -271,7 +272,7 @@ export function FlamegraphLayout(props: FlamegraphLayoutProps) {
                 ? props.spansTreeDepth
                   ? spansTimelineHeight
                   : EMPTY_TIMELINE_HEIGHT
-                : flamegraphTheme.SIZES.TIMELINE_LABEL_HEIGHT
+                : TIMELINE_LABEL_HEIGHT
             }
           >
             <CollapsibleTimeline

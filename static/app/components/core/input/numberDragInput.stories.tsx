@@ -4,6 +4,7 @@ import styled from '@emotion/styled';
 import {NumberDragInput} from 'sentry/components/core/input/numberDragInput';
 import * as Storybook from 'sentry/stories';
 
+// eslint-disable-next-line import/no-webpack-loader-syntax
 import types from '!!type-loader!sentry/components/core/input/numberDragInput';
 
 export default Storybook.story('NumberDragInput', (story, APIReference) => {
@@ -74,6 +75,6 @@ export default Storybook.story('NumberDragInput', (story, APIReference) => {
 });
 
 const Label = styled('div')`
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
 `;

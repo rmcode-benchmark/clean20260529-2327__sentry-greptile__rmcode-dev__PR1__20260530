@@ -1,8 +1,3 @@
-"""DO NOT USE ME. USE django.contrib.postgres.fields.array.ArrayField
-
-I am only here for migration compatibility
-"""
-
 from __future__ import annotations
 
 import ast

@@ -70,16 +70,15 @@ const PLUGIN_ICONS = {
 
 export interface PluginIconProps extends React.RefAttributes<HTMLDivElement> {
   pluginId: keyof typeof PLUGIN_ICONS | (string & {});
-  className?: string;
   /**
    * @default 20
    */
   size?: number;
 }
 
-export function PluginIcon({pluginId, size = 20, ref, className}: PluginIconProps) {
+export function PluginIcon({pluginId, size = 20, ref}: PluginIconProps) {
   return (
-    <StyledPluginIconContainer size={size} className={className}>
+    <StyledPluginIconContainer size={size}>
       <StyledPluginIcon size={size} pluginSrc={getPluginIconSource(pluginId)} ref={ref} />
     </StyledPluginIconContainer>
   );

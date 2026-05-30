@@ -1,12 +1,18 @@
 import {FeatureBadge} from 'sentry/components/core/badge/featureBadge';
 import {t} from 'sentry/locale';
+import HookStore from 'sentry/stores/hookStore';
+import type {Organization} from 'sentry/types/organization';
 import {hasDynamicSamplingCustomFeature} from 'sentry/utils/dynamicSampling/features';
 import type {NavigationSection} from 'sentry/views/settings/types';
 
 const organizationSettingsPathPrefix = '/settings/:orgId';
 const userSettingsPathPrefix = '/settings/account';
 
-export function getUserOrgNavigationConfiguration(): NavigationSection[] {
+export function getUserOrgNavigationConfiguration({
+  organization: incomingOrganization,
+}: {
+  organization: Organization;
+}): NavigationSection[] {
   return [
     {
       id: 'settings-account',
@@ -175,18 +181,7 @@ export function getUserOrgNavigationConfiguration(): NavigationSection[] {
           path: `${organizationSettingsPathPrefix}/feature-flags/`,
           title: t('Feature Flags'),
           description: t('Set up feature flag integrations'),
-        },
-        {
-          path: `${organizationSettingsPathPrefix}/seer/`,
-          title: t('Seer Automation'),
-          description: t(
-            "Manage settings for Seer's automated analysis across your organization"
-          ),
-          show: ({organization}) =>
-            !!organization &&
-            organization.features.includes('trigger-autofix-on-issue-summary') &&
-            !organization.hideAiFeatures,
-          id: 'seer',
+          badge: () => 'beta',
         },
       ],
     },
@@ -196,16 +191,9 @@ export function getUserOrgNavigationConfiguration(): NavigationSection[] {
       items: [
         {
           path: `${organizationSettingsPathPrefix}/auth-tokens/`,
-          title: t('Organization Tokens'),
-          description: t('Manage organization tokens'),
+          title: t('Auth Tokens'),
+          description: t('Manage organization auth tokens'),
           id: 'auth-tokens',
-        },
-        {
-          path: `${userSettingsPathPrefix}/api/auth-tokens/`,
-          title: t('Personal Tokens'),
-          description: t(
-            "Personal tokens allow you to perform actions against the Sentry API on behalf of your account. They're the easiest way to get started using the API."
-          ),
         },
         {
           path: `${organizationSettingsPathPrefix}/developer-settings/`,
@@ -213,11 +201,27 @@ export function getUserOrgNavigationConfiguration(): NavigationSection[] {
           description: t('Manage custom integrations'),
           id: 'developer-settings',
         },
+      ],
+    },
+    {
+      id: 'settings-api',
+      name: t('API'),
+      items: [
         {
           path: `${userSettingsPathPrefix}/api/applications/`,
           title: t('Applications'),
           description: t('Add and configure OAuth2 applications'),
         },
+        {
+          path: `${userSettingsPathPrefix}/api/auth-tokens/`,
+          title: t('User Auth Tokens'),
+          description: t(
+            "Authentication tokens allow you to perform actions against the Sentry API on behalf of your account. They're the easiest way to get started using the API."
+          ),
+        },
+        ...HookStore.get('settings:api-navigation-config').flatMap(cb =>
+          cb(incomingOrganization)
+        ),
       ],
     },
   ];

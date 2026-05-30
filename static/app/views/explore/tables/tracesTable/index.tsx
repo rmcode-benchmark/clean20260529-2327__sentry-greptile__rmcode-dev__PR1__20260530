@@ -3,10 +3,10 @@ import styled from '@emotion/styled';
 import debounce from 'lodash/debounce';
 
 import {Button} from 'sentry/components/core/button';
-import {ExternalLink} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import Count from 'sentry/components/count';
 import EmptyStateWarning, {EmptyStreamWrapper} from 'sentry/components/emptyStateWarning';
+import ExternalLink from 'sentry/components/links/externalLink';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import Pagination from 'sentry/components/pagination';
 import PerformanceDuration from 'sentry/components/performanceDuration';
@@ -105,8 +105,10 @@ export function TracesTable({tracesTableResult}: TracesTableProps) {
           {showEmptyState && (
             <StyledPanelItem span={6} overflow>
               <EmptyStateWarning withIcon>
-                <EmptyStateText size="xl">{t('No trace results found')}</EmptyStateText>
-                <EmptyStateText size="md">
+                <EmptyStateText size="fontSizeExtraLarge">
+                  {t('No trace results found')}
+                </EmptyStateText>
+                <EmptyStateText size="fontSizeMedium">
                   {tct('Try adjusting your filters or refer to [docSearchProps].', {
                     docSearchProps: (
                       <ExternalLink href={SPAN_PROPS_DOCS_URL}>
@@ -260,7 +262,7 @@ function TraceRow({
         )}
       </StyledPanelItem>
       <StyledPanelItem align="right">
-        <SpanTimeRenderer timestamp={trace.start} tooltipShowSeconds />
+        <SpanTimeRenderer timestamp={trace.end} tooltipShowSeconds />
       </StyledPanelItem>
       {expanded && <SpanTable trace={trace} />}
     </Fragment>

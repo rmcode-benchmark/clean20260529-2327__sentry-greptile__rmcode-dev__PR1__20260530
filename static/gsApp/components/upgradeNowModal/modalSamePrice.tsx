@@ -8,7 +8,7 @@ import {addErrorMessage, addSuccessMessage} from 'sentry/actionCreators/indicato
 import type {ModalRenderProps} from 'sentry/actionCreators/modal';
 import {closeModal} from 'sentry/actionCreators/modal';
 import {Button} from 'sentry/components/core/button';
-import {ExternalLink} from 'sentry/components/core/link';
+import ExternalLink from 'sentry/components/links/externalLink';
 import {t, tct} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {Organization} from 'sentry/types/organization';
@@ -124,12 +124,12 @@ const UpsellContent = styled('div')`
   padding-top: 190px;
   margin-inline: -45px;
   padding-inline: 45px;
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
 `;
 
 const Subheader = styled('h2')`
   color: ${p => p.theme.purple300};
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   font-weight: bold;
   margin-bottom: ${space(1.5)};
   text-transform: uppercase;
@@ -151,17 +151,17 @@ const CTAPanel = styled('div')`
 `;
 
 const CTAPrimary = styled('div')`
-  font-size: ${p => p.theme.fontSize.lg};
+  font-size: ${p => p.theme.fontSizeLarge};
   font-weight: bold;
 `;
 const CTASecondary = styled('div')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 const Note = styled('p')`
   text-align: center;
   color: ${p => p.theme.subText};
-  font-size: ${p => p.theme.fontSize.xs};
+  font-size: ${p => p.theme.fontSizeExtraSmall};
   margin-block: ${space(4)};
 `;
 

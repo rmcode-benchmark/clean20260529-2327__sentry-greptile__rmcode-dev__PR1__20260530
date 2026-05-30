@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 from operator import attrgetter
-from typing import Any, NoReturn
+from typing import Any
 
 from django.urls import reverse
 
@@ -15,15 +15,8 @@ from sentry.issues.grouptype import GroupCategory
 from sentry.issues.issue_occurrence import IssueOccurrence
 from sentry.models.group import Group
 from sentry.organizations.services.organization.service import organization_service
-from sentry.shared_integrations.exceptions import (
-    ApiError,
-    IntegrationError,
-    IntegrationFormError,
-    IntegrationInstallationConfigurationError,
-    IntegrationResourceNotFoundError,
-)
+from sentry.shared_integrations.exceptions import ApiError, IntegrationError
 from sentry.silo.base import all_silo_function
-from sentry.users.models.identity import Identity
 from sentry.users.models.user import User
 from sentry.users.services.user import RpcUser
 from sentry.utils.http import absolute_uri
@@ -31,32 +24,6 @@ from sentry.utils.strings import truncatechars
 
 
 class GitHubIssuesSpec(SourceCodeIssueIntegration):
-    def raise_error(self, exc: Exception, identity: Identity | None = None) -> NoReturn:
-        if isinstance(exc, ApiError):
-            if exc.code == 422:
-                invalid_fields = {}
-                if exc.json is not None:
-                    for e in exc.json.get("errors", []):
-                        field = e.get("field", "unknown field")
-                        code = e.get("code", "invalid")
-                        value = e.get("value", "unknown value")
-
-                        invalid_fields[field] = f"Got {code} value: {value} for field: {field}"
-                        raise IntegrationFormError(invalid_fields) from exc
-                    raise IntegrationFormError(
-                        {"detail": "Some given field was misconfigured"}
-                    ) from exc
-            elif exc.code == 410:
-                raise IntegrationInstallationConfigurationError(
-                    {
-                        "detail": "Issues are disabled for this repo, please check your repo's permissions"
-                    }
-                ) from exc
-            elif exc.code == 404:
-                raise IntegrationResourceNotFoundError from exc
-
-        raise super().raise_error(exc=exc, identity=identity)
-
     def make_external_key(self, data: Mapping[str, Any]) -> str:
         return "{}#{}".format(data["repo"], data["key"])
 
@@ -165,7 +132,7 @@ class GitHubIssuesSpec(SourceCodeIssueIntegration):
             org = org_context.organization
 
         params = kwargs.pop("params", {})
-        default_repo, repo_choices = self.get_repository_choices(group, params)
+        default_repo, repo_choices = self.get_repository_choices(group, params, **kwargs)
 
         assignees = self.get_allowed_assignees(default_repo) if default_repo else []
         labels: Sequence[tuple[str, str]] = []
@@ -229,7 +196,7 @@ class GitHubIssuesSpec(SourceCodeIssueIntegration):
         try:
             issue = client.create_issue(repo=repo, data=issue_data)
         except ApiError as e:
-            self.raise_error(e)
+            raise IntegrationError(self.message_from_error(e))
 
         return {
             "key": issue["number"],
@@ -241,7 +208,7 @@ class GitHubIssuesSpec(SourceCodeIssueIntegration):
 
     def get_link_issue_config(self, group: Group, **kwargs: Any) -> list[dict[str, Any]]:
         params = kwargs.pop("params", {})
-        default_repo, repo_choices = self.get_repository_choices(group, params)
+        default_repo, repo_choices = self.get_repository_choices(group, params, **kwargs)
 
         org = group.organization
         autocomplete_url = reverse(

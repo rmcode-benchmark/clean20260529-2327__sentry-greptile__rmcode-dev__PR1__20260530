@@ -6,7 +6,6 @@ import {LinkButton} from 'sentry/components/core/button/linkButton';
 import {DateTime} from 'sentry/components/dateTime';
 import {DropdownMenu} from 'sentry/components/dropdownMenu';
 import EmptyStateWarning from 'sentry/components/emptyStateWarning';
-import {makeFeatureFlagSearchKey} from 'sentry/components/events/featureFlags/utils';
 import {useOrganizationFlagLog} from 'sentry/components/featureFlags/hooks/useOrganizationFlagLog';
 import {getFlagActionLabel, type RawFlag} from 'sentry/components/featureFlags/utils';
 import LoadingError from 'sentry/components/loadingError';
@@ -15,7 +14,6 @@ import Pagination from 'sentry/components/pagination';
 import {IconArrow, IconEllipsis} from 'sentry/icons';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
-import type {Group} from 'sentry/types/group';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import useCopyToClipboard from 'sentry/utils/useCopyToClipboard';
 import {useLocation} from 'sentry/utils/useLocation';
@@ -26,11 +24,7 @@ import {DrawerTab} from 'sentry/views/issueDetails/groupDistributions/types';
 import {Tab, TabPaths} from 'sentry/views/issueDetails/types';
 import {useGroupDetailsRoute} from 'sentry/views/issueDetails/useGroupDetailsRoute';
 
-interface Props {
-  group: Group;
-}
-
-export function FlagDetailsDrawerContent({group}: Props) {
+export function FlagDetailsDrawerContent() {
   const navigate = useNavigate();
   const organization = useOrganization();
   const {tagKey} = useParams<{tagKey: string}>();
@@ -108,20 +102,9 @@ export function FlagDetailsDrawerContent({group}: Props) {
           </ColumnTitle>
         </Header>
         <Body>
-          {flagLog.data.map((flag, i) => {
-            const prev = flagLog.data[i - 1];
-
-            return (
-              <Fragment key={`${flag.id}-${i}`}>
-                {group.firstSeen > flag.createdAt &&
-                (i === 0 ||
-                  (flagLog.data && prev && prev.createdAt > group.firstSeen)) ? (
-                  <GroupFirstSeenRow group={group} />
-                ) : null}
-                <FlagDetailsRow flagValue={flag} />
-              </Fragment>
-            );
-          })}
+          {flagLog.data.map((fv, i) => (
+            <FlagDetailsRow key={`${fv.id}-${i}`} flagValue={fv} />
+          ))}
         </Body>
       </Table>
       <Pagination
@@ -160,18 +143,6 @@ function FlagDetailsRow({flagValue}: {flagValue: RawFlag}) {
   );
 }
 
-function GroupFirstSeenRow({group}: {group: Group}) {
-  return (
-    <Row>
-      <LeftAlignedValue>{t('Issue First Seen')}</LeftAlignedValue>
-      <LeftAlignedValue />
-      <LeftAlignedValue />
-      <DateTime date={group.firstSeen} year timeZone />
-      <div />
-    </Row>
-  );
-}
-
 function FlagValueActionsMenu({flagValue}: {flagValue: RawFlag}) {
   const organization = useOrganization();
   const {onClick: handleCopy} = useCopyToClipboard({
@@ -197,7 +168,7 @@ function FlagValueActionsMenu({flagValue}: {flagValue: RawFlag}) {
           label: t('Search issues where this flag value is TRUE'),
           to: {
             pathname: `/organizations/${organization.slug}/issues/`,
-            query: {query: `${makeFeatureFlagSearchKey(key)}:"true"`},
+            query: {query: `flags["${key}"]:"true"`},
           },
         },
         {
@@ -205,7 +176,7 @@ function FlagValueActionsMenu({flagValue}: {flagValue: RawFlag}) {
           label: t('Search issues where this flag value is FALSE'),
           to: {
             pathname: `/organizations/${organization.slug}/issues/`,
-            query: {query: `${makeFeatureFlagSearchKey(key)}:"false"`},
+            query: {query: `flags["${key}"]:"false"`},
           },
         },
         {
@@ -225,7 +196,7 @@ const Table = styled('div')`
   row-gap: ${space(0.5)};
   margin: 0 -${space(1)};
 
-  @media (min-width: ${p => p.theme.breakpoints.xl}) {
+  @media (min-width: ${p => p.theme.breakpoints.xlarge}) {
     column-gap: ${space(2)};
   }
 `;
@@ -233,7 +204,7 @@ const Table = styled('div')`
 const ColumnTitle = styled('div')`
   white-space: nowrap;
   color: ${p => p.theme.subText};
-  font-weight: ${p => p.theme.fontWeight.bold};
+  font-weight: ${p => p.theme.fontWeightBold};
 `;
 
 const Body = styled('div')`

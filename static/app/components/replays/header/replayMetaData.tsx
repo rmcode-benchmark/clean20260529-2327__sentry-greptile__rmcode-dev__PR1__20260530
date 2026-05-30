@@ -1,7 +1,7 @@
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
-import {Link} from 'sentry/components/core/link';
+import Link from 'sentry/components/links/link';
 import Placeholder from 'sentry/components/placeholder';
 import ErrorCounts from 'sentry/components/replays/header/errorCounts';
 import ReplayViewers from 'sentry/components/replays/header/replayViewers';
@@ -26,7 +26,7 @@ export default function ReplayMetaData({
   replayRecord,
   showDeadRageClicks = true,
 }: Props) {
-  const nonFeedbackErrors = replayErrors.filter(e => !e.title.includes('User Feedback'));
+  const nonFeedbackErrors = replayErrors.filter(e => e.title !== 'User Feedback');
 
   const location = useLocation();
   const routes = useRoutes();
@@ -84,9 +84,7 @@ export default function ReplayMetaData({
       <KeyMetricLabel>{t('Errors')}</KeyMetricLabel>
       <KeyMetricData>
         {replayRecord ? (
-          replayRecord.is_archived ? null : (
-            <ErrorCounts replayErrors={nonFeedbackErrors} replayRecord={replayRecord} />
-          )
+          <ErrorCounts replayErrors={nonFeedbackErrors} replayRecord={replayRecord} />
         ) : (
           <Placeholder width="20px" height="16px" />
         )}
@@ -94,12 +92,7 @@ export default function ReplayMetaData({
       <KeyMetricLabel>{t('Seen By')}</KeyMetricLabel>
       <KeyMetricData>
         {replayRecord ? (
-          replayRecord.is_archived ? null : (
-            <ReplayViewers
-              projectId={replayRecord.project_id}
-              replayId={replayRecord.id}
-            />
-          )
+          <ReplayViewers projectId={replayRecord.project_id} replayId={replayRecord.id} />
         ) : (
           <Placeholder width="55px" height="27px" />
         )}
@@ -119,18 +112,18 @@ const KeyMetrics = styled('dl')`
   color: ${p => p.theme.subText};
   margin: 0;
 
-  @media (min-width: ${p => p.theme.breakpoints.md}) {
+  @media (min-width: ${p => p.theme.breakpoints.medium}) {
     justify-self: flex-end;
   }
 `;
 
 const KeyMetricLabel = styled('dt')`
-  font-size: ${p => p.theme.fontSize.md};
+  font-size: ${p => p.theme.fontSizeMedium};
 `;
 
 const KeyMetricData = styled('dd')`
-  font-size: ${p => p.theme.fontSize.xl};
-  font-weight: ${p => p.theme.fontWeight.normal};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
+  font-weight: ${p => p.theme.fontWeightNormal};
   display: flex;
   align-items: center;
   gap: ${space(1)};

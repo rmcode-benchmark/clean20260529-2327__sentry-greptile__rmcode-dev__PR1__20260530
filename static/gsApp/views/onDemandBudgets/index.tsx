@@ -3,9 +3,9 @@ import styled from '@emotion/styled';
 
 import {Button} from 'sentry/components/core/button';
 import {LinkButton} from 'sentry/components/core/button/linkButton';
-import {ExternalLink} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
 import FieldGroup from 'sentry/components/forms/fieldGroup';
+import ExternalLink from 'sentry/components/links/externalLink';
 import PanelBody from 'sentry/components/panels/panelBody';
 import {IconQuestion} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
@@ -141,10 +141,7 @@ class OnDemandBudgets extends Component<Props> {
     if (onDemandBudgets.budgetMode === OnDemandBudgetMode.PER_CATEGORY) {
       return (
         <PerCategoryBudgetContainer data-test-id="per-category-budget-info">
-          {getOnDemandCategories({
-            plan: subscription.planDetails,
-            budgetMode: onDemandBudgets.budgetMode,
-          }).map(category => (
+          {subscription.planDetails.onDemandCategories.map(category => (
             <Category key={category}>
               <DetailTitle>
                 {getPlanCategoryName({plan: subscription.planDetails, category})}
@@ -204,16 +201,13 @@ class OnDemandBudgets extends Component<Props> {
       return this.renderNeedsPaymentSource();
     }
 
-    const onDemandBudgets = subscription.onDemandBudgets!;
     const oxfordCategories = listDisplayNames({
       plan: subscription.planDetails,
-      categories: getOnDemandCategories({
-        plan: subscription.planDetails,
-        budgetMode: onDemandBudgets.budgetMode,
-      }),
+      categories: getOnDemandCategories(subscription.planDetails),
     });
     let description = t('Applies to %s.', oxfordCategories);
 
+    const onDemandBudgets = subscription.onDemandBudgets!;
     if (
       onDemandBudgets.budgetMode === OnDemandBudgetMode.SHARED &&
       onDemandBudgets.sharedMaxBudget > 0
@@ -263,7 +257,7 @@ const Label = styled('div')`
 
 const DetailTitle = styled('div')`
   text-transform: uppercase;
-  font-size: ${p => p.theme.fontSize.sm};
+  font-size: ${p => p.theme.fontSizeSmall};
   color: ${p => p.theme.subText};
   margin-bottom: ${space(1)};
   white-space: nowrap;
@@ -271,7 +265,7 @@ const DetailTitle = styled('div')`
 
 const Amount = styled('div')`
   color: ${p => p.theme.textColor};
-  font-size: ${p => p.theme.fontSize.xl};
+  font-size: ${p => p.theme.fontSizeExtraLarge};
 `;
 
 const PerCategoryBudgetContainer = styled('div')`
