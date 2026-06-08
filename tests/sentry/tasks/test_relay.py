@@ -388,8 +388,12 @@ class TestInvalidationTask:
         invalidation_debounce_cache.mark_task_done(
             public_key=None, project_id=None, organization_id=default_organization.id
         )
-        schedule_invalidate_project_config(organization_id=default_organization.id, trigger="test")
-        schedule_invalidate_project_config(organization_id=default_organization.id, trigger="test")
+        schedule_invalidate_project_config(
+            organization_id=default_organization.id, trigger="test", trigger_details="more test"
+        )
+        schedule_invalidate_project_config(
+            organization_id=default_organization.id, trigger="test", trigger_details="more test"
+        )
 
         assert tasks == [
             {
@@ -397,12 +401,14 @@ class TestInvalidationTask:
                 "organization_id": None,
                 "public_key": None,
                 "trigger": "test",
+                "trigger_details": None,
             },
             {
                 "project_id": None,
                 "organization_id": default_organization.id,
                 "public_key": None,
                 "trigger": "test",
+                "trigger_details": "more test",
             },
         ]
 
@@ -465,15 +471,19 @@ class TestInvalidationTask:
         schedule_inner,
         default_project,
     ):
-        schedule_invalidate_project_config(trigger="test", project_id=default_project.id)
+        schedule_invalidate_project_config(
+            trigger="test", project_id=default_project.id, countdown=2
+        )
 
         assert oncommit.call_count == 1
         assert schedule_inner.call_count == 1
         assert schedule_inner.call_args == call(
             trigger="test",
+            trigger_details=None,
             organization_id=None,
             project_id=default_project.id,
             public_key=None,
+            countdown=2,
         )
 
     @mock.patch("sentry.tasks.relay._schedule_invalidate_project_config")
@@ -484,13 +494,13 @@ class TestInvalidationTask:
     ):
         with transaction.atomic(router.db_for_write(ProjectOption)):
             schedule_invalidate_project_config(
-                trigger="inside-transaction", project_id=default_project
+                trigger="inside-transaction", project_id=default_project, countdown=2
             )
             assert schedule_inner.call_count == 0
 
         assert schedule_inner.call_count == 1
         schedule_invalidate_project_config(
-            trigger="outside-transaction", project_id=default_project
+            trigger="outside-transaction", project_id=default_project, countdown=2
         )
         assert schedule_inner.call_count == 2
 

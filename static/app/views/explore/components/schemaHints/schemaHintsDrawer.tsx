@@ -133,6 +133,7 @@ function SchemaHintsDrawer({hints, searchBarDispatch, queryRef}: SchemaHintsDraw
             .lastIndexOf(hint.key)}`,
           part: 'value',
         },
+        shouldCommitQuery: false,
       });
       trackAnalytics('trace.explorer.schema_hints_click', {
         hint_key: hint.key,
@@ -253,7 +254,7 @@ const CheckboxLabelContainer = styled('div')`
 `;
 
 const CheckboxLabel = styled('span')`
-  font-weight: ${p => p.theme.fontWeightNormal};
+  font-weight: ${p => p.theme.fontWeight.normal};
   margin: 0;
   ${p => p.theme.overflowEllipsis};
 `;
@@ -269,7 +270,7 @@ const StyledMultipleCheckboxItem = styled(MultipleCheckbox.Item)`
   padding: ${space(1)} ${space(0.5)};
   border-top: 1px solid ${p => p.theme.border};
 
-  @media (min-width: ${p => p.theme.breakpoints.small}) {
+  @media (min-width: ${p => p.theme.breakpoints.sm}) {
     width: 100%;
   }
 
@@ -326,7 +327,7 @@ const NoAttributesMessage = styled('div')`
 `;
 
 const StyledInputGroup = styled(InputGroup)`
-  @media (max-width: ${p => p.theme.breakpoints.medium}) {
+  @media (max-width: ${p => p.theme.breakpoints.md}) {
     max-width: 175px;
   }
 `;

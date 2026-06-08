@@ -175,7 +175,11 @@ export default function ProfilingContent({location}: ProfilingContentProps) {
                       <LandingWidgetSelector
                         cursorName={RIGHT_WIDGET_CURSOR}
                         widgetHeight="410px"
-                        defaultWidget="regressed functions"
+                        defaultWidget={
+                          organization.features.includes('profiling-function-trends')
+                            ? 'regressed functions'
+                            : 'slowest functions avg'
+                        }
                         storageKey="profiling-landing-widget-1"
                         onDataState={updateWidget2DataState}
                       />
@@ -298,13 +302,12 @@ function TransactionsTab({onDataState, location, selection}: TabbedContentProps)
           initialQuery={query}
           onSearch={handleSearch}
           searchSource="profile_landing"
+          disallowFreeText={false}
         />
       </SearchbarContainer>
       {transactionsError && (
         <Alert.Container>
-          <Alert type="error" showIcon>
-            {transactionsError}
-          </Alert>
+          <Alert type="error">{transactionsError}</Alert>
         </Alert.Container>
       )}
       <ProfileEventsTable
@@ -389,7 +392,7 @@ const LayoutBody = styled(Layout.Body)`
   display: grid;
   align-content: stretch;
 
-  @media (min-width: ${p => p.theme.breakpoints.large}) {
+  @media (min-width: ${p => p.theme.breakpoints.lg}) {
     align-content: stretch;
   }
 `;
@@ -435,7 +438,7 @@ const WidgetsContainer = styled('div')`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: ${space(2)};
-  @media (max-width: ${p => p.theme.breakpoints.small}) {
+  @media (max-width: ${p => p.theme.breakpoints.sm}) {
     grid-template-columns: 1fr;
   }
 `;

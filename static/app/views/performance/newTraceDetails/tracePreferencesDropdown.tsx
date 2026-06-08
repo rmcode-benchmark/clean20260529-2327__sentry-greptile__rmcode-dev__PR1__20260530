@@ -2,8 +2,8 @@ import {useCallback, useMemo} from 'react';
 
 import {openModal} from 'sentry/actionCreators/modal';
 import {CompactSelect, type SelectOption} from 'sentry/components/core/compactSelect';
+import {ExternalLink} from 'sentry/components/core/link';
 import type {DropdownButtonProps} from 'sentry/components/dropdownButton';
-import ExternalLink from 'sentry/components/links/externalLink';
 import {IconSettings} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
 import type {Project} from 'sentry/types/project';
@@ -16,7 +16,6 @@ import {isTraceItemDetailsResponse} from 'sentry/views/performance/newTraceDetai
 import {getCustomInstrumentationLink} from 'sentry/views/performance/newTraceDetails/traceConfigurations';
 import {findSpanAttributeValue} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/utils';
 import {TraceShortcutsModal} from 'sentry/views/performance/newTraceDetails/traceShortcutsModal';
-import {useHasTraceTabsUI} from 'sentry/views/performance/newTraceDetails/useHasTraceTabsUI';
 
 const CompactSelectTriggerProps: DropdownButtonProps = {
   icon: <IconSettings />,
@@ -34,7 +33,6 @@ interface TracePreferencesDropdownProps {
 }
 
 export function TracePreferencesDropdown(props: TracePreferencesDropdownProps) {
-  const hasTraceTabsUi = useHasTraceTabsUI();
   const organization = useOrganization();
   const {projects} = useProjects();
 
@@ -100,7 +98,7 @@ export function TracePreferencesDropdown(props: TracePreferencesDropdownProps) {
     [values, onAutogroupChange, onMissingInstrumentationChange]
   );
 
-  const menuFooter = hasTraceTabsUi ? (
+  const menuFooter = (
     <a
       onClick={() => {
         traceAnalytics.trackViewShortcuts(organization);
@@ -109,7 +107,7 @@ export function TracePreferencesDropdown(props: TracePreferencesDropdownProps) {
     >
       {t('See Shortcuts')}
     </a>
-  ) : null;
+  );
 
   return (
     <CompactSelect
@@ -126,7 +124,7 @@ export function TracePreferencesDropdown(props: TracePreferencesDropdownProps) {
   );
 }
 
-export function getTraceProject(
+function getTraceProject(
   projects: Project[],
   rootEventResults: TraceRootEventQueryResults
 ): Project | undefined {

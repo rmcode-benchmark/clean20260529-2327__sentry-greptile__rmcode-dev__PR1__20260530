@@ -1,18 +1,23 @@
-import AutomationBuilderInputField from 'sentry/components/workflowEngine/form/automationBuilderInputField';
+import {AutomationBuilderInput} from 'sentry/components/workflowEngine/form/automationBuilderInput';
 import {t} from 'sentry/locale';
 import {useActionNodeContext} from 'sentry/views/automations/components/actionNodes';
+import {useAutomationBuilderErrorContext} from 'sentry/views/automations/components/automationBuilderErrorContext';
 
 export function TargetDisplayField({placeholder}: {placeholder?: string}) {
   const {action, actionId, onUpdate} = useActionNodeContext();
+  const {removeError} = useAutomationBuilderErrorContext();
+
   return (
-    <AutomationBuilderInputField
-      name={`${actionId}.data.targetDisplay`}
+    <AutomationBuilderInput
+      name={`${actionId}.config.target_display`}
+      aria-label={t('Target')}
       placeholder={placeholder ? placeholder : t('channel name or ID')}
-      value={action.data.targetDisplay}
-      onChange={(value: string) => {
+      value={action.config.target_display}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
         onUpdate({
-          targetDisplay: value,
+          config: {...action.config, target_display: e.target.value},
         });
+        removeError(action.id);
       }}
     />
   );

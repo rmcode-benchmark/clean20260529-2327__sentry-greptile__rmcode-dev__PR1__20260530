@@ -11,7 +11,7 @@ from sentry.conf.server import SEER_HASH_GROUPING_RECORDS_DELETE_URL
 from sentry.seer.similarity.grouping_records import (
     POST_BULK_GROUPING_RECORDS_TIMEOUT,
     CreateGroupingRecordsRequest,
-    delete_grouping_records_by_hash,
+    call_seer_to_delete_these_hashes,
     post_bulk_grouping_records,
 )
 from sentry.testutils.pytest.fixtures import django_db_all
@@ -44,7 +44,9 @@ def _create_grouping_records_request_params() -> CreateGroupingRecordsRequest:
 
 @pytest.mark.django_db
 @mock.patch("sentry.seer.similarity.grouping_records.logger")
-@mock.patch("sentry.seer.similarity.grouping_records.seer_grouping_connection_pool.urlopen")
+@mock.patch(
+    "sentry.seer.similarity.grouping_records.seer_grouping_backfill_connection_pool.urlopen"
+)
 def test_post_bulk_grouping_records_success(mock_seer_request: MagicMock, mock_logger: MagicMock):
     expected_return_value = {
         "success": True,
@@ -69,7 +71,9 @@ def test_post_bulk_grouping_records_success(mock_seer_request: MagicMock, mock_l
 
 @pytest.mark.django_db
 @mock.patch("sentry.seer.similarity.grouping_records.logger")
-@mock.patch("sentry.seer.similarity.grouping_records.seer_grouping_connection_pool.urlopen")
+@mock.patch(
+    "sentry.seer.similarity.grouping_records.seer_grouping_backfill_connection_pool.urlopen"
+)
 def test_post_bulk_grouping_records_timeout(mock_seer_request: MagicMock, mock_logger: MagicMock):
     expected_return_value = {"success": False, "reason": "ReadTimeoutError"}
     mock_seer_request.side_effect = ReadTimeoutError(
@@ -93,7 +97,9 @@ def test_post_bulk_grouping_records_timeout(mock_seer_request: MagicMock, mock_l
 
 @pytest.mark.django_db
 @mock.patch("sentry.seer.similarity.grouping_records.logger")
-@mock.patch("sentry.seer.similarity.grouping_records.seer_grouping_connection_pool.urlopen")
+@mock.patch(
+    "sentry.seer.similarity.grouping_records.seer_grouping_backfill_connection_pool.urlopen"
+)
 def test_post_bulk_grouping_records_failure(mock_seer_request: MagicMock, mock_logger: MagicMock):
     expected_return_value = {"success": False, "reason": "INTERNAL SERVER ERROR"}
     mock_seer_request.return_value = HTTPResponse(
@@ -132,7 +138,9 @@ def test_post_bulk_grouping_records_empty_data(mock_seer_request: MagicMock):
 
 @pytest.mark.django_db
 @mock.patch("sentry.seer.similarity.grouping_records.logger")
-@mock.patch("sentry.seer.similarity.grouping_records.seer_grouping_connection_pool.urlopen")
+@mock.patch(
+    "sentry.seer.similarity.grouping_records.seer_grouping_backfill_connection_pool.urlopen"
+)
 def test_post_bulk_grouping_records_use_reranking(
     mock_seer_request: MagicMock, mock_logger: MagicMock
 ):
@@ -170,7 +178,7 @@ def test_delete_grouping_records_by_hash_success(
     )
 
     project_id, hashes = 1, ["1", "2"]
-    response = delete_grouping_records_by_hash(project_id, hashes)
+    response = call_seer_to_delete_these_hashes(project_id, hashes)
     assert response is True
     mock_logger.info.assert_called_with(
         "seer.delete_grouping_records.hashes.success",
@@ -181,6 +189,7 @@ def test_delete_grouping_records_by_hash_success(
     )
 
 
+@django_db_all
 @mock.patch("sentry.seer.similarity.grouping_records.logger")
 @mock.patch("sentry.seer.similarity.grouping_records.seer_grouping_connection_pool.urlopen")
 def test_delete_grouping_records_by_hash_timeout(
@@ -190,7 +199,7 @@ def test_delete_grouping_records_by_hash_timeout(
         DUMMY_POOL, SEER_HASH_GROUPING_RECORDS_DELETE_URL, "read timed out"
     )
     project_id, hashes = 1, ["1", "2"]
-    response = delete_grouping_records_by_hash(project_id, hashes)
+    response = call_seer_to_delete_these_hashes(project_id, hashes)
     assert response is False
     mock_logger.exception.assert_called_with(
         "seer.delete_grouping_records.hashes.timeout",
@@ -215,7 +224,7 @@ def test_delete_grouping_records_by_hash_failure(
         status=500,
     )
     project_id, hashes = 1, ["1", "2"]
-    response = delete_grouping_records_by_hash(project_id, hashes)
+    response = call_seer_to_delete_these_hashes(project_id, hashes)
     assert response is False
     mock_logger.error.assert_called_with(
         "seer.delete_grouping_records.hashes.failure",

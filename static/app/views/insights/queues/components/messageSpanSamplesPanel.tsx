@@ -5,7 +5,7 @@ import keyBy from 'lodash/keyBy';
 import {Button} from 'sentry/components/core/button';
 import {CompactSelect, type SelectOption} from 'sentry/components/core/compactSelect';
 import {EventDrawerHeader} from 'sentry/components/events/eventDrawer';
-import {SpanSearchQueryBuilder} from 'sentry/components/performance/spanSearchQueryBuilder';
+import {EapSpanSearchQueryBuilderWrapper} from 'sentry/components/performance/spanSearchQueryBuilder';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import {trackAnalytics} from 'sentry/utils/analytics';
@@ -30,8 +30,7 @@ import * as ModuleLayout from 'sentry/views/insights/common/components/moduleLay
 import {ReadoutRibbon} from 'sentry/views/insights/common/components/ribbon';
 import {SampleDrawerBody} from 'sentry/views/insights/common/components/sampleDrawerBody';
 import {SampleDrawerHeaderTransaction} from 'sentry/views/insights/common/components/sampleDrawerHeaderTransaction';
-import {useSpanMetricsSeries} from 'sentry/views/insights/common/queries/useDiscoverSeries';
-import {useInsightsEap} from 'sentry/views/insights/common/utils/useEap';
+import {useSpanSeries} from 'sentry/views/insights/common/queries/useDiscoverSeries';
 import {getDurationChartTitle} from 'sentry/views/insights/common/views/spans/types';
 import {useSpanSamples} from 'sentry/views/insights/http/queries/useSpanSamples';
 import {InsightsSpanTagProvider} from 'sentry/views/insights/pages/insightsSpanTagProvider';
@@ -47,11 +46,7 @@ import {
 } from 'sentry/views/insights/queues/settings';
 import decodeRetryCount from 'sentry/views/insights/queues/utils/queryParameterDecoders/retryCount';
 import decodeTraceStatus from 'sentry/views/insights/queues/utils/queryParameterDecoders/traceStatus';
-import {
-  ModuleName,
-  SpanIndexedField,
-  type SpanMetricsResponse,
-} from 'sentry/views/insights/types';
+import {ModuleName, SpanFields, type SpanResponse} from 'sentry/views/insights/types';
 
 export function MessageSpanSamplesPanel() {
   const navigate = useNavigate();
@@ -69,7 +64,6 @@ export function MessageSpanSamplesPanel() {
   });
   const {projects} = useProjects();
   const {selection} = usePageFilters();
-  const useEap = useInsightsEap();
 
   const project = projects.find(p => query.project === p.id);
 
@@ -130,6 +124,7 @@ export function MessageSpanSamplesPanel() {
   const timeseriesFilters = new MutableSearch(queryFilter);
   timeseriesFilters.addFilterValue('transaction', query.transaction);
   timeseriesFilters.addFilterValue('messaging.destination.name', query.destination);
+  const timeseriesReferrer = Referrer.QUEUES_SAMPLES_PANEL_DURATION_CHART;
 
   const sampleFilters = new MutableSearch(queryFilter);
   sampleFilters.addFilterValue('transaction', query.transaction);
@@ -170,14 +165,14 @@ export function MessageSpanSamplesPanel() {
     isFetching: isDurationDataFetching,
     data: durationData,
     error: durationError,
-  } = useSpanMetricsSeries(
+  } = useSpanSeries(
     {
       search: timeseriesFilters,
       yAxis: [`avg(span.duration)`],
       enabled: isPanelOpen,
       transformAliasToInputFormat: true,
     },
-    'api.performance.queues.avg-duration-chart'
+    timeseriesReferrer
   );
 
   const durationAxisMax = computeAxisMax([durationData?.[`avg(span.duration)`]]);
@@ -193,15 +188,15 @@ export function MessageSpanSamplesPanel() {
     max: durationAxisMax,
     enabled: isPanelOpen && durationAxisMax > 0,
     fields: [
-      SpanIndexedField.ID,
-      SpanIndexedField.TRACE,
-      SpanIndexedField.SPAN_DESCRIPTION,
-      SpanIndexedField.MESSAGING_MESSAGE_BODY_SIZE,
-      SpanIndexedField.MESSAGING_MESSAGE_RECEIVE_LATENCY,
-      SpanIndexedField.MESSAGING_MESSAGE_RETRY_COUNT,
-      SpanIndexedField.MESSAGING_MESSAGE_ID,
-      SpanIndexedField.TRACE_STATUS,
-      SpanIndexedField.SPAN_DURATION,
+      SpanFields.ID,
+      SpanFields.TRACE,
+      SpanFields.SPAN_DESCRIPTION,
+      SpanFields.MESSAGING_MESSAGE_BODY_SIZE,
+      SpanFields.MESSAGING_MESSAGE_RECEIVE_LATENCY,
+      SpanFields.MESSAGING_MESSAGE_RETRY_COUNT,
+      SpanFields.MESSAGING_MESSAGE_ID,
+      SpanFields.TRACE_STATUS,
+      SpanFields.SPAN_DURATION,
     ],
   });
 
@@ -313,6 +308,7 @@ export function MessageSpanSamplesPanel() {
             <ModuleLayout.Full>
               <InsightsLineChartWidget
                 showLegend="never"
+                queryInfo={{search: timeseriesFilters, referrer: timeseriesReferrer}}
                 title={getDurationChartTitle('queue')}
                 isLoading={isDurationDataFetching}
                 error={durationError}
@@ -322,13 +318,12 @@ export function MessageSpanSamplesPanel() {
             </ModuleLayout.Full>
 
             <ModuleLayout.Full>
-              <SpanSearchQueryBuilder
+              <EapSpanSearchQueryBuilderWrapper
                 searchSource={`${ModuleName.QUEUE}-sample-panel`}
                 initialQuery={query.spanSearchQuery}
                 onSearch={handleSearch}
                 placeholder={t('Search for span attributes')}
                 projects={selection.projects}
-                useEap={useEap}
               />
             </ModuleLayout.Full>
 
@@ -343,13 +338,13 @@ export function MessageSpanSamplesPanel() {
                 // Samples endpoint doesn't provide meta data, so we need to provide it here
                 meta={{
                   fields: {
-                    [SpanIndexedField.SPAN_DURATION]: 'duration',
-                    [SpanIndexedField.MESSAGING_MESSAGE_BODY_SIZE]: 'size',
-                    [SpanIndexedField.MESSAGING_MESSAGE_RETRY_COUNT]: 'number',
+                    [SpanFields.SPAN_DURATION]: 'duration',
+                    [SpanFields.MESSAGING_MESSAGE_BODY_SIZE]: 'size',
+                    [SpanFields.MESSAGING_MESSAGE_RETRY_COUNT]: 'number',
                   },
                   units: {
-                    [SpanIndexedField.SPAN_DURATION]: DurationUnit.MILLISECOND,
-                    [SpanIndexedField.MESSAGING_MESSAGE_BODY_SIZE]: SizeUnit.BYTE,
+                    [SpanFields.SPAN_DURATION]: DurationUnit.MILLISECOND,
+                    [SpanFields.MESSAGING_MESSAGE_BODY_SIZE]: SizeUnit.BYTE,
                   },
                 }}
                 type={messageActorType}
@@ -381,7 +376,7 @@ function ProducerMetricsRibbon({
   isLoading,
 }: {
   isLoading: boolean;
-  metrics: Array<Partial<SpanMetricsResponse>>;
+  metrics: Array<Partial<SpanResponse>>;
 }) {
   const errorRate = 1 - (metrics[0]?.['trace_status_rate(ok)'] ?? 0);
   return (
@@ -407,7 +402,7 @@ function ConsumerMetricsRibbon({
   isLoading,
 }: {
   isLoading: boolean;
-  metrics: Array<Partial<SpanMetricsResponse>>;
+  metrics: Array<Partial<SpanResponse>>;
 }) {
   const errorRate = 1 - (metrics[0]?.['trace_status_rate(ok)'] ?? 0);
   return (

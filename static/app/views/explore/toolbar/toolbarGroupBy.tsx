@@ -12,16 +12,6 @@ import {IconDelete} from 'sentry/icons/iconDelete';
 import {IconGrabbable} from 'sentry/icons/iconGrabbable';
 import {t} from 'sentry/locale';
 import {defined} from 'sentry/utils';
-import {DragNDropContext} from 'sentry/views/explore/contexts/dragNDropContext';
-import {
-  useExploreGroupBys,
-  useSetExploreGroupBys,
-} from 'sentry/views/explore/contexts/pageParamsContext';
-import {Mode} from 'sentry/views/explore/contexts/pageParamsContext/mode';
-import {useSpanTags} from 'sentry/views/explore/contexts/spanTagsContext';
-import type {Column} from 'sentry/views/explore/hooks/useDragNDropColumns';
-import {useGroupByFields} from 'sentry/views/explore/hooks/useGroupByFields';
-
 import {
   ToolbarFooter,
   ToolbarFooterButton,
@@ -29,14 +19,23 @@ import {
   ToolbarLabel,
   ToolbarRow,
   ToolbarSection,
-} from './styles';
+} from 'sentry/views/explore/components/toolbar/styles';
+import {DragNDropContext} from 'sentry/views/explore/contexts/dragNDropContext';
+import {
+  useExploreGroupBys,
+  useSetExploreGroupBys,
+} from 'sentry/views/explore/contexts/pageParamsContext';
+import {Mode} from 'sentry/views/explore/contexts/pageParamsContext/mode';
+import {useTraceItemTags} from 'sentry/views/explore/contexts/spanTagsContext';
+import type {Column} from 'sentry/views/explore/hooks/useDragNDropColumns';
+import {useGroupByFields} from 'sentry/views/explore/hooks/useGroupByFields';
 
 interface ToolbarGroupBy {
   autoSwitchToAggregates: boolean;
 }
 
 export function ToolbarGroupBy({autoSwitchToAggregates}: ToolbarGroupBy) {
-  const {tags} = useSpanTags();
+  const {tags} = useTraceItemTags();
 
   const groupBys = useExploreGroupBys();
   const setGroupBys = useSetExploreGroupBys();

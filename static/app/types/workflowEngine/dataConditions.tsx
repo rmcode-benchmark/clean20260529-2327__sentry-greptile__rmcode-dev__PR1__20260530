@@ -1,3 +1,5 @@
+import {PriorityLevel} from 'sentry/types/group';
+
 import type {Action} from './actions';
 
 export enum DataConditionType {
@@ -28,6 +30,7 @@ export enum DataConditionType {
   TAGGED_EVENT = 'tagged_event',
   ISSUE_PRIORITY_EQUALS = 'issue_priority_equals',
   ISSUE_PRIORITY_GREATER_OR_EQUAL = 'issue_priority_greater_or_equal',
+  ISSUE_PRIORITY_DEESCALATING = 'issue_priority_deescalating',
 
   // frequency
   EVENT_FREQUENCY_COUNT = 'event_frequency_count',
@@ -52,11 +55,30 @@ export enum DataConditionGroupLogicType {
   NONE = 'none',
 }
 
+export enum DetectorPriorityLevel {
+  OK = 0,
+  LOW = 25,
+  MEDIUM = 50,
+  HIGH = 75,
+}
+
+export const DETECTOR_PRIORITY_LEVEL_TO_PRIORITY_LEVEL: Record<
+  Exclude<DetectorPriorityLevel, DetectorPriorityLevel.OK>,
+  PriorityLevel
+> = {
+  [DetectorPriorityLevel.LOW]: PriorityLevel.LOW,
+  [DetectorPriorityLevel.MEDIUM]: PriorityLevel.MEDIUM,
+  [DetectorPriorityLevel.HIGH]: PriorityLevel.HIGH,
+};
+
+/**
+ * See DataConditionSerializer
+ */
 export interface DataCondition {
   comparison: any;
-  comparison_type: DataConditionType;
   id: string;
-  condition_result?: any;
+  type: DataConditionType;
+  conditionResult?: any;
 }
 
 export interface DataConditionGroup {
@@ -81,6 +103,6 @@ export enum DataConditionHandlerSubgroupType {
 export interface DataConditionHandler {
   comparisonJsonSchema: Record<string, any>;
   handlerGroup: DataConditionHandlerGroupType;
-  handlerSubgroup: DataConditionHandlerSubgroupType;
   type: DataConditionType;
+  handlerSubgroup?: DataConditionHandlerSubgroupType;
 }

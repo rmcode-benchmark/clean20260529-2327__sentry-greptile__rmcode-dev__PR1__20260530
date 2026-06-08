@@ -36,7 +36,12 @@ describe('WebVitalsDetailPanel', function () {
     });
     eventsStatsMock = MockApiClient.addMockResponse({
       url: `/organizations/${organization.slug}/events-stats/`,
-      body: {},
+      body: {
+        data: [
+          [1543449600, [20, 12]],
+          [1543449601, [10, 5]],
+        ],
+      },
     });
   });
 
@@ -48,14 +53,14 @@ describe('WebVitalsDetailPanel', function () {
     render(<WebVitalsDetailPanel webVital="lcp" />, {
       organization,
     });
-    await waitForElementToBeRemoved(() => screen.queryByTestId('loading-indicator'));
+    await waitForElementToBeRemoved(() => screen.queryAllByTestId('loading-indicator'));
     // Raw web vital metric tile queries
     expect(eventsMock).toHaveBeenNthCalledWith(
       1,
       expect.anything(),
       expect.objectContaining({
         query: expect.objectContaining({
-          dataset: 'metrics',
+          dataset: 'spans',
           field: [
             'p75(measurements.lcp)',
             'p75(measurements.fcp)',
@@ -65,7 +70,7 @@ describe('WebVitalsDetailPanel', function () {
             'count()',
           ],
           query:
-            'transaction.op:[pageload,""] span.op:[ui.interaction.click,ui.interaction.hover,ui.interaction.drag,ui.interaction.press,ui.webvital.cls,""] !transaction:"<< unparameterized >>"',
+            'span.op:[ui.interaction.click,ui.interaction.hover,ui.interaction.drag,ui.interaction.press,ui.webvital.cls,ui.webvital.lcp,pageload,""] !transaction:"<< unparameterized >>"',
         }),
       })
     );
@@ -75,7 +80,7 @@ describe('WebVitalsDetailPanel', function () {
       expect.anything(),
       expect.objectContaining({
         query: expect.objectContaining({
-          dataset: 'metrics',
+          dataset: 'spans',
           field: [
             'performance_score(measurements.score.lcp)',
             'performance_score(measurements.score.fcp)',
@@ -98,7 +103,7 @@ describe('WebVitalsDetailPanel', function () {
             'sum(measurements.score.weight.lcp)',
           ],
           query:
-            'transaction.op:[pageload,""] span.op:[ui.interaction.click,ui.interaction.hover,ui.interaction.drag,ui.interaction.press,ui.webvital.cls,""] !transaction:"<< unparameterized >>"',
+            'span.op:[ui.interaction.click,ui.interaction.hover,ui.interaction.drag,ui.interaction.press,ui.webvital.cls,ui.webvital.lcp,pageload,""] !transaction:"<< unparameterized >>"',
         }),
       })
     );
@@ -108,7 +113,7 @@ describe('WebVitalsDetailPanel', function () {
       expect.anything(),
       expect.objectContaining({
         query: expect.objectContaining({
-          dataset: 'metrics',
+          dataset: 'spans',
           field: [
             'project.id',
             'project',
@@ -128,15 +133,15 @@ describe('WebVitalsDetailPanel', function () {
             'count_scores(measurements.score.inp)',
             'count_scores(measurements.score.ttfb)',
             'count_scores(measurements.score.total)',
-            'total_opportunity_score()',
+            'opportunity_score(measurements.score.total)',
           ],
           query:
-            'transaction.op:[pageload,""] span.op:[ui.interaction.click,ui.interaction.hover,ui.interaction.drag,ui.interaction.press,ui.webvital.cls,""] !transaction:"<< unparameterized >>" avg(measurements.score.total):>=0 count_scores(measurements.score.lcp):>0',
+            'span.op:[ui.interaction.click,ui.interaction.hover,ui.interaction.drag,ui.interaction.press,ui.webvital.cls,ui.webvital.lcp,pageload,\"\"] !transaction:\"<< unparameterized >>\" avg(measurements.score.total):>=0 count_scores(measurements.score.lcp):>0',
         }),
       })
     );
     expect(eventsStatsMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Largest Contentful Paint (P75)')).toBeInTheDocument();
+    expect(screen.getAllByText('Largest Contentful Paint (P75)')).toHaveLength(2);
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(
       screen.getByText(/Largest Contentful Paint \(LCP\) measures the render/)

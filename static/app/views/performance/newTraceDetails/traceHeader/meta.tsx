@@ -7,12 +7,13 @@ import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {Organization} from 'sentry/types/organization';
 import getDuration from 'sentry/utils/duration/getDuration';
-import type {TraceMeta} from 'sentry/utils/performance/quickTrace/types';
 import type {OurLogsResponseItem} from 'sentry/views/explore/logs/types';
+import type {TraceMetaQueryResults} from 'sentry/views/performance/newTraceDetails/traceApi/useTraceMeta';
 import type {RepresentativeTraceEvent} from 'sentry/views/performance/newTraceDetails/traceApi/utils';
 import {TraceDrawerComponents} from 'sentry/views/performance/newTraceDetails/traceDrawer/details/styles';
 import {
   isEAPError,
+  isEAPTraceNode,
   isTraceError,
 } from 'sentry/views/performance/newTraceDetails/traceGuards';
 import type {TraceTree} from 'sentry/views/performance/newTraceDetails/traceModels/traceTree';
@@ -38,12 +39,12 @@ const HeaderInfo = styled('div')`
 `;
 
 const StyledSectionHeading = styled(SectionHeading)`
-  font-size: ${p => p.theme.fontSizeSmall};
+  font-size: ${p => p.theme.fontSize.sm};
   margin: 0;
 `;
 
 const SectionBody = styled('div')<{rightAlign?: boolean}>`
-  font-size: ${p => p.theme.fontSizeExtraLarge};
+  font-size: ${p => p.theme.fontSize.xl};
   text-align: ${p => (p.rightAlign ? 'right' : 'left')};
   padding: ${space(0.5)} 0;
   max-height: 32px;
@@ -51,7 +52,7 @@ const SectionBody = styled('div')<{rightAlign?: boolean}>`
 
 interface MetaProps {
   logs: OurLogsResponseItem[] | undefined;
-  meta: TraceMeta | undefined;
+  meta: TraceMetaQueryResults['data'];
   organization: Organization;
   representativeEvent: RepresentativeTraceEvent;
   tree: TraceTree;
@@ -71,7 +72,7 @@ function getRootDuration(event: TraceTree.TraceEvent | null) {
 }
 
 export function Meta(props: MetaProps) {
-  const traceNode = props.tree.root.children[0]!;
+  const traceNode = props.tree.root.children[0];
   const {timestamp} = useTraceQueryParams();
 
   const uniqueErrorIssues = useMemo(() => {
@@ -112,6 +113,14 @@ export function Meta(props: MetaProps) {
     return unique;
   }, [traceNode]);
 
+  if (!traceNode) {
+    return null;
+  }
+
+  const spansCount = isEAPTraceNode(traceNode)
+    ? props.tree.eap_spans_count
+    : (props.meta?.span_count ?? 0);
+
   const uniqueIssuesCount = uniqueErrorIssues.length + uniquePerformanceIssues.length;
 
   // If there is no trace data, use the timestamp from the query params as an approximation for
@@ -119,7 +128,7 @@ export function Meta(props: MetaProps) {
   const ageStartTimestamp =
     traceNode?.space[0] ?? (timestamp ? timestamp * 1000 : undefined);
 
-  const hasSpans = (props.meta?.span_count ?? 0) > 0;
+  const hasSpans = spansCount > 0;
   const hasLogs = (props.logs?.length ?? 0) > 0;
 
   return (
@@ -138,9 +147,7 @@ export function Meta(props: MetaProps) {
           )
         }
       />
-      {hasSpans ? (
-        <MetaSection headingText={t('Spans')} bodyText={props.meta?.span_count} />
-      ) : null}
+      {hasSpans ? <MetaSection headingText={t('Spans')} bodyText={spansCount} /> : null}
       {ageStartTimestamp ? (
         <MetaSection
           headingText={t('Age')}
@@ -166,7 +173,11 @@ export function Meta(props: MetaProps) {
         <MetaSection
           rightAlignBody
           headingText={t('Logs')}
-          bodyText={props.logs?.length ?? 0}
+          bodyText={
+            props.meta && 'logs' in props.meta
+              ? props.meta.logs
+              : (props.logs?.length ?? 0)
+          }
         />
       ) : null}
     </MetaWrapper>

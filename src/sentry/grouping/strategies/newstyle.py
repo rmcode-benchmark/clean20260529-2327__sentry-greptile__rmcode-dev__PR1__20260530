@@ -35,6 +35,7 @@ from sentry.interfaces.exception import Mechanism, SingleException
 from sentry.interfaces.stacktrace import Frame, Stacktrace
 from sentry.interfaces.threads import Threads
 from sentry.stacktraces.platform import get_behavior_family_for_platform
+from sentry.utils.safe import get_path
 
 if TYPE_CHECKING:
     from sentry.eventstore.models import Event
@@ -295,7 +296,7 @@ def get_function_component(
     interface=Frame,
 )
 def frame(
-    interface: Frame, event: Event, context: GroupingContext, **meta: Any
+    interface: Frame, event: Event, context: GroupingContext, **kwargs: Any
 ) -> ReturnedVariants:
     frame = interface
     platform = frame.platform or event.platform
@@ -391,25 +392,27 @@ def get_contextline_component(
     if not line:
         return ContextLineGroupingComponent()
 
-    component = ContextLineGroupingComponent(values=[line])
+    context_line_component = ContextLineGroupingComponent(values=[line])
     if line:
         if len(frame.context_line) > 120:
-            component.update(hint="discarded because line too long", contributes=False)
+            context_line_component.update(hint="discarded because line too long", contributes=False)
         elif get_behavior_family_for_platform(platform) == "javascript":
             if context["with_context_line_file_origin_bug"]:
                 if has_url_origin(frame.abs_path, allow_file_origin=True):
-                    component.update(hint="discarded because from URL origin", contributes=False)
+                    context_line_component.update(
+                        hint="discarded because from URL origin", contributes=False
+                    )
             elif not function and has_url_origin(frame.abs_path):
-                component.update(
+                context_line_component.update(
                     hint="discarded because from URL origin and no function", contributes=False
                 )
 
-    return component
+    return context_line_component
 
 
 @strategy(ids=["stacktrace:v1"], interface=Stacktrace, score=1800)
 def stacktrace(
-    interface: Stacktrace, event: Event, context: GroupingContext, **meta: Any
+    interface: Stacktrace, event: Event, context: GroupingContext, **kwargs: Any
 ) -> ReturnedVariants:
     assert context["variant"] is None
 
@@ -419,12 +422,12 @@ def stacktrace(
         interface,
         event=event,
         context=context,
-        meta=meta,
+        kwargs=kwargs,
     )
 
 
 def _single_stacktrace_variant(
-    stacktrace: Stacktrace, event: Event, context: GroupingContext, meta: dict[str, Any]
+    stacktrace: Stacktrace, event: Event, context: GroupingContext, kwargs: dict[str, Any]
 ) -> ReturnedVariants:
     variant_name = context["variant"]
 
@@ -432,13 +435,13 @@ def _single_stacktrace_variant(
 
     frame_components = []
     prev_frame = None
-    frames_for_filtering = []
+    raw_frames = []
     found_in_app_frame = False
 
     for frame in frames:
         with context:
             context["is_recursion"] = is_recursive_frames(frame, prev_frame)
-            frame_component = context.get_single_grouping_component(frame, event=event, **meta)
+            frame_component = context.get_single_grouping_component(frame, event=event, **kwargs)
 
         if variant_name == "app":
             if frame.in_app:
@@ -447,7 +450,7 @@ def _single_stacktrace_variant(
                 frame_component.update(contributes=False)
 
         frame_components.append(frame_component)
-        frames_for_filtering.append(frame.get_raw_data())
+        raw_frames.append(frame.get_raw_data())
         prev_frame = frame
 
     # Special case for JavaScript where we want to ignore single frame
@@ -467,7 +470,7 @@ def _single_stacktrace_variant(
     stacktrace_component = context.config.enhancements.assemble_stacktrace_component(
         variant_name,
         frame_components,
-        frames_for_filtering,
+        raw_frames,
         event.platform,
         exception_data=context["exception_data"],
     )
@@ -497,7 +500,7 @@ def _single_stacktrace_variant(
 
 @stacktrace.variant_processor
 def stacktrace_variant_processor(
-    variants: ReturnedVariants, context: GroupingContext, **meta: Any
+    variants: ReturnedVariants, context: GroupingContext, **kwargs: Any
 ) -> ReturnedVariants:
     return remove_non_stacktrace_variants(variants)
 
@@ -507,7 +510,7 @@ def stacktrace_variant_processor(
     interface=SingleException,
 )
 def single_exception(
-    interface: SingleException, event: Event, context: GroupingContext, **meta: Any
+    interface: SingleException, event: Event, context: GroupingContext, **kwargs: Any
 ) -> ReturnedVariants:
     exception = interface
 
@@ -540,7 +543,7 @@ def single_exception(
             context["exception_data"] = exception.to_json()
             stacktrace_components_by_variant: dict[str, StacktraceGroupingComponent] = (
                 context.get_grouping_components_by_variant(
-                    exception.stacktrace, event=event, **meta
+                    exception.stacktrace, event=event, **kwargs
                 )
             )
     else:
@@ -569,12 +572,7 @@ def single_exception(
 
             raw = exception.value
             if raw is not None:
-                favors_other_component = stacktrace_component.contributes or (
-                    ns_error_component is not None and ns_error_component.contributes
-                )
-                normalized = normalize_message_for_grouping(
-                    raw, event, share_analytics=(not favors_other_component)
-                )
+                normalized = normalize_message_for_grouping(raw, event)
                 hint = "stripped event-specific values" if raw != normalized else None
                 if normalized:
                     value_component.update(values=[normalized], hint=hint)
@@ -606,14 +604,14 @@ def single_exception(
 
 @strategy(ids=["chained-exception:v1"], interface=ChainedException, score=2000)
 def chained_exception(
-    interface: ChainedException, event: Event, context: GroupingContext, **meta: Any
+    interface: ChainedException, event: Event, context: GroupingContext, **kwargs: Any
 ) -> ReturnedVariants:
     # Get all the exceptions to consider.
     all_exceptions = interface.exceptions()
 
     # For each exception, create a dictionary of grouping components by variant name
     exception_components_by_exception = {
-        id(exception): context.get_grouping_components_by_variant(exception, event=event, **meta)
+        id(exception): context.get_grouping_components_by_variant(exception, event=event, **kwargs)
         for exception in all_exceptions
     }
 
@@ -623,16 +621,17 @@ def chained_exception(
             all_exceptions, exception_components_by_exception, event
         )
     except Exception:
-        # We shouldn't have exceptions here. But if we do, just record it and continue with the original list.
-        # TODO: Except we do, as it turns out. See https://github.com/getsentry/sentry/issues/73592.
+        # We shouldn't have exceptions here. But if we do, just record it and continue with the
+        # original list.
         logging.exception(
-            "Failed to filter exceptions for exception groups. Continuing with original list."
+            "Failed to filter exceptions for exception groups. Continuing with original list.",
+            extra={
+                "event_id": context.event.event_id,
+                "project_id": context.event.project.id,
+                "org_id": context.event.project.organization.id,
+            },
         )
         exceptions = all_exceptions
-
-    main_exception_id = determine_main_exception_id(exceptions)
-    if main_exception_id:
-        event.data["main_exception_id"] = main_exception_id
 
     # Cases 1 and 2: Either this never was a chained exception (this is our entry point for single
     # exceptions, too), or this is a chained exception consisting solely of an exception group and a
@@ -645,6 +644,12 @@ def chained_exception(
     # Case 3: This is either a chained exception or an exception group containing at least two inner
     # exceptions. Either way, we need to wrap our exception components in a chained exception component.
     exception_components_by_variant: dict[str, list[ExceptionGroupingComponent]] = {}
+
+    # Check for cases in which we want to switch the `main_exception_id` in order to use a different
+    # exception than normal for the event title
+    main_exception_id = determine_main_exception_id(exceptions)
+    if main_exception_id:
+        event.data["main_exception_id"] = main_exception_id
 
     for exception in exceptions:
         for variant_name, component in exception_components_by_exception[id(exception)].items():
@@ -677,6 +682,17 @@ def filter_exceptions_for_exception_groups(
     if len(exceptions) <= 1:
         return exceptions
 
+    # TODO: Get rid of this hack!
+    #
+    # A change in the python SDK between version 2 and version 3 means that suddenly this function
+    # applies where it didn't used to, which in turn changes how some exception groups are hashed.
+    # As a temporary stopgap, until we can build a system akin to the grouping config transition
+    # system to compensate for the change, we're just emulating the old behavior.
+    if event.platform == "python" and get_path(event.data, "sdk", "version", default="").startswith(
+        "3"
+    ):
+        return exceptions
+
     # Reconstruct the tree of exceptions if the required data is present.
     class ExceptionTreeNode:
         def __init__(
@@ -688,19 +704,28 @@ def filter_exceptions_for_exception_groups(
             self.children = children or []
 
     exception_tree: dict[int, ExceptionTreeNode] = {}
+    ids_seen = set()
     for exception in reversed(exceptions):
         mechanism: Mechanism = exception.mechanism
-        if mechanism and mechanism.exception_id is not None:
-            node = exception_tree.setdefault(
-                mechanism.exception_id, ExceptionTreeNode()
-            ).exception = exception
+        if (
+            mechanism
+            and mechanism.exception_id is not None
+            and mechanism.exception_id != mechanism.parent_id
+            and mechanism.exception_id not in ids_seen
+        ):
+            ids_seen.add(mechanism.exception_id)
+
+            node = exception_tree.setdefault(mechanism.exception_id, ExceptionTreeNode())
             node.exception = exception
+            exception.exception = exception
+
             if mechanism.parent_id is not None:
                 parent_node = exception_tree.setdefault(mechanism.parent_id, ExceptionTreeNode())
                 parent_node.children.append(exception)
         else:
-            # At least one exception is missing mechanism ids, so we can't continue with the filter.
-            # Exit early to not waste perf.
+            # At least one exception's mechanism is either missing an exception id, duplicating an
+            # exception id we've already seen, or listing the exception as its own parent. Since the
+            # tree structure is broken, we can't continue with the filter.
             return exceptions
 
     # This gets the child exceptions for an exception using the exception_id from the mechanism.
@@ -710,9 +735,10 @@ def filter_exceptions_for_exception_groups(
         node = exception_tree.get(exception_id)
         return node.children if node else []
 
-    # This recursive generator gets the "top-level exceptions," and is used below.
-    # Top-level exceptions are those that are the first descendants of the root that are not exception groups.
-    # For examples, see https://github.com/getsentry/rfcs/blob/main/text/0079-exception-groups.md#sentry-issue-grouping
+    # This recursive generator gets the "top-level exceptions," and is used below. Top-level
+    # exceptions are those that are the direct descendants of an exception group that are not
+    # themselves exception groups. For examples, see
+    # https://github.com/getsentry/rfcs/blob/main/text/0079-exception-groups.md#sentry-issue-grouping
     def get_top_level_exceptions(
         exception: SingleException,
     ) -> Generator[SingleException]:
@@ -724,19 +750,21 @@ def filter_exceptions_for_exception_groups(
         else:
             yield exception
 
-    # This recursive generator gets the "first-path" of exceptions, and is used below.
-    # The first path follows from the root to a leaf node, but only following the first child of each node.
+    # This recursive generator gets the "first-path" of exceptions, and is used below. The first
+    # path follows from the root to a leaf node, but only following the first child of each node.
     def get_first_path(exception: SingleException) -> Generator[SingleException]:
         yield exception
         children = get_child_exceptions(exception)
         if children:
             yield from get_first_path(children[0])
 
-    # Traverse the tree recursively from the root exception to get all "top-level exceptions" and sort for consistency.
+    # Traverse the tree recursively from the root exception to get all "top-level exceptions" (see
+    # `get_top_level_exceptions` above) and sort by exception type for consistency.
     top_level_exceptions = []
-    if exception_tree[0].exception:
+    root_node = exception_tree.get(0)
+    if root_node and root_node.exception:
         top_level_exceptions = sorted(
-            get_top_level_exceptions(exception_tree[0].exception),
+            get_top_level_exceptions(root_node.exception),
             key=lambda exception: str(exception.type),
             reverse=True,
         )
@@ -777,26 +805,26 @@ def filter_exceptions_for_exception_groups(
 
 @chained_exception.variant_processor
 def chained_exception_variant_processor(
-    variants: ReturnedVariants, context: GroupingContext, **meta: Any
+    variants: ReturnedVariants, context: GroupingContext, **kwargs: Any
 ) -> ReturnedVariants:
     return remove_non_stacktrace_variants(variants)
 
 
 @strategy(ids=["threads:v1"], interface=Threads, score=1900)
 def threads(
-    interface: Threads, event: Event, context: GroupingContext, **meta: Any
+    interface: Threads, event: Event, context: GroupingContext, **kwargs: Any
 ) -> ReturnedVariants:
     crashed_threads = [thread for thread in interface.values if thread.get("crashed")]
-    thread_variants = _filtered_threads(crashed_threads, event, context, meta)
+    thread_variants = _filtered_threads(crashed_threads, event, context, **kwargs)
     if thread_variants is not None:
         return thread_variants
 
     current_threads = [thread for thread in interface.values if thread.get("current")]
-    thread_variants = _filtered_threads(current_threads, event, context, meta)
+    thread_variants = _filtered_threads(current_threads, event, context, **kwargs)
     if thread_variants is not None:
         return thread_variants
 
-    thread_variants = _filtered_threads(interface.values, event, context, meta)
+    thread_variants = _filtered_threads(interface.values, event, context, **kwargs)
     if thread_variants is not None:
         return thread_variants
 
@@ -814,7 +842,7 @@ def threads(
 
 
 def _filtered_threads(
-    threads: list[dict[str, Any]], event: Event, context: GroupingContext, meta: dict[str, Any]
+    threads: list[dict[str, Any]], event: Event, context: GroupingContext, **kwargs: dict[str, Any]
 ) -> ReturnedVariants | None:
     if len(threads) != 1:
         return None
@@ -826,7 +854,7 @@ def _filtered_threads(
     thread_components_by_variant = {}
 
     for variant_name, stacktrace_component in context.get_grouping_components_by_variant(
-        stacktrace, event=event, **meta
+        stacktrace, event=event, **kwargs
     ).items():
         thread_components_by_variant[variant_name] = ThreadsGroupingComponent(
             values=[stacktrace_component], frame_counts=stacktrace_component.frame_counts
@@ -837,7 +865,7 @@ def _filtered_threads(
 
 @threads.variant_processor
 def threads_variant_processor(
-    variants: ReturnedVariants, context: GroupingContext, **meta: Any
+    variants: ReturnedVariants, context: GroupingContext, **kwargs: Any
 ) -> ReturnedVariants:
     return remove_non_stacktrace_variants(variants)
 
@@ -855,6 +883,7 @@ def react_error_with_cause(exceptions: list[SingleException]) -> int | None:
     if (
         exceptions[0].type == "Error"
         and exceptions[0].value in REACT_ERRORS_WITH_CAUSE
+        and exceptions[-1].mechanism
         and exceptions[-1].mechanism.source == "cause"
     ):
         main_exception_id = exceptions[-1].mechanism.exception_id

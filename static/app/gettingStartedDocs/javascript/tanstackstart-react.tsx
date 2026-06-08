@@ -1,14 +1,14 @@
 import {Fragment} from 'react';
 
-import {StepType} from 'sentry/components/onboarding/gettingStartedDoc/step';
 import type {
   Docs,
   DocsParams,
   OnboardingConfig,
 } from 'sentry/components/onboarding/gettingStartedDoc/types';
-import {MaybeBrowserProfilingBetaWarning} from 'sentry/components/onboarding/gettingStartedDoc/utils/profilingOnboarding';
+import {StepType} from 'sentry/components/onboarding/gettingStartedDoc/types';
 import {t, tct} from 'sentry/locale';
 import {getJavascriptFullStackOnboarding} from 'sentry/utils/gettingStartedDocs/javascript';
+import {getNodeAgentMonitoringOnboarding} from 'sentry/utils/gettingStartedDocs/node';
 
 type Params = DocsParams;
 
@@ -39,12 +39,8 @@ const getInstallConfig = () => [
 ];
 
 const onboarding: OnboardingConfig = {
-  introduction: params => (
-    <Fragment>
-      <MaybeBrowserProfilingBetaWarning {...params} />
-      <p>{t("In this guide you'll set up the Sentry TanStack Start React SDK")}</p>
-    </Fragment>
-  ),
+  introduction: () =>
+    t("In this guide you'll set up the Sentry TanStack Start React SDK"),
   install: () => [
     {
       type: StepType.INSTALL,
@@ -453,6 +449,9 @@ const profilingOnboarding = getJavascriptFullStackOnboarding({
 const docs: Docs = {
   onboarding,
   profilingOnboarding,
+  agentMonitoringOnboarding: getNodeAgentMonitoringOnboarding({
+    basePackage: 'tanstackstart-react',
+  }),
 };
 
 export default docs;

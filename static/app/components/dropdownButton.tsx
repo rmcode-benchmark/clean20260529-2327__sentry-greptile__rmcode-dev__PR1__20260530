@@ -6,7 +6,8 @@ import {Button} from 'sentry/components/core/button';
 import {IconChevron} from 'sentry/icons';
 import {space} from 'sentry/styles/space';
 
-export interface DropdownButtonProps extends Omit<ButtonProps, 'type' | 'prefix'> {
+export interface DropdownButtonProps
+  extends Omit<ButtonProps, 'type' | 'prefix' | 'onClick'> {
   /**
    * Whether or not the button should render as open
    */
@@ -85,7 +86,7 @@ const StyledButton = styled(Button)<StyledButtonProps>`
   ${p =>
     p.hasPrefix &&
     css`
-      font-weight: ${p.theme.fontWeightNormal};
+      font-weight: ${p.theme.fontWeight.normal};
     `}
 `;
 
@@ -94,7 +95,7 @@ const LabelText = styled('span')`
     content: ':';
   }
 
-  font-weight: ${p => p.theme.fontWeightBold};
+  font-weight: ${p => p.theme.fontWeight.bold};
   padding-right: ${space(0.75)};
 `;
 

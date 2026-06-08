@@ -1,9 +1,12 @@
 import {Fragment} from 'react';
 import styled from '@emotion/styled';
 
+import Feature from 'sentry/components/acl/feature';
+import FeatureDisabled from 'sentry/components/acl/featureDisabled';
 import {Button} from 'sentry/components/core/button';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
 import {CompactSelect} from 'sentry/components/core/compactSelect';
+import {Hovercard} from 'sentry/components/hovercard';
 import * as Layout from 'sentry/components/layouts/thirds';
 import Pagination from 'sentry/components/pagination';
 import Redirect from 'sentry/components/redirect';
@@ -229,20 +232,42 @@ function NoViewsBanner({
           'Your haven’t saved any issue views yet — saving views makes it easier to return to your most frequent search queries, like high priority, assigned to you, or most recent.'
         )}
       </BannerText>
-      <BannerAddViewButton
-        priority="primary"
-        icon={<IconAdd />}
-        size="sm"
-        onClick={() => {
-          trackAnalytics('issue_views.table.banner_create_view_clicked', {
-            organization,
-          });
-          handleCreateView();
-        }}
-        disabled={isCreatingView}
+      <Feature
+        features={'organizations:issue-views'}
+        hookName="feature-disabled:issue-views"
+        renderDisabled={props => (
+          <Hovercard
+            body={
+              <FeatureDisabled
+                features={props.features}
+                hideHelpToggle
+                featureName={t('Issue Views')}
+              />
+            }
+          >
+            {typeof props.children === 'function'
+              ? props.children(props)
+              : props.children}
+          </Hovercard>
+        )}
       >
-        {t('Create View')}
-      </BannerAddViewButton>
+        {({hasFeature}) => (
+          <BannerAddViewButton
+            priority="primary"
+            icon={<IconAdd />}
+            size="sm"
+            onClick={() => {
+              trackAnalytics('issue_views.table.banner_create_view_clicked', {
+                organization,
+              });
+              handleCreateView();
+            }}
+            disabled={!hasFeature || isCreatingView}
+          >
+            {t('Create View')}
+          </BannerAddViewButton>
+        )}
+      </Feature>
     </Banner>
   );
 }
@@ -349,7 +374,7 @@ export default function IssueViewsList() {
             <Layout.Title>{t('All Views')}</Layout.Title>
           </Layout.HeaderContent>
           <Layout.HeaderActions>
-            <ButtonBar gap={1}>
+            <ButtonBar>
               {openFeedbackForm ? (
                 <Button
                   icon={<IconMegaphone />}
@@ -370,21 +395,44 @@ export default function IssueViewsList() {
                   {t('Give Feedback')}
                 </Button>
               ) : null}
-              <Button
-                priority="primary"
-                icon={<IconAdd />}
-                size="sm"
-                disabled={isCreatingView}
-                busy={isCreatingView}
-                onClick={() => {
-                  trackAnalytics('issue_views.table.create_view_clicked', {
-                    organization,
-                  });
-                  handleCreateView();
-                }}
+
+              <Feature
+                features={'organizations:issue-views'}
+                hookName="feature-disabled:issue-views"
+                renderDisabled={props => (
+                  <Hovercard
+                    body={
+                      <FeatureDisabled
+                        features={props.features}
+                        hideHelpToggle
+                        featureName={t('Issue Views')}
+                      />
+                    }
+                  >
+                    {typeof props.children === 'function'
+                      ? props.children(props)
+                      : props.children}
+                  </Hovercard>
+                )}
               >
-                {t('Create View')}
-              </Button>
+                {({hasFeature}) => (
+                  <Button
+                    priority="primary"
+                    icon={<IconAdd />}
+                    size="sm"
+                    disabled={!hasFeature || isCreatingView}
+                    busy={isCreatingView}
+                    onClick={() => {
+                      trackAnalytics('issue_views.table.create_view_clicked', {
+                        organization,
+                      });
+                      handleCreateView();
+                    }}
+                  >
+                    {t('Create View')}
+                  </Button>
+                )}
+              </Feature>
             </ButtonBar>
           </Layout.HeaderActions>
         </Layout.Header>
@@ -457,24 +505,24 @@ const Banner = styled('div')`
 `;
 
 const BannerTitle = styled('div')`
-  font-size: ${p => p.theme.fontSizeMedium};
-  font-weight: ${p => p.theme.fontWeightBold};
+  font-size: ${p => p.theme.fontSize.md};
+  font-weight: ${p => p.theme.fontWeight.bold};
 `;
 
 const BannerText = styled('div')`
-  font-size: ${p => p.theme.fontSizeMedium};
-  font-weight: ${p => p.theme.fontWeightNormal};
+  font-size: ${p => p.theme.fontSize.md};
+  font-weight: ${p => p.theme.fontWeight.normal};
   flex-shrink: 0;
 
-  @media (min-width: ${p => p.theme.breakpoints.medium}) {
+  @media (min-width: ${p => p.theme.breakpoints.md}) {
     max-width: 75%;
   }
 
-  @media (min-width: ${p => p.theme.breakpoints.large}) {
+  @media (min-width: ${p => p.theme.breakpoints.lg}) {
     max-width: 60%;
   }
 
-  @media (min-width: ${p => p.theme.breakpoints.xlarge}) {
+  @media (min-width: ${p => p.theme.breakpoints.xl}) {
     max-width: 50%;
   }
 `;
@@ -494,7 +542,7 @@ const TableHeading = styled('h2')`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: ${p => p.theme.fontSizeExtraLarge};
+  font-size: ${p => p.theme.fontSize.xl};
   margin-top: ${space(3)};
   margin-bottom: ${space(1.5)};
 `;

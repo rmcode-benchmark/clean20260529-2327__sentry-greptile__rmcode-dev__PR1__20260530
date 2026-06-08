@@ -17,6 +17,7 @@ import {
   getPlanCategoryName,
   getReservedBudgetDisplayName,
   hasCategoryFeature,
+  isByteCategory,
   listDisplayNames,
   sortCategories,
   sortCategoriesWithKeys,
@@ -146,6 +147,18 @@ describe('hasCategoryFeature', function () {
         prepaid: 1,
         order: 9,
       }),
+      MetricHistoryFixture({
+        category: DataCategory.SEER_AUTOFIX,
+        reserved: 0,
+        prepaid: 0,
+        order: 14,
+      }),
+      MetricHistoryFixture({
+        category: DataCategory.SEER_SCANNER,
+        reserved: 0,
+        prepaid: 0,
+        order: 15,
+      }),
     ]);
   });
 
@@ -204,6 +217,24 @@ describe('hasCategoryFeature', function () {
           reserved: 1,
           prepaid: 1,
           order: 9,
+        }),
+      ],
+      [
+        'seerAutofix',
+        MetricHistoryFixture({
+          category: DataCategory.SEER_AUTOFIX,
+          reserved: 0,
+          prepaid: 0,
+          order: 14,
+        }),
+      ],
+      [
+        'seerScanner',
+        MetricHistoryFixture({
+          category: DataCategory.SEER_SCANNER,
+          reserved: 0,
+          prepaid: 0,
+          order: 15,
         }),
       ],
     ]);
@@ -368,5 +399,14 @@ describe('listDisplayNames', function () {
     ).toBe(
       'errors, replays, attachments, cron monitors, accepted spans, uptime monitors, and stored spans'
     );
+  });
+});
+
+describe('isByteCategory', function () {
+  it('verifies isByteCategory function handles both ATTACHMENTS and LOG_BYTE', function () {
+    expect(isByteCategory(DataCategory.ATTACHMENTS)).toBe(true);
+    expect(isByteCategory(DataCategory.LOG_BYTE)).toBe(true);
+    expect(isByteCategory(DataCategory.ERRORS)).toBe(false);
+    expect(isByteCategory(DataCategory.TRANSACTIONS)).toBe(false);
   });
 });

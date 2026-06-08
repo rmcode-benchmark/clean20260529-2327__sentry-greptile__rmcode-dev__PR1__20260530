@@ -9,15 +9,23 @@ import {
   TWO_WEEKS,
 } from 'sentry/components/charts/utils';
 import {t} from 'sentry/locale';
-import {type Aggregate, ModuleName} from 'sentry/views/insights/types';
+import {
+  type Aggregate,
+  ModuleName,
+  SpanFunction,
+  type SpanProperty,
+} from 'sentry/views/insights/types';
 
 export const MODULE_TITLE = t('Queries');
 export const DATA_TYPE = t('Query');
 export const DATA_TYPE_PLURAL = t('Queries');
 export const BASE_URL = 'database';
 
+export const EXCLUDED_DB_OPS = ['db.sql.room', 'db.redis'];
+
 export const BASE_FILTERS = {
-  'span.module': ModuleName.DB,
+  'span.category': ModuleName.DB,
+  '!span.op': `[${EXCLUDED_DB_OPS.join(',')}]`,
   has: 'sentry.normalized_description',
 };
 
@@ -33,7 +41,7 @@ export const MIN_SDK_VERSION_BY_PLATFORM: Record<string, string> = {
   'sentry.android': '6.30.0',
 };
 
-export const DEFAULT_DURATION_AGGREGATE: Aggregate = 'avg';
+export const DEFAULT_DURATION_AGGREGATE: Aggregate = SpanFunction.AVG;
 
 export const CHART_HEIGHT = 160;
 
@@ -59,3 +67,7 @@ export const DISTRIBUTION_GRANULARITIES = new GranularityLadder([
 export const MODULE_DOC_LINK = 'https://docs.sentry.io/product/insights/backend/queries/';
 
 export const MODULE_FEATURES = ['insights-initial-modules'];
+
+export const FIELD_ALIASES = {
+  'epm()': t('Queries Per Minute'),
+} satisfies Partial<Record<SpanProperty, string>>;

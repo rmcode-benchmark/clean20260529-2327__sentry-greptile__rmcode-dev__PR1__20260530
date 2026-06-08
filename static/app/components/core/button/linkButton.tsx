@@ -1,11 +1,11 @@
 import isPropValid from '@emotion/is-prop-valid';
 import styled from '@emotion/styled';
 
+import InteractionStateLayer from 'sentry/components/core/interactionStateLayer';
+import {Link} from 'sentry/components/core/link';
 import {Tooltip} from 'sentry/components/core/tooltip';
-import InteractionStateLayer from 'sentry/components/interactionStateLayer';
-import Link from 'sentry/components/links/link';
+// eslint-disable-next-line boundaries/element-types
 import {IconDefaultsProvider} from 'sentry/icons/useIconDefaults';
-import {space} from 'sentry/styles/space';
 
 import {
   DO_NOT_USE_BUTTON_ICON_SIZES as BUTTON_ICON_SIZES,
@@ -36,6 +36,7 @@ export function LinkButton({
       <StyledLinkButton
         aria-label={accessibleLabel}
         aria-disabled={disabled}
+        disabled={disabled}
         size={size}
         {...props}
         // @ts-expect-error set href as undefined to force "disabled" state.
@@ -105,6 +106,7 @@ const ButtonLabel = styled('span', {
     !['size', 'borderless'].includes(prop),
 })<Pick<CommonButtonProps, 'size' | 'borderless'>>`
   height: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -120,8 +122,8 @@ const Icon = styled('span')<{
   margin-right: ${p =>
     p.hasChildren
       ? p.size === 'xs' || p.size === 'zero'
-        ? space(0.75)
-        : space(1)
+        ? p.theme.space.sm
+        : p.theme.space.md
       : '0'};
   flex-shrink: 0;
 `;

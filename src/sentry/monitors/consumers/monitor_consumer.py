@@ -22,7 +22,7 @@ from sentry_kafka_schemas.codecs import Codec
 from sentry_kafka_schemas.schema_types.ingest_monitors_v1 import IngestMonitorMessage
 from sentry_sdk.tracing import Span, Transaction
 
-from sentry import quotas, ratelimits
+from sentry import options, quotas, ratelimits
 from sentry.conf.types.kafka_definition import Topic, get_topic_codec
 from sentry.constants import DataCategory, ObjectStatus
 from sentry.db.postgres.transactions import in_test_hide_transaction_boundary
@@ -32,6 +32,10 @@ from sentry.monitors.clock_dispatch import try_monitor_clock_tick
 from sentry.monitors.constants import PermitCheckInStatus
 from sentry.monitors.logic.mark_failed import mark_failed
 from sentry.monitors.logic.mark_ok import mark_ok
+from sentry.monitors.logic.monitor_environment import (
+    monitor_has_newer_status_affecting_checkins,
+    update_monitor_environment,
+)
 from sentry.monitors.models import (
     CheckInStatus,
     Monitor,
@@ -82,9 +86,6 @@ logger = logging.getLogger(__name__)
 
 MONITOR_CODEC: Codec[IngestMonitorMessage] = get_topic_codec(Topic.INGEST_MONITORS)
 
-CHECKIN_QUOTA_LIMIT = 6
-CHECKIN_QUOTA_WINDOW = 60
-
 
 def _ensure_monitor_with_config(
     project: Project,
@@ -99,6 +100,11 @@ def _ensure_monitor_with_config(
         )
     except Monitor.DoesNotExist:
         monitor = None
+
+    # Monitor was previously marked as upserting, but no config is provided for
+    # this check-in, therefore it's no longer upserting.
+    if not config and monitor and monitor.is_upserting:
+        monitor.update(is_upserting=False)
 
     if not config:
         return monitor
@@ -156,6 +162,7 @@ def _ensure_monitor_with_config(
                 "config": validated_config,
                 "owner_user_id": owner_user_id,
                 "owner_team_id": owner_team_id,
+                "is_upserting": True,
             },
         )
         if created:
@@ -165,6 +172,8 @@ def _ensure_monitor_with_config(
     if monitor and not created:
         if monitor.config != validated_config:
             monitor.update_config(config, validated_config)
+        if not monitor.is_upserting:
+            monitor.update(is_upserting=True)
         if (owner_user_id or owner_team_id) and (
             owner_user_id != monitor.owner_user_id or owner_team_id != monitor.owner_team_id
         ):
@@ -195,6 +204,12 @@ def check_killswitch(
 def check_ratelimit(metric_kwargs: dict[str, str], item: CheckinItem) -> bool:
     """
     Enforce check-in rate limits. Returns True if rate limit is enforced.
+
+    Rate limits are typically already enforced by quotas in relay, however
+    relay cron monitor quotas are limited at the project level (see
+    sentry.monitors.rate_limit for more details), so it is possible in
+    some scenarios that we still need to accurately enforce rate-limits at the
+    monitor level in the consumer here.
     """
     # Use the kafka message timestamp as part of the key to ensure we do not
     # rate-limit during backlog processing.
@@ -204,8 +219,8 @@ def check_ratelimit(metric_kwargs: dict[str, str], item: CheckinItem) -> bool:
 
     is_blocked = ratelimits.backend.is_limited(
         f"monitor-checkins:{ratelimit_key}",
-        limit=CHECKIN_QUOTA_LIMIT,
-        window=CHECKIN_QUOTA_WINDOW,
+        limit=options.get("crons.per_monitor_rate_limit"),
+        window=60,
     )
 
     if is_blocked:
@@ -218,9 +233,10 @@ def check_ratelimit(metric_kwargs: dict[str, str], item: CheckinItem) -> bool:
 
 class _CheckinUpdateKwargs(TypedDict):
     status: NotRequired[int]
-    duration: int | None
+    duration: NotRequired[int]
     timeout_at: NotRequired[datetime | None]
     date_updated: NotRequired[datetime]
+    date_in_progress: NotRequired[datetime]
 
 
 def transform_checkin_uuid(
@@ -318,11 +334,15 @@ def update_existing_check_in(
         and updated_status in CheckInStatus.USER_TERMINAL_VALUES
     )
 
-    if already_user_complete and not updated_duration_only:
-        # If we receive an in-progress check-in after a user-terminal value it
-        # could likely be due to the user's job running very quickly and events
-        # coming in slightly out of order. We can just ignore this type of
-        # error, and also return to not update the duration
+    # If we receive an in-progress check-in after a user-terminal value it
+    # could likely be due to the user's job running very quickly and events
+    # coming in slightly out of order. In this case we want to
+    # and also return to not update the duration
+    is_out_of_order_in_progress = (
+        already_user_complete and updated_status == CheckInStatus.IN_PROGRESS
+    )
+
+    if already_user_complete and not updated_duration_only and not is_out_of_order_in_progress:
         if updated_status == CheckInStatus.IN_PROGRESS:
             return
 
@@ -346,7 +366,9 @@ def update_existing_check_in(
             },
         )
 
-    if updated_duration is None:
+    # Only compute a new duration if there isn't already an existing duration
+    # set, and a duration hasn't been explicitly provided in this update.
+    if updated_duration is None and existing_check_in.duration is None:
         # We use abs here because in some cases we might end up having checkins arrive
         # slightly out of order due to race conditions in relay. In cases like this,
         # we're happy to just assume that the duration is the absolute difference between
@@ -378,11 +400,21 @@ def update_existing_check_in(
     if processing_errors:
         raise ProcessingErrorsException(processing_errors, monitor=monitor)
 
-    updated_checkin: _CheckinUpdateKwargs = {
-        "status": updated_status,
-        "duration": updated_duration,
-        "date_updated": start_time,
-    }
+    updated_checkin: _CheckinUpdateKwargs = {}
+
+    if updated_duration:
+        updated_checkin["duration"] = updated_duration
+
+    # When processing an out-of-order in-progress check-in we ONLY need to set
+    # the date_in_progress. We do NOT update the duration, since it's likely
+    # we want to actually calculate this
+    if is_out_of_order_in_progress:
+        updated_checkin["date_in_progress"] = start_time
+        existing_check_in.update(**updated_checkin)
+        return
+
+    updated_checkin["status"] = updated_status
+    updated_checkin["date_updated"] = start_time
 
     # XXX(epurkhiser): We currently allow a existing timed-out check-in to
     # have it's duration updated. This helps users understand that a check-in
@@ -427,6 +459,22 @@ def _process_checkin(item: CheckinItem, txn: Transaction | Span) -> None:
     monitor_slug = item.valid_monitor_slug
     environment = params.get("environment")
 
+    # XXX(epurkhiser): Adding VERY early logging specific to a sentry monitor
+    # that we're seeing have intermittent missed in-progress check-ins. We
+    # would like to verify that these check-ins truley are NOT being received
+    # at all (and not being drooped somewhere in this consumer)
+    if project_id == 1 and monitor_slug == "monitors-clock-pulse":
+        clock_time = item.ts.replace(second=0, microsecond=0, tzinfo=UTC)
+        logger.info(
+            "monitors.consumer.sentry_clock_pulse_debug_entry",
+            extra={
+                "clock_time": clock_time,
+                "item_ts": item.ts,
+                "start_time": start_time,
+                **params,
+            },
+        )
+
     project = Project.objects.get_from_cache(id=project_id)
 
     # Strip sdk version to reduce metric cardinality
@@ -438,6 +486,10 @@ def _process_checkin(item: CheckinItem, txn: Transaction | Span) -> None:
     }
 
     if check_killswitch(metric_kwargs, project):
+        metrics.incr(
+            "monitors.checkin.result",
+            tags={**metric_kwargs, "status": "organization_killswitch_enabled"},
+        )
         track_outcome(
             org_id=project.organization_id,
             project_id=project.id,
@@ -453,6 +505,10 @@ def _process_checkin(item: CheckinItem, txn: Transaction | Span) -> None:
         raise ProcessingErrorsException([killswitch_error])
 
     if check_ratelimit(metric_kwargs, item):
+        metrics.incr(
+            "monitors.checkin.result",
+            tags={**metric_kwargs, "status": "monitor_environment_ratelimited"},
+        )
         track_outcome(
             org_id=project.organization_id,
             project_id=project.id,
@@ -473,6 +529,10 @@ def _process_checkin(item: CheckinItem, txn: Transaction | Span) -> None:
     )
 
     if quotas_outcome == PermitCheckInStatus.DROP:
+        metrics.incr(
+            "monitors.checkin.result",
+            tags={**metric_kwargs, "status": "monitor_over_quota"},
+        )
         track_outcome(
             org_id=project.organization_id,
             project_id=project.id,
@@ -495,6 +555,10 @@ def _process_checkin(item: CheckinItem, txn: Transaction | Span) -> None:
     )
 
     if guid is None:
+        metrics.incr(
+            "monitors.checkin.result",
+            tags={**metric_kwargs, "status": "checkin_invalid_guid"},
+        )
         track_outcome(
             org_id=project.organization_id,
             project_id=project.id,
@@ -626,6 +690,10 @@ def _process_checkin(item: CheckinItem, txn: Transaction | Span) -> None:
         quotas_outcome == PermitCheckInStatus.ACCEPTED_FOR_UPSERT
         and monitor.status == ObjectStatus.DISABLED
     ):
+        metrics.incr(
+            "monitors.checkin.result",
+            tags={**metric_kwargs, "status": "monitor_disabled_no_quota"},
+        )
         track_outcome(
             org_id=project.organization_id,
             project_id=project.id,
@@ -893,9 +961,13 @@ def _process_checkin(item: CheckinItem, txn: Transaction | Span) -> None:
                 # Note: We use `start_time` for received here since it's the time that this
                 # checkin was received by relay. Potentially, `ts` should be the client
                 # timestamp. If we change that, leave `received` the same.
-                mark_failed(check_in, failed_at=start_time, received=start_time)
+                if not monitor_has_newer_status_affecting_checkins(
+                    monitor_environment, check_in.date_added
+                ):
+                    update_monitor_environment(monitor_environment, check_in.date_added, start_time)
+                    mark_failed(check_in, failed_at=start_time, received=start_time)
             else:
-                mark_ok(check_in, succeeded_at=start_time)
+                mark_ok(check_in, start_time)
 
             # track how much time it took for the message to make it through
             # relay into kafka. This should help us understand when missed

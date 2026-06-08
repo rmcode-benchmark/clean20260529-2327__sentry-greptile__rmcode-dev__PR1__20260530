@@ -129,8 +129,13 @@ export const getCodeChangesIsLoading = (autofixData: AutofixData) => {
   return changesStep?.status === AutofixStatus.PROCESSING;
 };
 
-export const isSupportedAutofixProvider = (provider: string) => {
-  return provider.toLowerCase().includes('github');
+const supportedProviders = ['integrations:github'];
+
+export const isSupportedAutofixProvider = (provider?: {id: string; name: string}) => {
+  if (!provider) {
+    return false;
+  }
+  return supportedProviders.includes(provider.id);
 };
 
 export interface AutofixProgressDetails {

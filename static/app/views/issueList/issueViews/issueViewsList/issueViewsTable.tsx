@@ -17,6 +17,7 @@ import {
   type GroupSearchView,
   GroupSearchViewCreatedBy,
 } from 'sentry/views/issueList/types';
+import {useHasIssueViews} from 'sentry/views/nav/secondary/sections/issues/issueViews/useHasIssueViews';
 
 type IssueViewsTableProps = {
   handleDeleteView: (view: GroupSearchView) => void;
@@ -41,6 +42,7 @@ export function IssueViewsTable({
 }: IssueViewsTableProps) {
   const organization = useOrganization();
   const user = useUser();
+  const hasIssueViews = useHasIssueViews();
 
   return (
     <SavedEntityTableWithColumns
@@ -155,7 +157,7 @@ export function IssueViewsTable({
                         />
                       ));
                     },
-                    hidden: !canEdit,
+                    hidden: !canEdit || !hasIssueViews,
                   },
                   {
                     key: 'duplicate',
@@ -170,6 +172,7 @@ export function IssueViewsTable({
                         />
                       ));
                     },
+                    hidden: !hasIssueViews,
                   },
                   {
                     key: 'delete',
@@ -218,7 +221,7 @@ const SavedEntityTableWithColumns = styled(SavedEntityTable)<{hideCreatedBy?: bo
         auto auto 48px;
     `}
 
-  @container (max-width: ${p => p.theme.breakpoints.medium}) {
+  @container (max-width: ${p => p.theme.breakpoints.md}) {
     grid-template-areas: 'star name project query creator actions';
     grid-template-columns: 40px 20% minmax(auto, 120px) minmax(0, 1fr) auto 48px;
 
@@ -237,7 +240,7 @@ const SavedEntityTableWithColumns = styled(SavedEntityTable)<{hideCreatedBy?: bo
     }
   }
 
-  @container (max-width: ${p => p.theme.breakpoints.small}) {
+  @container (max-width: ${p => p.theme.breakpoints.sm}) {
     grid-template-areas: 'star name query actions';
     grid-template-columns: 40px 30% minmax(0, 1fr) 48px;
 

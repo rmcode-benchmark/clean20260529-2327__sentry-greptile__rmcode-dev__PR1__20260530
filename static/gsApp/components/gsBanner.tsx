@@ -21,7 +21,7 @@ import {Badge} from 'sentry/components/core/badge';
 import {Button} from 'sentry/components/core/button';
 import {ButtonBar} from 'sentry/components/core/button/buttonBar';
 import {LinkButton} from 'sentry/components/core/button/linkButton';
-import ExternalLink from 'sentry/components/links/externalLink';
+import {ExternalLink} from 'sentry/components/core/link';
 import {DATA_CATEGORY_INFO} from 'sentry/constants';
 import {IconClose} from 'sentry/icons';
 import {t, tct} from 'sentry/locale';
@@ -30,11 +30,11 @@ import GuideStore from 'sentry/stores/guideStore';
 import {space} from 'sentry/styles/space';
 import {DataCategory, DataCategoryExact} from 'sentry/types/core';
 import type {Organization} from 'sentry/types/organization';
-import {browserHistory} from 'sentry/utils/browserHistory';
 import {isActiveSuperuser} from 'sentry/utils/isActiveSuperuser';
 import {Oxfordize} from 'sentry/utils/oxfordizeArray';
 import {promptIsDismissed} from 'sentry/utils/promptIsDismissed';
 import normalizeUrl from 'sentry/utils/url/normalizeUrl';
+import {useNavigate} from 'sentry/utils/useNavigate';
 import withApi from 'sentry/utils/withApi';
 import {prefersStackedNav} from 'sentry/views/nav/prefersStackedNav';
 import {getPricingDocsLinkForEventType} from 'sentry/views/settings/account/notifications/utils';
@@ -45,8 +45,11 @@ import {
   openTrialEndingModal,
 } from 'getsentry/actionCreators/modal';
 import type {EventType} from 'getsentry/components/addEventsCTA';
-import AddEventsCTA from 'getsentry/components/addEventsCTA';
+import AddEventsCTA, {
+  getCategoryInfoFromEventType,
+} from 'getsentry/components/addEventsCTA';
 import ProductTrialAlert from 'getsentry/components/productTrial/productTrialAlert';
+import {getProductForPath} from 'getsentry/components/productTrial/productTrialPaths';
 import {makeLinkToOwnersAndBillingMembers} from 'getsentry/components/profiling/alerts';
 import withSubscription from 'getsentry/components/withSubscription';
 import ZendeskLink from 'getsentry/components/zendeskLink';
@@ -54,7 +57,6 @@ import {BILLED_DATA_CATEGORY_INFO} from 'getsentry/constants';
 import SubscriptionStore from 'getsentry/stores/subscriptionStore';
 import {
   type BilledDataCategoryInfo,
-  PlanTier,
   type Promotion,
   type PromotionClaimed,
   type Subscription,
@@ -96,7 +98,7 @@ function objectFromBilledCategories(callback: (c: BilledDataCategoryInfo) => any
   return Object.values(BILLED_DATA_CATEGORY_INFO).reduce(
     (acc, c) => {
       if (c.isBilledCategory) {
-        acc[c.name as EventType] = callback(c);
+        acc[c.singular as EventType] = callback(c);
       }
       return acc;
     },
@@ -116,9 +118,7 @@ function SuspensionModal({Header, Body, Footer, subscription}: SuspensionModalPr
       <Header>{'Action Required'}</Header>
       <Body>
         <Alert.Container>
-          <Alert type="warning" showIcon>
-            {t('Your account has been suspended')}
-          </Alert>
+          <Alert type="warning">{t('Your account has been suspended')}</Alert>
         </Alert.Container>
         <p>{t('Your account has been suspended with the following reason:')}</p>
         <ul>
@@ -128,14 +128,14 @@ function SuspensionModal({Header, Body, Footer, subscription}: SuspensionModalPr
         </ul>
         <p>
           {t(
-            'Until this situation is resolved you will not be able to send events to Sentry.'
+            'Until this situation is resolved you will not be able to send events to Sentry. Please contact support if you have any questions or need assistance.'
           )}
         </p>
       </Body>
       <Footer>
         <ZendeskLink
           subject="Account Suspension"
-          className="btn btn-primary"
+          Component={props => <LinkButton {...props} href={props.href ?? ''} />}
           source="account-suspension"
         >
           {t('Contact Support')}
@@ -162,6 +162,7 @@ function NoticeModal({
   whichModal,
   billingPermissions,
 }: NoticeModalProps) {
+  const navigate = useNavigate();
   const closeModalAndContinue = (link: string) => {
     closeModal();
     if (whichModal === ModalType.PAST_DUE) {
@@ -175,7 +176,7 @@ function NoticeModal({
     if (link === window.location.pathname) {
       return;
     }
-    browserHistory.push(link);
+    navigate(link);
   };
 
   const closeModalDoNotContinue = () => {
@@ -222,7 +223,7 @@ function NoticeModal({
       title = t('Unable to bill your account');
       body = billingPermissions
         ? t(
-            `There was an issue with your payment. Update your payment information to ensure uniterrupted access to Sentry.`
+            `There was an issue with your payment. Update your payment information to ensure uninterrupted access to Sentry.`
           )
         : t(
             `There was an issue with your payment. Please have the Org Owner or Billing Member update your payment information to ensure continued access to Sentry.`
@@ -275,9 +276,7 @@ function NoticeModal({
       </Header>
       <Body>
         <Alert.Container>
-          <Alert type={alertType} showIcon>
-            {title}
-          </Alert>
+          <Alert type={alertType}>{title}</Alert>
         </Alert.Container>
         <p>{body}</p>
         {subText && <p>{subText}</p>}
@@ -709,8 +708,6 @@ class GSBanner extends Component<Props, State> {
             checkResults[`${snakeCase(c.plural)}_warning_alert`]!
           )
         ),
-        // TODO(data categories): We don't need to check every EventType for product trials,
-        // only the ones that are supported for product trials.
         productTrialDismissed: objectFromBilledCategories(c =>
           trialPromptIsDismissed(
             checkResults[`${snakeCase(c.plural)}_product_trial_alert`]!,
@@ -731,7 +728,7 @@ class GSBanner extends Component<Props, State> {
     }
     return objectFromBilledCategories(
       c =>
-        !this.state.overageAlertDismissed[c.name as EventType] &&
+        !this.state.overageAlertDismissed[c.singular as EventType] &&
         !!subscription.categories[c.plural]?.usageExceeded
     );
   }
@@ -747,7 +744,7 @@ class GSBanner extends Component<Props, State> {
     }
     return objectFromBilledCategories(
       c =>
-        !this.state.overageWarningDismissed[c.name as EventType] &&
+        !this.state.overageWarningDismissed[c.singular as EventType] &&
         !!subscription.categories[c.plural]?.sentUsageWarning
     );
   }
@@ -847,15 +844,18 @@ class GSBanner extends Component<Props, State> {
           clicked_event: eventType,
         });
       };
+      const categoryInfo =
+        getCategoryInfoFromEventType(eventType) ??
+        DATA_CATEGORY_INFO[DataCategoryExact.ERROR];
       return (
         <ExternalLink
           key={eventType}
-          href={getPricingDocsLinkForEventType(eventType)}
+          href={getPricingDocsLinkForEventType(categoryInfo.name)}
           onClick={onClick}
         >
           {getSingularCategoryName({
             plan,
-            category: DATA_CATEGORY_INFO[eventType].plural,
+            category: categoryInfo.plural,
             capitalize: false,
           })}
         </ExternalLink>
@@ -870,7 +870,7 @@ class GSBanner extends Component<Props, State> {
             value &&
             getActiveProductTrial(
               subscription.productTrials ?? null,
-              DATA_CATEGORY_INFO[key as DataCategoryExact].plural
+              getCategoryInfoFromEventType(key as EventType)?.plural as DataCategory
             ) === null
         )
         .map(([key, _]) => key as EventType);
@@ -892,17 +892,16 @@ class GSBanner extends Component<Props, State> {
             value &&
             getActiveProductTrial(
               subscription.productTrials ?? null,
-              DATA_CATEGORY_INFO[key as DataCategoryExact].plural
+              getCategoryInfoFromEventType(key as EventType)?.plural as DataCategory
             ) === null
         )
         .map(([key, _]) => key as EventType);
 
       // Make an exception for when only seat-based categories have an overage to disable the See Usage button
-      strictlySeatOverage =
-        eventTypes.length <= 2 &&
-        every(eventTypes, eventType =>
-          [DataCategoryExact.MONITOR_SEAT, DataCategoryExact.UPTIME].includes(eventType)
-        );
+      strictlySeatOverage = every(
+        eventTypes,
+        eventType => getCategoryInfoFromEventType(eventType)?.tallyType === 'seat'
+      );
 
       // Make an exception for when only crons has an overage to change the language to be more fitting and hide See Usage
       if (strictlySeatOverage) {
@@ -912,7 +911,8 @@ class GSBanner extends Component<Props, State> {
             seatCategories: listDisplayNames({
               plan: subscription.planDetails,
               categories: eventTypes.map(
-                eventType => DATA_CATEGORY_INFO[eventType].plural as DataCategory
+                eventType =>
+                  getCategoryInfoFromEventType(eventType)?.plural as DataCategory
               ),
               shouldTitleCase: true,
             }),
@@ -938,18 +938,26 @@ class GSBanner extends Component<Props, State> {
       return null;
     }
 
+    // we should only ever specify an event type that has an external stats page
+    // in the stats link
+    const eventTypeForStatsPage = strictlySeatOverage
+      ? null
+      : (eventTypes.find(
+          eventType =>
+            getCategoryInfoFromEventType(eventType)?.statsInfo.showExternalStats
+        ) ?? null);
+
     return (
       <Alert
         system
         type={isWarning ? 'muted' : 'warning'}
-        showIcon
         data-test-id={'overage-banner-' + eventTypes.join('-')}
         trailingItems={
-          <ButtonBar gap={1}>
+          <ButtonBar>
             {!strictlySeatOverage && (
               <LinkButton
                 size="xs"
-                to={`/organizations/${organization.slug}/stats/?dataCategory=${eventTypes[0]}s&pageStart=${subscription.onDemandPeriodStart}&pageEnd=${subscription.onDemandPeriodEnd}&pageUtc=true`}
+                to={`/organizations/${organization.slug}/stats/?${eventTypeForStatsPage ? `dataCategory=${eventTypeForStatsPage}&` : ''}pageStart=${subscription.onDemandPeriodStart}&pageEnd=${subscription.onDemandPeriodEnd}&pageUtc=true`}
                 onClick={() => {
                   trackGetsentryAnalytics('quota_alert.clicked_see_usage', {
                     organization,
@@ -1050,28 +1058,12 @@ class GSBanner extends Component<Props, State> {
       product: DataCategory.PROFILE_DURATION_UI,
       categories: [DataCategory.PROFILE_DURATION_UI],
     },
-    // TODO(Seer): add in-product links for Seer categories
   };
 
   renderProductTrialAlerts() {
     const {subscription, organization, api} = this.props;
-    if (subscription.planTier === PlanTier.AM3) {
-      this.PATHS_FOR_PRODUCT_TRIALS['/performance/'] = {
-        product: DataCategory.SPANS,
-        categories: [DataCategory.SPANS],
-      };
-      this.PATHS_FOR_PRODUCT_TRIALS['/performance/database/'] = {
-        product: DataCategory.SPANS,
-        categories: [DataCategory.SPANS],
-      };
-      this.PATHS_FOR_PRODUCT_TRIALS['/profiling/'] = {
-        product: DataCategory.PROFILES,
-        categories: [DataCategory.PROFILE_DURATION, DataCategory.PROFILE_DURATION_UI],
-      };
-    }
-    // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
-    const productPath = this.PATHS_FOR_PRODUCT_TRIALS[window.location.pathname] || null;
 
+    const productPath = getProductForPath(subscription, window.location.pathname);
     if (!productPath) {
       return null;
     }
@@ -1081,7 +1073,7 @@ class GSBanner extends Component<Props, State> {
         const categoryInfo = getCategoryInfoFromPlural(category);
         const categorySnakeCase = snakeCase(category);
         const isDismissed =
-          this.state.productTrialDismissed[categoryInfo?.name as EventType];
+          this.state.productTrialDismissed[categoryInfo?.singular as EventType];
         const trial = getProductTrial(subscription.productTrials ?? null, category);
         return trial && !isDismissed ? (
           <ProductTrialAlert
@@ -1100,7 +1092,7 @@ class GSBanner extends Component<Props, State> {
               this.setState({
                 productTrialDismissed: {
                   ...this.state.productTrialDismissed,
-                  [categoryInfo?.name as EventType]: true,
+                  [categoryInfo?.singular as EventType]: true,
                 },
               });
             }}
@@ -1214,7 +1206,7 @@ class GSBanner extends Component<Props, State> {
               system
               type="muted"
               trailingItems={
-                <ButtonBar gap={1}>
+                <ButtonBar>
                   <LinkButton
                     to={checkoutUrl}
                     onClick={this.handleUpgradeLinkClick}

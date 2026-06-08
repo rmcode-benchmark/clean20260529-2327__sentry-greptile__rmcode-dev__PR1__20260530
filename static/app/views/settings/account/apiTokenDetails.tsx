@@ -3,10 +3,10 @@ import {
   addLoadingMessage,
   addSuccessMessage,
 } from 'sentry/actionCreators/indicator';
+import {ExternalLink} from 'sentry/components/core/link';
 import FieldGroup from 'sentry/components/forms/fieldGroup';
 import TextField from 'sentry/components/forms/fields/textField';
 import Form from 'sentry/components/forms/form';
-import ExternalLink from 'sentry/components/links/externalLink';
 import LoadingError from 'sentry/components/loadingError';
 import LoadingIndicator from 'sentry/components/loadingIndicator';
 import Panel from 'sentry/components/panels/panel';
@@ -116,8 +116,8 @@ function ApiTokenDetails({params}: Props) {
 
   return (
     <div>
-      <SentryDocumentTitle title={t('Edit User Auth Token')} />
-      <SettingsPageHeader title={t('Edit User Auth Token')} />
+      <SentryDocumentTitle title={t('Edit Personal Token')} />
+      <SettingsPageHeader title={t('Edit Personal Token')} />
 
       <TextBlock>
         {t(
@@ -133,12 +133,12 @@ function ApiTokenDetails({params}: Props) {
         )}
       </TextBlock>
       <Panel>
-        <PanelHeader>{t('User Auth Token Details')}</PanelHeader>
+        <PanelHeader>{t('Personal Token Details')}</PanelHeader>
 
         <PanelBody>
           {isError && (
             <LoadingError
-              message={t('Failed to load user auth token.')}
+              message={t('Failed to load personal token.')}
               onRetry={refetchToken}
             />
           )}

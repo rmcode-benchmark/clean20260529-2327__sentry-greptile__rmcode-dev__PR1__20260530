@@ -13,7 +13,13 @@ from sentry.integrations.source_code_management.commit_context import (
     _open_pr_comment_log,
     _pr_comment_log,
 )
-from sentry.integrations.source_code_management.language_parsers import PATCH_PARSERS
+from sentry.integrations.source_code_management.language_parsers import (
+    get_patch_parsers_for_organization,
+)
+from sentry.integrations.source_code_management.metrics import (
+    CommitContextIntegrationInteractionEvent,
+    SCMIntegrationInteractionType,
+)
 from sentry.models.options.organization_option import OrganizationOption
 from sentry.models.organization import Organization
 from sentry.models.project import Project
@@ -35,6 +41,7 @@ logger = logging.getLogger(__name__)
     silo_mode=SiloMode.REGION,
     taskworker_config=TaskworkerConfig(
         namespace=integrations_tasks,
+        processing_deadline_duration=45,
     ),
 )
 def pr_comment_workflow(pr_id: int, project_id: int):
@@ -143,10 +150,6 @@ def pr_comment_workflow(pr_id: int, project_id: int):
     top_5_issue_ids = [issue["group_id"] for issue in top_5_issues]
 
     comment_body = pr_comment_workflow.get_comment_body(issue_ids=top_5_issue_ids)
-    logger.info(
-        _pr_comment_log(integration_name=integration_name, suffix="comment_body"),
-        extra={"body": comment_body},
-    )
 
     top_24_issue_ids = issue_ids[:24]  # 24 is the P99 for issues-per-PR
 
@@ -186,6 +189,7 @@ def pr_comment_workflow(pr_id: int, project_id: int):
     silo_mode=SiloMode.REGION,
     taskworker_config=TaskworkerConfig(
         namespace=integrations_tasks,
+        processing_deadline_duration=150,
     ),
 )
 def open_pr_comment_workflow(pr_id: int) -> None:
@@ -236,7 +240,7 @@ def open_pr_comment_workflow(pr_id: int) -> None:
         )
         return
 
-    # check integration exists to hit Github API with client
+    # check integration exists to hit external API with client
     integration = integration_service.get_integration(
         integration_id=repo.integration_id, status=ObjectStatus.ACTIVE
     )
@@ -269,18 +273,21 @@ def open_pr_comment_workflow(pr_id: int) -> None:
         )
         return
 
-    # CREATING THE COMMENT
-
-    # fetch the files in the PR and determine if it is safe to comment
-    pullrequest_files = open_pr_comment_workflow.get_pr_files_safe_for_comment(
-        repo=repo, pr=pull_request
-    )
+    with CommitContextIntegrationInteractionEvent(
+        interaction_type=SCMIntegrationInteractionType.GET_PR_DIFFS,
+        provider_key=integration_name,
+        repository=repo,
+        pull_request_id=pull_request.id,
+    ).capture():
+        # fetch the files in the PR and determine if it is safe to comment
+        pullrequest_files = open_pr_comment_workflow.get_pr_files_safe_for_comment(
+            repo=repo, pr=pull_request
+        )
 
     issue_table_contents = {}
     top_issues_per_file = []
 
-    patch_parsers = PATCH_PARSERS
-    # NOTE: if we are testing beta patch parsers, add check here
+    patch_parsers = get_patch_parsers_for_organization(organization)
 
     file_extensions = set()
     # fetch issues related to the files
@@ -342,7 +349,7 @@ def open_pr_comment_workflow(pr_id: int) -> None:
                 },
             )
 
-        if file_extension == ["php"]:
+        if file_extension in ["php"]:
             logger.info(
                 _open_pr_comment_log(integration_name=integration_name, suffix="php"),
                 extra={
@@ -354,9 +361,33 @@ def open_pr_comment_workflow(pr_id: int) -> None:
                 },
             )
 
-        if file_extension == ["rb"]:
+        if file_extension in ["rb"]:
             logger.info(
                 _open_pr_comment_log(integration_name=integration_name, suffix="ruby"),
+                extra={
+                    "organization_id": org_id,
+                    "repository_id": repo.id,
+                    "file_name": file.filename,
+                    "extension": file_extension,
+                    "has_function_names": bool(function_names),
+                },
+            )
+
+        if file_extension in ["cs"]:
+            logger.info(
+                _open_pr_comment_log(integration_name=integration_name, suffix="csharp"),
+                extra={
+                    "organization_id": org_id,
+                    "repository_id": repo.id,
+                    "file_name": file.filename,
+                    "extension": file_extension,
+                    "has_function_names": bool(function_names),
+                },
+            )
+
+        if file_extension in ["go"]:
+            logger.info(
+                _open_pr_comment_log(integration_name=integration_name, suffix="go"),
                 extra={
                     "organization_id": org_id,
                     "repository_id": repo.id,
@@ -375,6 +406,19 @@ def open_pr_comment_workflow(pr_id: int) -> None:
             function_names=list(function_names),
         )
         if not len(top_issues):
+            if organization.id == 1:
+                logger.info(
+                    _open_pr_comment_log(
+                        integration_name=integration_name, suffix="no_issues_for_file"
+                    ),
+                    extra={
+                        "organization_id": org_id,
+                        "repository_id": repo.id,
+                        "file_name": file.filename,
+                        "sentry_filenames": list(sentry_filenames),
+                        "function_names": list(function_names),
+                    },
+                )
             continue
 
         top_issues_per_file.append(top_issues)
